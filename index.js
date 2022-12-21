@@ -1,4 +1,3 @@
-"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,21 +7,20 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.FMError = void 0;
 // const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-const node_fetch_1 = require("node-fetch");
-const events_1 = require("events");
+import fetch, { File, FormData } from 'node-fetch';
+import { EventEmitter } from "events";
 // @ts-ignore
-const fs_1 = require("fs");
+import fs from "fs";
 // @ts-ignore
-const path_1 = require("path");
+import path from "path";
 // @ts-ignore
-const url_1 = require("url");
-const btoa = require("btoa");
+import { fileURLToPath } from "url";
+import * as https from "https";
+// import * as btoa from "btoa";
 // @ts-ignore
-const errs = JSON.parse(fs_1.default.readFileSync(path_1.default.join(path_1.default.dirname((0, url_1.fileURLToPath)(import.meta.url)), 'fmErrors.json')).toString());
-class FileMakerConnection {
+const errs = JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'fmErrors.json')).toString());
+export default class FileMakerConnection {
     constructor() {
     }
     get endpoint() {
@@ -44,7 +42,7 @@ class FileMakerConnection {
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
             if (!this.token)
                 reject(new Error("Not logged in"));
-            let _fetch = yield (0, node_fetch_1.default)(`${this.endpoint}/sessions/${this.token}`, {
+            let _fetch = yield fetch(`${this.endpoint}/sessions/${this.token}`, {
                 method: "DELETE",
                 headers: {
                     "content-type": "application/json"
@@ -66,13 +64,13 @@ class FileMakerConnection {
     }
     createSession() {
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
-            (0, node_fetch_1.default)(`${this.endpoint}/sessions`, {
+            fetch(`${this.endpoint}/sessions`, {
                 hostname: this.hostname,
                 port: 443,
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": "Basic " + btoa(this.username + ":" + this.password)
+                    "Authorization": "Basic " + Buffer.from(this.username + ":" + this.password).toString("base64")
                 }
             }).then(res => {
                 console.log(res);
@@ -97,14 +95,14 @@ class FileMakerConnection {
     getLayout(name) {
         return new layout(this, name);
     }
-    apiRequest(url, options) {
+    apiRequest(url, options = {}) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!options.headers)
                 options.headers = {};
             options.headers["content-type"] = options.headers["content-type"] ? options.headers["content-type"] : "application/json";
             options.headers["authorization"] = "Bearer " + this.token;
             options.rejectUnauthorized = this.rejectUnauthroized;
-            let _fetch = yield (0, node_fetch_1.default)(url, options);
+            let _fetch = yield fetch(url, options);
             let data = yield _fetch.json();
             return data;
         });
@@ -133,7 +131,6 @@ class FileMakerConnection {
         return { name, parameter };
     }
 }
-exports.default = FileMakerConnection;
 class layout {
     constructor(conn, name) {
         this.conn = conn;
@@ -145,26 +142,17 @@ class layout {
     getScript(script) {
         return new script(this, script);
     }
-    createRecord(body = {}) {
-        // console.log(fieldData)
-        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
-            this.conn.apiRequest(`${this.endpoint}/records`, {
-                port: 443,
-                method: "POST",
-                body: JSON.stringify(body)
-            })
-                .then(res => {
-                if (res.messages[0].code === "0") {
-                    resolve(new record(this, res.response.recordId, res.response.modId));
+    createRecord() {
+        return new Promise((resolve, reject) => {
+            // Get the layout's metadata
+            this.conn.apiRequest(`${this.endpoint}`).then(res => {
+                let fields = {};
+                for (let _field of res.response.fieldMetaData) {
+                    fields[_field.name] = "";
                 }
-                else {
-                    reject(new FMError(res.messages[0].code, res.status, res));
-                }
-            })
-                .catch(e => {
-                reject(e);
+                resolve(new record(this, -1, 0, fields));
             });
-        }));
+        });
     }
     getRecord(recordId) {
         return new record(this, recordId);
@@ -195,8 +183,17 @@ class layout {
             });
         }));
     }
+    getLayoutMeta() {
+        return new Promise((resolve, reject) => {
+            this.conn.apiRequest(this.endpoint).then(res => {
+                this.metadata = res.response;
+                resolve(this);
+            })
+                .catch(e => reject(e));
+        });
+    }
 }
-class record extends events_1.EventEmitter {
+class record extends EventEmitter {
     constructor(layout, recordId, modId = recordId, fieldData = {}, portalData = null) {
         super();
         this.layout = layout;
@@ -235,6 +232,8 @@ class record extends events_1.EventEmitter {
     }
     get() {
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+            if (!this.layout.metadata)
+                yield this.layout.getLayoutMeta();
             this.layout.conn.apiRequest(this.endpoint, {
                 port: 443,
                 method: "GET"
@@ -258,11 +257,35 @@ class record extends events_1.EventEmitter {
             });
         }));
     }
-    save(extraBody = {}) {
+    commit(extraBody = {}) {
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
             let data = this.toObject();
             delete data.recordId;
             delete data.modId;
+            if (this.recordId === -1) {
+                // This is a new record
+                this.layout.conn.apiRequest(`${this.layout.endpoint}/records`, {
+                    port: 443,
+                    method: "POST",
+                    body: JSON.stringify({
+                        fieldData: data.fieldData
+                    })
+                })
+                    .then(res => {
+                    if (res.messages[0].code === "0") {
+                        this.recordId = res.response.recordId;
+                        this.modId = res.response.modId;
+                        resolve(this);
+                    }
+                    else {
+                        reject(new FMError(res.messages[0].code, res.status, res));
+                    }
+                })
+                    .catch(e => {
+                    reject(e);
+                });
+                return;
+            }
             for (let item of Object.keys(extraBody))
                 data[item] = extraBody[item];
             this.layout.conn.apiRequest(this.endpoint, {
@@ -322,14 +345,26 @@ class field {
         this.edited = false;
     }
     set(content) {
+        if (this.dataType === "container")
+            throw "Cannot set container value using set(). Use upload() instead.";
         this.value = content;
         this.edited = true;
     }
-    containerUpload(buffer, filename, mime) {
+    get dataType() {
+        if (this.record instanceof portalItem) {
+            return this.record.layout.metadata.portalMetaData.find(name => name === this.id).result;
+        }
+        else {
+            return this.record.layout.metadata.fieldMetaData.find(name => name === this.id).result;
+        }
+    }
+    upload(buffer, filename, mime) {
+        if (this.dataType !== "container")
+            throw "Cannot upload a file to the field; " + this.id + " (not a container field)";
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
-            let form = new node_fetch_1.FormData();
-            form.append("upload", new node_fetch_1.File([buffer], filename, { type: mime }));
-            let _fetch = yield (0, node_fetch_1.default)(`${this.record.endpoint}/containers/${this.id}/1`, {
+            let form = new FormData();
+            form.append("upload", new File([buffer], filename, { type: mime }));
+            let _fetch = yield fetch(`${this.record.endpoint}/containers/${this.id}/1`, {
                 method: "POST",
                 headers: { "Authorization": "Bearer " + this.record.layout.conn.token },
                 body: form
@@ -345,6 +380,13 @@ class field {
             })
                 .catch(e => { reject(e); });
         }));
+    }
+    download() {
+        return new Promise((resolve, reject) => {
+            https.get(this.value.toString(), (res) => {
+                resolve(res);
+            });
+        });
     }
 }
 class portal {
@@ -366,8 +408,8 @@ class portalItem extends record {
     attachPortal(portal) {
         this.portal = portal;
     }
-    save(extraBody = {}) {
-        return this.portal.record.save(extraBody);
+    commit(extraBody = {}) {
+        return this.portal.record.commit(extraBody);
     }
     toObject(fieldFilter) {
         super.toObject();
@@ -439,7 +481,7 @@ class find {
         });
     }
 }
-class FMError extends Error {
+export class FMError extends Error {
     constructor(code, httpStatus, res) {
         super(code);
         this.httpStatus = httpStatus;
@@ -448,7 +490,6 @@ class FMError extends Error {
         this.message = errs.find(err => err.e === this.code) || "Unknown error";
     }
 }
-exports.FMError = FMError;
 //
 // module.exports = {
 //     default: {FileMakerConnection}
