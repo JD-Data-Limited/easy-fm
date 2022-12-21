@@ -18,7 +18,8 @@ import fs from "fs"
 import path from "path"
 // @ts-ignore
 import { fileURLToPath } from "url"
-import btoa = require("btoa");
+import * as https from "https";
+// import * as btoa from "btoa";
 
 // @ts-ignore
 const errs = JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'fmErrors.json')).toString())
@@ -41,7 +42,7 @@ export default class FileMakerConnection {
     private username: any;
     private password: any;
     private rejectUnauthroized: boolean;
-    
+
     constructor() {
     }
 
@@ -95,7 +96,7 @@ export default class FileMakerConnection {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": "Basic " + btoa(this.username + ":" + this.password)
+                    "Authorization": "Basic " + Buffer.from(this.username + ":" + this.password).toString("base64")
                 }
             }).then(res => {
                 console.log(res)
@@ -117,11 +118,11 @@ export default class FileMakerConnection {
         })
     }
 
-    getLayout(name) {
+    getLayout(name): layout {
         return new layout(this, name)
     }
 
-    async apiRequest(url, options): Promise<any> {
+    async apiRequest(url: string | Request, options: any = {}): Promise<any> {
         if (!options.headers) options.headers = {}
         options.headers["content-type"] = options.headers["content-type"] ? options.headers["content-type"] : "application/json"
         options.headers["authorization"] = "Bearer " + this.token
@@ -160,6 +161,7 @@ export default class FileMakerConnection {
 class layout {
     readonly conn: FileMakerConnection;
     protected name: string;
+    metadata: any;
     constructor(conn: FileMakerConnection, name: string) {
         this.conn = conn
         this.name = name
@@ -173,26 +175,16 @@ class layout {
         return new script(this, script)
     }
 
-    createRecord(body = {}): Promise<record | Error> {
-        // console.log(fieldData)
-        return new Promise(async (resolve, reject) => {
-            this.conn.apiRequest(`${this.endpoint}/records`, {
-                port: 443,
-                method: "POST",
-                body: JSON.stringify(body)
+    createRecord(): Promise<record | Error | void> {
+        return new Promise((resolve, reject) => {
+            // Get the layout's metadata
+            this.conn.apiRequest(`${this.endpoint}`).then(res => {
+                let fields = {}
+                for (let _field of res.response.fieldMetaData) {
+                    fields[_field.name] = ""
+                }
+                resolve(new record(this, -1, 0, fields))
             })
-                .then(res => {
-                    if (res.messages[0].code === "0") {
-                        resolve(
-                            new record(this, res.response.recordId, res.response.modId)
-                        )
-                    } else {
-                        reject(new FMError(res.messages[0].code, res.status, res))
-                    }
-                })
-                .catch(e => {
-                    reject(e)
-                })
         })
     }
 
@@ -225,11 +217,21 @@ class layout {
                 })
         })
     }
+
+    public getLayoutMeta(): Promise<layout | FMError> {
+        return new Promise((resolve, reject) => {
+            this.conn.apiRequest(this.endpoint).then(res => {
+                this.metadata = res.response
+                resolve(this)
+            })
+                .catch(e => reject(e))
+        })
+    }
 }
 
 class record extends EventEmitter {
     readonly layout: layout;
-    readonly recordId: number;
+    public recordId: number;
     modId: number;
     fields: field[];
     readonly portals: portal[];
@@ -277,6 +279,8 @@ class record extends EventEmitter {
 
     get() {
         return new Promise(async (resolve, reject) => {
+            if (!this.layout.metadata) await this.layout.getLayoutMeta()
+
             this.layout.conn.apiRequest(this.endpoint, {
                 port: 443,
                 method: "GET"
@@ -299,11 +303,36 @@ class record extends EventEmitter {
         })
     }
 
-    save(extraBody = {}) {
+    commit(extraBody = {}): Promise<record | FMError> {
         return new Promise(async (resolve, reject) => {
             let data = this.toObject()
             delete data.recordId
             delete data.modId
+
+            if (this.recordId === -1) {
+                // This is a new record
+                this.layout.conn.apiRequest(`${this.layout.endpoint}/records`, {
+                    port: 443,
+                    method: "POST",
+                    body: JSON.stringify({
+                        fieldData: data.fieldData
+                    })
+                })
+                    .then(res => {
+                        if (res.messages[0].code === "0") {
+                            this.recordId = res.response.recordId
+                            this.modId = res.response.modId
+                            resolve(this)
+                        } else {
+                            reject(new FMError(res.messages[0].code, res.status, res))
+                        }
+                    })
+                    .catch(e => {
+                        reject(e)
+                    })
+
+                return
+            }
 
             for (let item of Object.keys(extraBody)) data[item] = extraBody[item]
             this.layout.conn.apiRequest(this.endpoint, {
@@ -376,11 +405,21 @@ class field {
     }
 
     set(content) {
+        if (this.dataType === "container") throw "Cannot set container value using set(). Use upload() instead."
         this.value = content
         this.edited = true
     }
 
-    containerUpload(buffer, filename, mime): Promise<void | FMError> {
+    get dataType() {
+        if (this.record instanceof portalItem) {
+            return this.record.layout.metadata.portalMetaData.find(name => name === this.id).result
+        } else {
+            return this.record.layout.metadata.fieldMetaData.find(name => name === this.id).result
+        }
+    }
+
+    upload(buffer: Buffer, filename: string, mime: string): Promise<void | FMError> {
+        if (this.dataType !== "container") throw "Cannot upload a file to the field; " + this.id + " (not a container field)"
         return new Promise(async (resolve, reject) => {
             let form = new FormData()
             form.append("upload", new File([buffer], filename, {type: mime}))
@@ -399,6 +438,13 @@ class field {
                     }
                 })
                 .catch(e => {reject(e)})
+        })
+    }
+    download() {
+        return new Promise((resolve, reject) => {
+            https.get(this.value.toString(), (res) => {
+                resolve(res)
+            })
         })
     }
 }
@@ -430,8 +476,8 @@ class portalItem extends record {
         this.portal = portal
     }
 
-    save(extraBody = {}) {
-        return this.portal.record.save(extraBody)
+    commit(extraBody = {}) {
+        return this.portal.record.commit(extraBody)
     }
 
     toObject(fieldFilter): any {

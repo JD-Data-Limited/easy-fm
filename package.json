@@ -1,6 +1,6 @@
 {
-  "name": "easy-fm",
-  "version": "1.0.0",
+  "name": "@jd-data-limited/easy-fm",
+  "version": "0.0.2",
   "dependencies": {
     "@types/btoa": "^1.2.3",
     "@types/events": "^3.0.0",
@@ -9,5 +9,26 @@
   },
   "type": "module",
   "main": "index.js",
-  "module": "es2022"
+  "module": "es2022",
+  "homepage": "https://github.com/JD-Data-Limited/easy-fm",
+  "url": "https://github.com/JD-Data-Limited/easy-fm",
+  "license": "SEE LICENSE IN LICENSE",
+  "description": "easy-fm is a Node.js module that allows you to interact with\r a [FileMaker database stored](https://www.claris.com/filemaker/) on\r a [FileMaker server](https://www.claris.com/filemaker/server/). This module interacts with your server using the\r [FileMaker Data API](https://help.claris.com/en/data-api-guide/content/index.html).",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JD-Data-Limited/easy-fm.git"
+  },
+  "keywords": [
+    "FileMaker",
+    "Data API",
+    "REST"
+  ],
+  "author": "JD-Data Limited",
+  "bugs": {
+    "url": "https://github.com/JD-Data-Limited/easy-fm/issues"
+  }
 }
