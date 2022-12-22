@@ -417,9 +417,9 @@ class field {
     get dataType() {
         if (!this.record.layout.metadata) return "unknown"
         if (this.record instanceof portalItem) {
-            return this.record.layout.metadata.portalMetaData.find(name => name === this.id).result
+            return this.record.layout.metadata.portalMetaData.find(i => i.name === this.id).result || "unknown"
         } else {
-            return this.record.layout.metadata.fieldMetaData.find(name => name === this.id).result
+            return this.record.layout.metadata.fieldMetaData.find(i => i.name === this.id).result || "unknown"
         }
     }
 
