@@ -2,7 +2,7 @@
  * Copyright (c) 2022. See LICENSE file for more information
  */
 
-// const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));_
+// const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 import fetch, {
     Blob,
     blobFrom,
