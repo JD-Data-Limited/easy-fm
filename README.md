@@ -1,7 +1,7 @@
 # easy-fm
 
 easy-fm is a Node.js module that allows you to interact with
-a [FileMaker database stored](https://www.claris.com/filemaker/) on
+a [FileMaker database](https://www.claris.com/filemaker/) stored on
 a [FileMaker server](https://www.claris.com/filemaker/server/). This module interacts with your server using the
 [FileMaker Data API](https://help.claris.com/en/data-api-guide/content/index.html).
 
@@ -169,7 +169,7 @@ find.addRequests( // Specify the find criteria
     {"CreatedBy": "BBBB"}
 )
 
-find.addSort("CratedBy", "ascend") // Sort the results in ascending order
+find.addSort("CreatedBy", "ascend") // Sort the results in ascending order
 let records = await find.find() // Perform the find
 console.log(records)
 ```
