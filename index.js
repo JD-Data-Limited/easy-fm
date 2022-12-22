@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2022. See LICENSE file for more information
+ */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -462,10 +465,12 @@ class find {
                 port: 443,
                 method: "POST",
                 body: JSON.stringify(this.toObject())
-            }).then(res => {
+            }).then((res) => __awaiter(this, void 0, void 0, function* () {
                 // // console.log(res)
                 if (res.messages[0].code === "0") {
                     // console.log("RESOLVING")
+                    if (!this.layout.metadata)
+                        yield this.layout.getLayoutMeta();
                     let data = res.response.data.map(item => {
                         return new record(this.layout, item.recordId, item.modId, item.fieldData, item.portalData);
                     });
@@ -474,7 +479,7 @@ class find {
                 else {
                     reject(new FMError(res.messages[0].code, res.status, res));
                 }
-            })
+            }))
                 .catch(e => {
                 reject(e);
             });

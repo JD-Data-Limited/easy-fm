@@ -543,10 +543,11 @@ class find {
                 port: 443,
                 method: "POST",
                 body: JSON.stringify(this.toObject())
-            }).then(res => {
+            }).then(async res => {
                 // // console.log(res)
                 if (res.messages[0].code === "0") {
                     // console.log("RESOLVING")
+                    if (!this.layout.metadata) await this.layout.getLayoutMeta()
                     let data = res.response.data.map(item => {
                         return new record(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
                     })
