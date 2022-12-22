@@ -354,6 +354,8 @@ class field {
         this.edited = true;
     }
     get dataType() {
+        if (!this.record.layout.metadata)
+            return "unknown";
         if (this.record instanceof portalItem) {
             return this.record.layout.metadata.portalMetaData.find(name => name === this.id).result;
         }
