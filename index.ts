@@ -1,4 +1,8 @@
-// const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+/*
+ * Copyright (c) 2022. See LICENSE file for more information
+ */
+
+// const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));_
 import fetch, {
     Blob,
     blobFrom,
