@@ -24,8 +24,7 @@ import * as https from "https";
 // @ts-ignore
 const errs = JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'fmErrors.json')).toString());
 export default class FileMakerConnection {
-    constructor() {
-    }
+    constructor() { }
     get endpoint() {
         return `https://${this.hostname}/fmi/data/v2/databases/${encodeURI(this.database)}`;
     }
@@ -148,11 +147,12 @@ class layout {
     createRecord() {
         return new Promise((resolve, reject) => {
             // Get the layout's metadata
-            this.conn.apiRequest(`${this.endpoint}`).then(res => {
+            this.getLayoutMeta().then(layout => {
                 let fields = {};
-                for (let _field of res.response.fieldMetaData) {
+                for (let _field of this.metadata.fieldMetaData) {
                     fields[_field.name] = "";
                 }
+                console.log(fields);
                 resolve(new record(this, -1, 0, fields));
             });
         });
@@ -234,6 +234,9 @@ class record extends EventEmitter {
         });
     }
     get() {
+        if (this.recordId === -1) {
+            throw "Cannot get this record until a commit() is done.";
+        }
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
             if (!this.layout.metadata)
                 yield this.layout.getLayoutMeta();
@@ -260,24 +263,26 @@ class record extends EventEmitter {
             });
         }));
     }
-    commit(extraBody = {}) {
+    commit(extraBody = {
+        fieldData: undefined
+    }) {
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
             let data = this.toObject();
             delete data.recordId;
             delete data.modId;
             if (this.recordId === -1) {
                 // This is a new record
+                extraBody.fieldData = data.fieldData;
                 this.layout.conn.apiRequest(`${this.layout.endpoint}/records`, {
                     port: 443,
                     method: "POST",
-                    body: JSON.stringify({
-                        fieldData: data.fieldData
-                    })
+                    body: JSON.stringify(extraBody)
                 })
                     .then(res => {
                     if (res.messages[0].code === "0") {
-                        this.recordId = res.response.recordId;
-                        this.modId = res.response.modId;
+                        this.recordId = parseInt(res.response.recordId);
+                        console.log(this.recordId);
+                        this.modId = parseInt(res.response.modId);
                         resolve(this);
                     }
                     else {
@@ -413,7 +418,7 @@ class portalItem extends record {
     attachPortal(portal) {
         this.portal = portal;
     }
-    commit(extraBody = {}) {
+    commit(extraBody = { fieldData: undefined }) {
         return this.portal.record.commit(extraBody);
     }
     toObject(fieldFilter) {
@@ -490,11 +495,14 @@ class find {
 }
 export class FMError extends Error {
     constructor(code, httpStatus, res) {
-        super(code);
+        if (typeof code === "string")
+            code = parseInt(code);
+        super(errs.find(err => err.e === code).d || "Unknown error");
         this.httpStatus = httpStatus;
         this.res = res;
+        this.messages = res.messages;
         this.code = typeof code === "string" ? parseInt(code) : code;
-        this.message = errs.find(err => err.e === this.code) || "Unknown error";
+        Error.captureStackTrace(this, FMError);
     }
 }
 //

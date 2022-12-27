@@ -12,6 +12,8 @@ a [FileMaker server](https://www.claris.com/filemaker/server/). This module inte
 2. Create a FileMaker database account for easy-fm to use. This account must have the 'Access via FileMaker Data API (
    fmrest)' extended privilege
 
+---
+
 ## Table of contents
 
 1. [Connecting to a database](#connecting-to-a-database)
@@ -19,6 +21,8 @@ a [FileMaker server](https://www.claris.com/filemaker/server/). This module inte
 3. [Performing find requests](#perform-find-requests)
 4. [Scripts](#scripts)
 5. [Index](#index)
+
+---
 
 ## Connecting to a database
 
@@ -33,6 +37,8 @@ connection.login(hostname, database, username, password).then(async token => { /
 
 })
 ```
+
+---
 
 ## Working with records
 
@@ -152,6 +158,8 @@ for (let _record of portal.records) {
 **WARNING**: Commiting a related portal record will also commit any changes to the parent record as well as any other
 portal records.
 
+---
+
 ## Perform find requests
 
 Performing find requests is one of the most common database operations
@@ -174,6 +182,8 @@ let records = await find.find() // Perform the find
 console.log(records)
 ```
 
+---
+
 ### Scripts
 
 Running scripts is another operation you may need to do regularly. This one is fairly straight-forward in how it works
@@ -184,6 +194,15 @@ let script = connection.script("MyFileMakerScript", "This is a parameter")
 let result = await layout.runScript(script)
 console.log(result)
 ```
+
+---
+
+## Classes and methods
+
+
+
+
+---
 
 ## Index
 

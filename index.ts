@@ -47,8 +47,7 @@ export default class FileMakerConnection {
     private password: any;
     private rejectUnauthroized: boolean;
 
-    constructor() {
-    }
+    constructor() {}
 
     get endpoint(): string {
         return `https://${this.hostname}/fmi/data/v2/databases/${encodeURI(this.database)}`
@@ -182,11 +181,12 @@ class layout {
     createRecord(): Promise<record | Error | void> {
         return new Promise((resolve, reject) => {
             // Get the layout's metadata
-            this.conn.apiRequest(`${this.endpoint}`).then(res => {
+            this.getLayoutMeta().then(layout => {
                 let fields = {}
-                for (let _field of res.response.fieldMetaData) {
+                for (let _field of this.metadata.fieldMetaData) {
                     fields[_field.name] = ""
                 }
+                console.log(fields)
                 resolve(new record(this, -1, 0, fields))
             })
         })
@@ -282,6 +282,7 @@ class record extends EventEmitter {
     }
 
     get() {
+        if (this.recordId === -1) {throw "Cannot get this record until a commit() is done."}
         return new Promise(async (resolve, reject) => {
             if (!this.layout.metadata) await this.layout.getLayoutMeta()
 
@@ -307,7 +308,9 @@ class record extends EventEmitter {
         })
     }
 
-    commit(extraBody = {}): Promise<record | FMError> {
+    commit(extraBody = {
+        fieldData: undefined
+    }): Promise<record | FMError> {
         return new Promise(async (resolve, reject) => {
             let data = this.toObject()
             delete data.recordId
@@ -315,17 +318,18 @@ class record extends EventEmitter {
 
             if (this.recordId === -1) {
                 // This is a new record
+                extraBody.fieldData = data.fieldData
+
                 this.layout.conn.apiRequest(`${this.layout.endpoint}/records`, {
                     port: 443,
                     method: "POST",
-                    body: JSON.stringify({
-                        fieldData: data.fieldData
-                    })
+                    body: JSON.stringify(extraBody)
                 })
                     .then(res => {
                         if (res.messages[0].code === "0") {
-                            this.recordId = res.response.recordId
-                            this.modId = res.response.modId
+                            this.recordId = parseInt(res.response.recordId)
+                            console.log(this.recordId)
+                            this.modId = parseInt(res.response.modId)
                             resolve(this)
                         } else {
                             reject(new FMError(res.messages[0].code, res.status, res))
@@ -481,7 +485,7 @@ class portalItem extends record {
         this.portal = portal
     }
 
-    commit(extraBody = {}) {
+    commit(extraBody = {fieldData: undefined}) {
         return this.portal.record.commit(extraBody)
     }
 
@@ -569,13 +573,16 @@ export class FMError extends Error {
     readonly res: any
     readonly code: number
     readonly message: string
+    readonly messages: string
 
     constructor(code, httpStatus, res) {
-        super(code);
+        if (typeof code === "string") code = parseInt(code)
+        super(errs.find(err => err.e === code).d || "Unknown error");
         this.httpStatus = httpStatus
         this.res = res
+        this.messages = res.messages
         this.code = typeof code === "string" ? parseInt(code) : code
-        this.message = errs.find(err => err.e === this.code) || "Unknown error"
+        Error.captureStackTrace(this, FMError)
     }
 }
 
