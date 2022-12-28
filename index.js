@@ -20,79 +20,17 @@ import path from "path";
 // @ts-ignore
 import { fileURLToPath } from "url";
 import * as https from "https";
-// import * as btoa from "btoa";
 // @ts-ignore
 const errs = JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'fmErrors.json')).toString());
-export default class FileMakerConnection {
-    constructor() { }
-    get endpoint() {
-        return `https://${this.hostname}/fmi/data/v2/databases/${encodeURI(this.database)}`;
+class database {
+    constructor(props, host = null) {
+        this.props = props;
+        this.name = this.props.database;
+        if (host)
+            this.host = host;
     }
-    login(hostname, database, username, password, rejectUnauthorized = true) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (this.token)
-                throw new Error("Already logged in. Run logout() first");
-            this.username = username;
-            this.password = password;
-            this.hostname = hostname;
-            this.database = database;
-            this.rejectUnauthroized = rejectUnauthorized;
-            return yield this.createSession();
-        });
-    }
-    logout() {
-        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
-            if (!this.token)
-                reject(new Error("Not logged in"));
-            let _fetch = yield fetch(`${this.endpoint}/sessions/${this.token}`, {
-                method: "DELETE",
-                headers: {
-                    "content-type": "application/json"
-                }
-            });
-            let data = yield _fetch.json();
-            // console.log(data)
-            this.token = null;
-            this.database = null;
-            this.hostname = null;
-            resolve();
-        }));
-    }
-    importSession(hostname, database, token, rejectUnauthorized = true) {
-        this.token = token;
-        this.database = database;
-        this.hostname = hostname;
-        this.rejectUnauthroized = rejectUnauthorized;
-    }
-    createSession() {
-        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
-            fetch(`${this.endpoint}/sessions`, {
-                hostname: this.hostname,
-                port: 443,
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": "Basic " + Buffer.from(this.username + ":" + this.password).toString("base64")
-                }
-            }).then(res => {
-                console.log(res);
-                return res.json();
-            })
-                .then(res => {
-                let _res = res;
-                if (_res.messages[0].code === "0") {
-                    this.token = _res.response.token;
-                    console.log(_res);
-                    resolve(this.token);
-                }
-                else {
-                    reject(new FMError(_res.messages[0].code, _res.status, res));
-                }
-            })
-                .catch(e => {
-                reject(e);
-            });
-        }));
+    get token() {
+        return this.host.token;
     }
     getLayout(name) {
         return new layout(this, name);
@@ -102,8 +40,8 @@ export default class FileMakerConnection {
             if (!options.headers)
                 options.headers = {};
             options.headers["content-type"] = options.headers["content-type"] ? options.headers["content-type"] : "application/json";
-            options.headers["authorization"] = "Bearer " + this.token;
-            options.rejectUnauthorized = this.rejectUnauthroized;
+            options.headers["authorization"] = "Bearer " + this.host.token;
+            options.rejectUnauthorized = this.host.rejectUnauthroized;
             let _fetch = yield fetch(url, options);
             let data = yield _fetch.json();
             return data;
@@ -132,14 +70,146 @@ export default class FileMakerConnection {
     script(name, parameter) {
         return { name, parameter };
     }
+    get endpoint() {
+        return `https://${this.hostname || this.host.hostname}/fmi/data/v2/databases/${encodeURI(this.name)}`;
+    }
+    get externalLoginInfo() {
+        // Returns an object that can be used when using this database object as an external source
+        let out = {
+            database: this.name,
+            username: undefined,
+            password: undefined,
+            oauthRequestId: undefined,
+            oauthIdentifier: undefined
+        };
+        switch (this.props.method) {
+            case "filemaker":
+                out.username = this.props.username;
+                out.password = this.props.password;
+            case "token":
+                throw "Token logins cannot be used for connecting to external sources. Please either use no login method, or open a second connection.";
+            case "oauth":
+                out.oauthRequestId = this.props.oauth.requestId;
+                out.oauthIdentifier = this.props.oauth.requestIdentifier;
+            case "claris":
+                throw "Claris logins cannot be used for connecting to external sources. Please either use no login method, or open a second connection.";
+        }
+        return out;
+    }
+}
+export default class FileMakerConnection extends database {
+    constructor(conn, externalDataSources = [], rejectUnauthorized = true) {
+        super(conn.database);
+        this.host = this;
+        this.hostname = conn.hostname;
+        this.externalSources = externalDataSources.map(i => { let e = new database(i, this); e.external = true; return e; });
+        this.rejectUnauthroized = rejectUnauthorized;
+    }
+    logout() {
+        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+            if (!this.token)
+                reject(new Error("Not logged in"));
+            let _fetch = yield fetch(`${this.endpoint}/sessions/${this.token}`, {
+                method: "DELETE",
+                headers: {
+                    "content-type": "application/json"
+                }
+            });
+            let data = yield _fetch.json();
+            // console.log(data)
+            this._token = null;
+            this.name = null;
+            this.hostname = null;
+            resolve();
+        }));
+    }
+    login() {
+        return new Promise((resolve, reject) => {
+            if (this.token)
+                throw new Error("Already logged in. Run logout() first");
+            console.log(this.props.method);
+            if (this.props.method === "filemaker") {
+                console.log("FILEMAKER");
+                this.username = this.props.username;
+                this.name = this.props.database;
+                fetch(`${this.endpoint}/sessions`, {
+                    hostname: this.hostname,
+                    port: 443,
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Basic " + Buffer.from(this.username + ":" + this.props.password).toString("base64")
+                    }
+                }).then((res) => __awaiter(this, void 0, void 0, function* () {
+                    console.log(res.status);
+                    if (res.status === 200) {
+                        this._token = res.headers.get('x-fm-data-access-token');
+                        resolve(this._token);
+                    }
+                    else {
+                        let _res = (yield res.json());
+                        reject(new FMError(_res.messages[0].code, _res.status, res));
+                    }
+                }))
+                    .catch(e => {
+                    reject(e);
+                });
+            }
+            else if (this.props.method === "token") {
+                console.log("TOKEN");
+                console.trace();
+                this._token = this.props.token;
+                this.name = this.props.database;
+                resolve(this.token);
+            }
+            else if (this.props.method === "oauth") {
+                this.name = this.props.database;
+                fetch(`${this.endpoint}/sessions`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-FM-Data-OAuth-RequestId": this.props.oauth.requestId,
+                        "X-FM-Data-OAuth-Identifier": this.props.oauth.requestIdentifier
+                    },
+                    body: "{}"
+                })
+                    .then(res => res.json())
+                    .then(res => {
+                    let _res = res;
+                    this._token = _res.headers["x-fm-data-access-token"];
+                    resolve(this.token);
+                });
+            }
+            else if (this.props.method === "claris") {
+                this.name = this.props.database;
+                fetch(`${this.endpoint}/sessions`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": this.props.claris.fmid,
+                    },
+                    body: "{}"
+                })
+                    .then(res => res.json())
+                    .then(res => {
+                    let _res = res;
+                    this._token = _res.headers["x-fm-data-access-token"];
+                    resolve(this.token);
+                });
+            }
+        });
+    }
+    get token() {
+        return this._token;
+    }
 }
 class layout {
-    constructor(conn, name) {
-        this.conn = conn;
+    constructor(database, name) {
+        this.database = database;
         this.name = name;
     }
     get endpoint() {
-        return `${this.conn.endpoint}/layouts/${this.name}`;
+        return `${this.database.endpoint}/layouts/${this.name}`;
     }
     getScript(script) {
         return new script(this, script);
@@ -168,7 +238,7 @@ class layout {
             let url = `${this.endpoint}/script/${encodeURI(script.name)}`;
             if (script.parameter)
                 url += "?" + encodeURI(script.parameter);
-            this.conn.apiRequest(url, {
+            this.database.apiRequest(url, {
                 port: 443,
                 method: "GET"
             })
@@ -188,7 +258,7 @@ class layout {
     }
     getLayoutMeta() {
         return new Promise((resolve, reject) => {
-            this.conn.apiRequest(this.endpoint).then(res => {
+            this.database.apiRequest(this.endpoint).then(res => {
                 this.metadata = res.response;
                 resolve(this);
             })
@@ -240,7 +310,7 @@ class record extends EventEmitter {
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
             if (!this.layout.metadata)
                 yield this.layout.getLayoutMeta();
-            this.layout.conn.apiRequest(this.endpoint, {
+            this.layout.database.apiRequest(this.endpoint, {
                 port: 443,
                 method: "GET"
             })
@@ -273,7 +343,7 @@ class record extends EventEmitter {
             if (this.recordId === -1) {
                 // This is a new record
                 extraBody.fieldData = data.fieldData;
-                this.layout.conn.apiRequest(`${this.layout.endpoint}/records`, {
+                this.layout.database.apiRequest(`${this.layout.endpoint}/records`, {
                     port: 443,
                     method: "POST",
                     body: JSON.stringify(extraBody)
@@ -296,7 +366,7 @@ class record extends EventEmitter {
             }
             for (let item of Object.keys(extraBody))
                 data[item] = extraBody[item];
-            this.layout.conn.apiRequest(this.endpoint, {
+            this.layout.database.apiRequest(this.endpoint, {
                 port: 443,
                 method: "PATCH",
                 body: JSON.stringify(data)
@@ -376,7 +446,7 @@ class field {
             form.append("upload", new File([buffer], filename, { type: mime }));
             let _fetch = yield fetch(`${this.record.endpoint}/containers/${this.id}/1`, {
                 method: "POST",
-                headers: { "Authorization": "Bearer " + this.record.layout.conn.token },
+                headers: { "Authorization": "Bearer " + this.record.layout.database.token },
                 body: form
             }).then(res => res.json())
                 .then(data => {
@@ -468,7 +538,7 @@ class find {
     find() {
         return new Promise((resolve, reject) => {
             // console.log(this.#toObject())
-            this.layout.conn.apiRequest(`${this.layout.endpoint}/_find`, {
+            this.layout.database.apiRequest(`${this.layout.endpoint}/_find`, {
                 port: 443,
                 method: "POST",
                 body: JSON.stringify(this.toObject())
