@@ -206,9 +206,7 @@ export default class FileMakerConnection extends database{
         return new Promise<string>((resolve, reject) => {
             if (this.token) throw new Error("Already logged in. Run logout() first")
 
-            console.log(this.props.method)
             if (this.props.method === "filemaker") {
-                console.log("FILEMAKER")
                 this.username = (<loginOptionsFileMaker>this.props).username
                 this.name = this.props.database
 
@@ -221,7 +219,6 @@ export default class FileMakerConnection extends database{
                         "Authorization": "Basic " + Buffer.from(this.username + ":" + (<loginOptionsFileMaker>this.props).password).toString("base64")
                     }
                 }).then(async res => {
-                    console.log(res.status)
                     if (res.status === 200) {
                         this._token = res.headers.get('x-fm-data-access-token')
                         resolve(this._token)
@@ -235,7 +232,6 @@ export default class FileMakerConnection extends database{
                     })
             }
             else if (this.props.method === "token") {
-                console.log("TOKEN")
                 this._token = (<loginOptionsToken>this.props).token
                 this.name = this.props.database
                 resolve(this.token)
@@ -308,7 +304,6 @@ class layout {
                 for (let _field of this.metadata.fieldMetaData) {
                     fields[_field.name] = ""
                 }
-                console.log(fields)
                 resolve(new record(this, -1, 0, fields))
             })
         })
@@ -450,7 +445,6 @@ class record extends EventEmitter {
                     .then(res => {
                         if (res.messages[0].code === "0") {
                             this.recordId = parseInt(res.response.recordId)
-                            console.log(this.recordId)
                             this.modId = parseInt(res.response.modId)
                             resolve(this)
                         } else {
