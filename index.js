@@ -343,7 +343,11 @@ class record extends EventEmitter {
                     body: JSON.stringify(extraBody)
                 })
                     .then(res => {
-                    if (res.messages[0].code === "0") {
+                    if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
+                        reject(new FMError(res.response.scriptError, res.status, res));
+                    }
+                    else if (res.messages[0].code === "0") {
+                        console.log(res);
                         this.recordId = parseInt(res.response.recordId);
                         this.modId = parseInt(res.response.modId);
                         resolve(this);
@@ -365,7 +369,11 @@ class record extends EventEmitter {
                 body: JSON.stringify(data)
             })
                 .then(res => {
-                if (res.messages[0].code === "0") {
+                if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
+                    reject(new FMError(res.response.scriptError, res.status, res));
+                }
+                else if (res.messages[0].code === "0") {
+                    console.log(res);
                     this.modId = res.response.modId;
                     this.emit("saved");
                     resolve(this);
