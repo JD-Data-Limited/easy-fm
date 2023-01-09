@@ -15,14 +15,15 @@ import fetch, {
     Request,
     Response
 } from 'node-fetch';
-import { EventEmitter } from "events";
+import {EventEmitter} from "events";
 // @ts-ignore
 import fs from "fs"
 // @ts-ignore
 import path from "path"
 // @ts-ignore
-import { fileURLToPath } from "url"
+import {fileURLToPath} from "url"
 import * as https from "https";
+
 // import * as btoa from "btoa";
 
 interface connectionOptions {
@@ -64,6 +65,12 @@ interface loginOptionsClaris extends databaseOptions {
     claris: {
         fmid: string
     }
+}
+
+interface limitPortalsInterface {
+    portal: portal,
+    offset: number,
+    limit: number
 }
 
 // @ts-ignore
@@ -168,18 +175,22 @@ class database {
     }
 }
 
-export default class FileMakerConnection extends database{
+export default class FileMakerConnection extends database {
     private _token: any;
     private username: any;
     private password: any;
     public readonly rejectUnauthroized: boolean;
     externalSources: database[];
 
-    constructor(conn: hostConnectionOptions, externalDataSources:databaseOptions[] = [], rejectUnauthorized = true) {
+    constructor(conn: hostConnectionOptions, externalDataSources: databaseOptions[] = [], rejectUnauthorized = true) {
         super(conn.database);
         this.host = this
         this.hostname = conn.hostname
-        this.externalSources = externalDataSources.map(i => {let e = new database(i, this); e.external = true; return e;})
+        this.externalSources = externalDataSources.map(i => {
+            let e = new database(i, this);
+            e.external = true;
+            return e;
+        })
         this.rejectUnauthroized = rejectUnauthorized
     }
 
@@ -230,13 +241,11 @@ export default class FileMakerConnection extends database{
                     .catch(e => {
                         reject(e)
                     })
-            }
-            else if (this.props.method === "token") {
+            } else if (this.props.method === "token") {
                 this._token = (<loginOptionsToken>this.props).token
                 this.name = this.props.database
                 resolve(this.token)
-            }
-            else if (this.props.method === "oauth") {
+            } else if (this.props.method === "oauth") {
                 this.name = this.props.database
                 fetch(`${this.endpoint}/sessions`, {
                     method: "POST",
@@ -253,8 +262,7 @@ export default class FileMakerConnection extends database{
                         this._token = _res.headers["x-fm-data-access-token"]
                         resolve(this.token)
                     })
-            }
-            else if (this.props.method === "claris") {
+            } else if (this.props.method === "claris") {
                 this.name = this.props.database
                 fetch(`${this.endpoint}/sessions`, {
                     method: "POST",
@@ -283,6 +291,7 @@ class layout {
     readonly database: database;
     protected name: string;
     metadata: any;
+
     constructor(database: database, name: string) {
         this.database = database
         this.name = name
@@ -357,7 +366,7 @@ class record extends EventEmitter {
     fields: field[];
     readonly portals: portal[];
     private portalData: any[];
-    
+
     constructor(layout, recordId, modId = recordId, fieldData = {}, portalData = null) {
         super();
         this.layout = layout
@@ -399,7 +408,9 @@ class record extends EventEmitter {
     }
 
     get() {
-        if (this.recordId === -1) {throw "Cannot get this record until a commit() is done."}
+        if (this.recordId === -1) {
+            throw "Cannot get this record until a commit() is done."
+        }
         return new Promise(async (resolve, reject) => {
             if (!this.layout.metadata) await this.layout.getLayoutMeta()
 
@@ -445,8 +456,7 @@ class record extends EventEmitter {
                     .then(res => {
                         if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
                             reject(new FMError(res.response.scriptError, res.status, res))
-                        }
-                        else if (res.messages[0].code === "0") {
+                        } else if (res.messages[0].code === "0") {
                             console.log(res)
                             this.recordId = parseInt(res.response.recordId)
                             this.modId = parseInt(res.response.modId)
@@ -471,8 +481,7 @@ class record extends EventEmitter {
                 .then(res => {
                     if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
                         reject(new FMError(res.response.scriptError, res.status, res))
-                    }
-                    else if (res.messages[0].code === "0") {
+                    } else if (res.messages[0].code === "0") {
                         console.log(res)
                         this.modId = res.response.modId
                         this.emit("saved")
@@ -529,6 +538,7 @@ class field {
     id: number;
     value: string | number;
     edited: boolean;
+
     constructor(record, id, contents) {
         this.record = record
         this.id = id
@@ -570,9 +580,12 @@ class field {
                         reject(new FMError(_res.messages[0].code, _res.status, data))
                     }
                 })
-                .catch(e => {reject(e)})
+                .catch(e => {
+                    reject(e)
+                })
         })
     }
+
     download() {
         return new Promise((resolve, reject) => {
             https.get(this.value.toString(), (res) => {
@@ -624,21 +637,102 @@ class portalItem extends record {
     }
 }
 
-class find {
+class recordGetOperation {
     protected layout: layout
-    protected queries: object[]
+    protected limit: number = 100
     protected scripts: object
     protected sort: object[]
+    protected limitPortals: limitPortalsInterface[] = []
+    protected offset: number = 0
 
     constructor(layout) {
         this.layout = layout
-        this.queries = []
         this.scripts = {
             "script": null, // Runs after everything
             "script.prerequeset": null, // Runs before the request
             "script.presort": null // Runs before the sort
         }
         this.sort = []
+    }
+
+    /*
+    addToPortalLimit() will adjust the results of the get request so that if a layout has multiple portals in it,
+    only data from the specified ones will be read. This may help reduce load on your FileMaker API
+    */
+    addToPortalLimit(portal: portal, offset = 0, limit = 100) {
+        if (offset < 0) throw "Portal offset cannot be less than 0"
+        this.limitPortals.push({portal, offset, limit})
+    }
+
+    setLimit(limit: number) {
+        if (limit < 1) throw "Record limit too low"
+        this.limit = limit
+    }
+
+    addSort(fieldName, sortOrder) {
+        this.sort.push({fieldName, sortOrder})
+        return this
+    }
+
+    setOffset(offset: number) {
+        if (offset < 0) throw "Record offset too low"
+        this.limit = offset
+    }
+}
+
+class recordGetRange extends recordGetOperation {
+    constructor(layout) {
+        super(layout)
+    }
+
+    private generateQueryParams() {
+        let params = []
+        if (this.limit !== 100) params.push("_limit=" + this.limit)
+        if (this.offset !== 0) params.push("_offset=" + this.offset)
+        if (this.sort.length > 0) params.push("_sort=" + encodeURI(JSON.stringify(this.sort)))
+        if (this.limitPortals.length > 0) {
+            params.push("portal=" + encodeURI(JSON.stringify(this.limitPortals.map(p => p.portal.name))))
+            for (let item of this.limitPortals) {
+                if (item.offset !== 0) params.push("_offset." + item.portal.name.replace(/[^0-9A-z]/g, "") + "=" + item.offset)
+                if (item.limit !== 100) params.push("_limit." + item.portal.name.replace(/[^0-9A-z]/g, "") + "=" + item.limit)
+            }
+        }
+
+        if (params.length === 0) return ""
+        return "?" + params.join("&")
+    }
+
+    run() {
+        return new Promise((resolve, reject) => {
+            // console.log(this.#toObject())
+            this.layout.database.apiRequest(`${this.layout.endpoint}/records${this.generateQueryParams()}`, {
+                method: "GET"
+            }).then(async res => {
+                // // console.log(res)
+                if (res.messages[0].code === "0") {
+                    // console.log("RESOLVING")
+                    if (!this.layout.metadata) await this.layout.getLayoutMeta()
+                    let data = res.response.data.map(item => {
+                        return new record(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
+                    })
+                    resolve(data)
+                } else {
+                    reject(new FMError(res.messages[0].code, res.status, res))
+                }
+            })
+                .catch(e => {
+                    reject(e)
+                })
+        })
+    }
+}
+
+class find extends recordGetOperation {
+    protected queries: object[]
+
+    constructor(layout) {
+        super(layout)
+        this.queries = []
     }
 
     private toObject() {
@@ -652,6 +746,16 @@ class find {
             }
         }
 
+        if (this.limit !== 100) out["limit"] = this.limit
+        if (this.offset !== 0) out["offset"] = this.offset
+        if (this.limitPortals.length > 0) {
+            out["portal"] = this.limitPortals.map(p => p.portal.name)
+            for (let item of this.limitPortals) {
+                out["offset." + item.portal.name.replace(/[^0-9A-z]/g, "")] = item.offset
+                out["limit." + item.portal.name.replace(/[^0-9A-z]/g, "")] = item.limit
+            }
+        }
+
         return out
     }
 
@@ -660,12 +764,11 @@ class find {
         return this
     }
 
-    addSort(fieldName, sortOrder) {
-        this.sort.push({fieldName, sortOrder})
-        return this
+    find() {
+        return this.run()
     }
 
-    find() {
+    run() {
         return new Promise((resolve, reject) => {
             // console.log(this.#toObject())
             this.layout.database.apiRequest(`${this.layout.endpoint}/_find`, {
