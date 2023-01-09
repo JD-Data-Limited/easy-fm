@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022. See LICENSE file for more information
+ * Copyright (c) 2022-2023. See LICENSE file for more information
  */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -102,7 +102,11 @@ export default class FileMakerConnection extends database {
         super(conn.database);
         this.host = this;
         this.hostname = conn.hostname;
-        this.externalSources = externalDataSources.map(i => { let e = new database(i, this); e.external = true; return e; });
+        this.externalSources = externalDataSources.map(i => {
+            let e = new database(i, this);
+            e.external = true;
+            return e;
+        });
         this.rejectUnauthroized = rejectUnauthorized;
     }
     logout() {
@@ -459,7 +463,9 @@ class field {
                     reject(new FMError(_res.messages[0].code, _res.status, data));
                 }
             })
-                .catch(e => { reject(e); });
+                .catch(e => {
+                reject(e);
+            });
         }));
     }
     download() {
@@ -503,16 +509,98 @@ class portalItem extends record {
         return res;
     }
 }
-class find {
+class recordGetOperation {
     constructor(layout) {
+        this.limit = 100;
+        this.limitPortals = [];
+        this.offset = 0;
         this.layout = layout;
-        this.queries = [];
         this.scripts = {
             "script": null,
             "script.prerequeset": null,
             "script.presort": null // Runs before the sort
         };
         this.sort = [];
+    }
+    /*
+    addToPortalLimit() will adjust the results of the get request so that if a layout has multiple portals in it,
+    only data from the specified ones will be read. This may help reduce load on your FileMaker API
+    */
+    addToPortalLimit(portal, offset = 0, limit = 100) {
+        if (offset < 0)
+            throw "Portal offset cannot be less than 0";
+        this.limitPortals.push({ portal, offset, limit });
+    }
+    setLimit(limit) {
+        if (limit < 1)
+            throw "Record limit too low";
+        this.limit = limit;
+    }
+    addSort(fieldName, sortOrder) {
+        this.sort.push({ fieldName, sortOrder });
+        return this;
+    }
+    setOffset(offset) {
+        if (offset < 0)
+            throw "Record offset too low";
+        this.limit = offset;
+    }
+}
+class recordGetRange extends recordGetOperation {
+    constructor(layout) {
+        super(layout);
+    }
+    generateQueryParams() {
+        let params = [];
+        if (this.limit !== 100)
+            params.push("_limit=" + this.limit);
+        if (this.offset !== 0)
+            params.push("_offset=" + this.offset);
+        if (this.sort.length > 0)
+            params.push("_sort=" + encodeURI(JSON.stringify(this.sort)));
+        if (this.limitPortals.length > 0) {
+            params.push("portal=" + encodeURI(JSON.stringify(this.limitPortals.map(p => p.portal.name))));
+            for (let item of this.limitPortals) {
+                if (item.offset !== 0)
+                    params.push("_offset." + item.portal.name.replace(/[^0-9A-z]/g, "") + "=" + item.offset);
+                if (item.limit !== 100)
+                    params.push("_limit." + item.portal.name.replace(/[^0-9A-z]/g, "") + "=" + item.limit);
+            }
+        }
+        if (params.length === 0)
+            return "";
+        return "?" + params.join("&");
+    }
+    run() {
+        return new Promise((resolve, reject) => {
+            // console.log(this.#toObject())
+            this.layout.database.apiRequest(`${this.layout.endpoint}/records${this.generateQueryParams()}`, {
+                method: "GET"
+            }).then((res) => __awaiter(this, void 0, void 0, function* () {
+                // // console.log(res)
+                if (res.messages[0].code === "0") {
+                    // console.log("RESOLVING")
+                    if (!this.layout.metadata)
+                        yield this.layout.getLayoutMeta();
+                    let data = res.response.data.map(item => {
+                        return new record(this.layout, item.recordId, item.modId, item.fieldData, item.portalData);
+                    });
+                    resolve(data);
+                }
+                else {
+                    reject(new FMError(res.messages[0].code, res.status, res));
+                }
+            }))
+                .catch(e => {
+                reject(e);
+            });
+        });
+    }
+}
+class find extends recordGetOperation {
+    constructor(layout) {
+        super(layout);
+        this.queries = [];
     }
     toObject() {
         let out = { query: this.queries, sort: undefined };
@@ -525,6 +613,17 @@ class find {
                     out[item + ".param"] = this.scripts[item].parameter;
             }
         }
+        if (this.limit !== 100)
+            out["limit"] = this.limit;
+        if (this.offset !== 0)
+            out["offset"] = this.offset;
+        if (this.limitPortals.length > 0) {
+            out["portal"] = this.limitPortals.map(p => p.portal.name);
+            for (let item of this.limitPortals) {
+                out["offset." + item.portal.name.replace(/[^0-9A-z]/g, "")] = item.offset;
+                out["limit." + item.portal.name.replace(/[^0-9A-z]/g, "")] = item.limit;
+            }
+        }
         return out;
     }
     addRequests(...requests) {
@@ -532,11 +631,10 @@ class find {
             this.queries.push(item);
         return this;
     }
-    addSort(fieldName, sortOrder) {
-        this.sort.push({ fieldName, sortOrder });
-        return this;
-    }
     find() {
+        return this.run();
+    }
+    run() {
         return new Promise((resolve, reject) => {
             // console.log(this.#toObject())
             this.layout.database.apiRequest(`${this.layout.endpoint}/_find`, {
