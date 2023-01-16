@@ -88,7 +88,7 @@ interface recordObject {
     fieldData: any
 }
 
-export default class FileMakerConnection {
+export default class FileMakerConnection extends EventEmitter {
     private _token: any;
     private hostname: string;
     public readonly rejectUnauthroized: boolean;
@@ -96,6 +96,7 @@ export default class FileMakerConnection {
     public name: string;
 
     constructor(conn: hostConnectionOptions, rejectUnauthorized = true) {
+        super()
         this.hostname = conn.hostname
         this.name = conn.database.database
         this.databaseConDetails = conn
@@ -253,6 +254,10 @@ export default class FileMakerConnection {
     script(name, parameter): Script {
         return ({name, parameter} as Script)
     }
+
+    _tokenExpired() {
+        this.emit("token_expired")
+    }
 }
 
 class layout {
@@ -282,7 +287,7 @@ class layout {
                     fields[_field.name] = ""
                 }
                 resolve(new record(this, -1, 0, fields))
-            })
+            }).catch(e => {reject(e)})
         })
     }
 
@@ -296,8 +301,8 @@ class layout {
 
     runScript(script): Promise<string | FMError | Error> {
         return new Promise(async (resolve, reject) => {
-            let url = `${this.endpoint}/script/${encodeURI(script.name)}`
-            if (script.parameter) url += "?" + encodeURI(script.parameter)
+            let url = `${this.endpoint}/script/${encodeURIComponent(script.name)}`
+            if (script.parameter) url += "?" + encodeURIComponent(script.parameter)
             this.database.apiRequest(url, {
                 port: 443,
                 method: "GET"
