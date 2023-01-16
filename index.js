@@ -218,7 +218,7 @@ class layout {
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
             let url = `${this.endpoint}/script/${encodeURIComponent(script.name)}`;
             if (script.parameter)
-                url += "?" + encodeURIComponent(script.parameter);
+                url += "?script.param=" + encodeURIComponent(script.parameter);
             this.database.apiRequest(url, {
                 port: 443,
                 method: "GET"
