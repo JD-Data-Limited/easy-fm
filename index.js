@@ -30,22 +30,10 @@ class database {
     getLayout(name) {
         return new layout(this, name);
     }
-    apiRequest(url, options = {}) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (!options.headers)
-                options.headers = {};
-            options.headers["content-type"] = options.headers["content-type"] ? options.headers["content-type"] : "application/json";
-            options.headers["authorization"] = "Bearer " + this.host.token;
-            options.rejectUnauthorized = this.host.rejectUnauthroized;
-            let _fetch = yield fetch(url, options);
-            let data = yield _fetch.json();
-            return data;
-        });
-    }
     setGlobals(globalFields) {
         // console.log({globalFields})
         return new Promise((resolve, reject) => {
-            this.apiRequest(`${this.endpoint}/globals`, {
+            this.host.apiRequest(`${this.endpoint}/globals`, {
                 method: "PATCH",
                 body: JSON.stringify({ globalFields })
             }).then(res => {
@@ -195,6 +183,18 @@ export default class FileMakerConnection {
     get endpoint() {
         return `https://${this.hostname}/fmi/data/v2/databases/`;
     }
+    apiRequest(url, options = {}) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!options.headers)
+                options.headers = {};
+            options.headers["content-type"] = options.headers["content-type"] ? options.headers["content-type"] : "application/json";
+            options.headers["authorization"] = "Bearer " + this._token;
+            options.rejectUnauthorized = this.rejectUnauthroized;
+            let _fetch = yield fetch(url, options);
+            let data = yield _fetch.json();
+            return data;
+        });
+    }
 }
 class layout {
     constructor(database, name) {
@@ -230,7 +230,7 @@ class layout {
             let url = `${this.endpoint}/script/${encodeURI(script.name)}`;
             if (script.parameter)
                 url += "?" + encodeURI(script.parameter);
-            this.database.apiRequest(url, {
+            this.database.host.apiRequest(url, {
                 port: 443,
                 method: "GET"
             })
@@ -250,7 +250,7 @@ class layout {
     }
     getLayoutMeta() {
         return new Promise((resolve, reject) => {
-            this.database.apiRequest(this.endpoint).then(res => {
+            this.database.host.apiRequest(this.endpoint).then(res => {
                 this.metadata = res.response;
                 resolve(this);
             })
@@ -302,7 +302,7 @@ class record extends EventEmitter {
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
             if (!this.layout.metadata)
                 yield this.layout.getLayoutMeta();
-            this.layout.database.apiRequest(this.endpoint, {
+            this.layout.database.host.apiRequest(this.endpoint, {
                 port: 443,
                 method: "GET"
             })
@@ -335,7 +335,7 @@ class record extends EventEmitter {
             if (this.recordId === -1) {
                 // This is a new record
                 extraBody.fieldData = data.fieldData;
-                this.layout.database.apiRequest(`${this.layout.endpoint}/records`, {
+                this.layout.database.host.apiRequest(`${this.layout.endpoint}/records`, {
                     port: 443,
                     method: "POST",
                     body: JSON.stringify(extraBody)
@@ -361,7 +361,7 @@ class record extends EventEmitter {
             }
             for (let item of Object.keys(extraBody))
                 data[item] = extraBody[item];
-            this.layout.database.apiRequest(this.endpoint, {
+            this.layout.database.host.apiRequest(this.endpoint, {
                 port: 443,
                 method: "PATCH",
                 body: JSON.stringify(data)
@@ -568,7 +568,7 @@ class recordGetRange extends recordGetOperation {
     run() {
         return new Promise((resolve, reject) => {
             // console.log(this.#toObject())
-            this.layout.database.apiRequest(`${this.layout.endpoint}/records${this.generateQueryParams()}`, {
+            this.layout.database.host.apiRequest(`${this.layout.endpoint}/records${this.generateQueryParams()}`, {
                 method: "GET"
             }).then((res) => __awaiter(this, void 0, void 0, function* () {
                 // // console.log(res)
@@ -631,7 +631,7 @@ class find extends recordGetOperation {
     run() {
         return new Promise((resolve, reject) => {
             // console.log(this.#toObject())
-            this.layout.database.apiRequest(`${this.layout.endpoint}/_find`, {
+            this.layout.database.host.apiRequest(`${this.layout.endpoint}/_find`, {
                 port: 443,
                 method: "POST",
                 body: JSON.stringify(this.toObject())
