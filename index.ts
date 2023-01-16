@@ -194,7 +194,7 @@ export default class FileMakerConnection {
             })
 
             if (this.databaseConDetails[0].method === "filemaker") {
-                fetch(`${this.endpoint}/sessions`, {
+                fetch(`${this.databases[0].endpoint}/sessions`, {
                     hostname: this.hostname,
                     port: 443,
                     method: "POST",
@@ -221,7 +221,7 @@ export default class FileMakerConnection {
                 this._token = (<loginOptionsToken>this.databaseConDetails[0]).token
                 resolve(this.token)
             } else if (this.databaseConDetails[0].method === "oauth") {
-                fetch(`${this.endpoint}/sessions`, {
+                fetch(`${this.databases[0].endpoint}/sessions`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -239,7 +239,7 @@ export default class FileMakerConnection {
                         resolve(this.token)
                     })
             } else if (this.databaseConDetails[0].method === "claris") {
-                fetch(`${this.endpoint}/sessions`, {
+                fetch(`${this.databases[0].endpoint}/sessions`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
