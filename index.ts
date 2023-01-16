@@ -33,7 +33,7 @@ interface connectionOptions {
 
 interface hostConnectionOptions {
     hostname: string
-    database: loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken
+    databases: (loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken)[]
 }
 
 interface databaseOptions {
@@ -96,11 +96,7 @@ class database {
 
     public hostname: string;
 
-    constructor(props: databaseOptions, host: FileMakerConnection = null) {
-        this.props = props
-        this.name = this.props.database
-        if (host) this.host = host
-    }
+    constructor() {}
 
     get token() {
         return this.host.token
@@ -146,51 +142,36 @@ class database {
     }
 
     get endpoint(): string {
-        return `https://${this.hostname || this.host.hostname}/fmi/data/v2/databases/${encodeURI(this.name)}`
+        return `${this.host.endpoint}/${encodeURI(this.name)}`
     }
 
-    get externalLoginInfo() {
-        // Returns an object that can be used when using this database object as an external source
-        let out = {
-            database: this.name,
-            username: undefined,
-            password: undefined,
-            oauthRequestId: undefined,
-            oauthIdentifier: undefined
+    pairHost(db: FileMakerConnection, details: databaseOptions, returnConDetails = true) {
+        this.host = db
+        this.name = details.database
+        if (returnConDetails) {
+            if (details.method === "filemaker") {
+                return {
+                    database: this.name,
+                    username: (<loginOptionsFileMaker>details).username,
+                    password: (<loginOptionsFileMaker>details).password
+                }
+            } else {
+                throw `Authentication method used for '${this.name}' is not supported for external data source connections`
+            }
         }
-        switch (this.props.method) {
-            case "filemaker":
-                out.username = (<loginOptionsFileMaker>this.props).username
-                out.password = (<loginOptionsFileMaker>this.props).password
-            case "token":
-                throw "Token logins cannot be used for connecting to external sources. Please either use no login method, or open a second connection."
-            case "oauth":
-                out.oauthRequestId = (<loginOptionsOAuth>this.props).oauth.requestId
-                out.oauthIdentifier = (<loginOptionsOAuth>this.props).oauth.requestIdentifier
-
-            case "claris":
-                throw "Claris logins cannot be used for connecting to external sources. Please either use no login method, or open a second connection."
-        }
-        return out
     }
 }
 
-export default class FileMakerConnection extends database {
+export default class FileMakerConnection {
     private _token: any;
-    private username: any;
-    private password: any;
+    private hostname: string;
     public readonly rejectUnauthroized: boolean;
-    externalSources: database[];
+    private databases: database[]
+    private databaseConDetails: (loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken)[];
 
-    constructor(conn: hostConnectionOptions, externalDataSources: databaseOptions[] = [], rejectUnauthorized = true) {
-        super(conn.database);
-        this.host = this
+    constructor(conn: hostConnectionOptions, rejectUnauthorized = true) {
         this.hostname = conn.hostname
-        this.externalSources = externalDataSources.map(i => {
-            let e = new database(i, this);
-            e.external = true;
-            return e;
-        })
+        this.databaseConDetails = conn.databases
         this.rejectUnauthroized = rejectUnauthorized
     }
 
@@ -207,7 +188,6 @@ export default class FileMakerConnection extends database {
             let data = await _fetch.json()
             // console.log(data)
             this._token = null
-            this.name = null
             this.hostname = null
             resolve()
         })
@@ -216,19 +196,26 @@ export default class FileMakerConnection extends database {
     login() {
         return new Promise<string>((resolve, reject) => {
             if (this.token) throw new Error("Already logged in. Run logout() first")
+            this.databases = [new database()]
+            this.databases[0].pairHost(this, this.databaseConDetails[0], false)
+            let external_sources_cons = this.databaseConDetails.slice(1).map(con => {
+                let db = new database()
+                this.databases.push(db)
+                return db.pairHost(this, con)
+            })
 
-            if (this.props.method === "filemaker") {
-                this.username = (<loginOptionsFileMaker>this.props).username
-                this.name = this.props.database
-
+            if (this.databaseConDetails[0].method === "filemaker") {
                 fetch(`${this.endpoint}/sessions`, {
                     hostname: this.hostname,
                     port: 443,
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "Authorization": "Basic " + Buffer.from(this.username + ":" + (<loginOptionsFileMaker>this.props).password).toString("base64")
-                    }
+                        "Authorization": "Basic " + Buffer.from((<loginOptionsFileMaker>this.databaseConDetails[0]).username + ":" + (<loginOptionsFileMaker>this.databaseConDetails[0]).password).toString("base64")
+                    },
+                    body: JSON.stringify({
+                        fmDataSource: external_sources_cons
+                    })
                 }).then(async res => {
                     if (res.status === 200) {
                         this._token = res.headers.get('x-fm-data-access-token')
@@ -241,20 +228,20 @@ export default class FileMakerConnection extends database {
                     .catch(e => {
                         reject(e)
                     })
-            } else if (this.props.method === "token") {
-                this._token = (<loginOptionsToken>this.props).token
-                this.name = this.props.database
+            } else if (this.databaseConDetails[0].method === "token") {
+                this._token = (<loginOptionsToken>this.databaseConDetails[0]).token
                 resolve(this.token)
-            } else if (this.props.method === "oauth") {
-                this.name = this.props.database
+            } else if (this.databaseConDetails[0].method === "oauth") {
                 fetch(`${this.endpoint}/sessions`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "X-FM-Data-OAuth-RequestId": (<loginOptionsOAuth>this.props).oauth.requestId,
-                        "X-FM-Data-OAuth-Identifier": (<loginOptionsOAuth>this.props).oauth.requestIdentifier
+                        "X-FM-Data-OAuth-RequestId": (<loginOptionsOAuth>this.databaseConDetails[0]).oauth.requestId,
+                        "X-FM-Data-OAuth-Identifier": (<loginOptionsOAuth>this.databaseConDetails[0]).oauth.requestIdentifier
                     },
-                    body: "{}"
+                    body: external_sources_cons.length === 0 ? "{}" : JSON.stringify({
+                        fmDataSource: external_sources_cons
+                    })
                 })
                     .then(res => res.json())
                     .then(res => {
@@ -262,13 +249,12 @@ export default class FileMakerConnection extends database {
                         this._token = _res.headers["x-fm-data-access-token"]
                         resolve(this.token)
                     })
-            } else if (this.props.method === "claris") {
-                this.name = this.props.database
+            } else if (this.databaseConDetails[0].method === "claris") {
                 fetch(`${this.endpoint}/sessions`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "Authorization": (<loginOptionsClaris>this.props).claris.fmid,
+                        "Authorization": (<loginOptionsClaris>this.databaseConDetails[0]).claris.fmid,
                     },
                     body: "{}"
                 })
@@ -282,8 +268,16 @@ export default class FileMakerConnection extends database {
         })
     }
 
+    getDatabase(database_name) {
+        return this.databases.find(db => db.name === database_name)
+    }
+
     get token() {
         return this._token
+    }
+
+    get endpoint(): string {
+        return `https://${this.hostname}/fmi/data/v2/databases/`
     }
 }
 
