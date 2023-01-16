@@ -63,7 +63,7 @@ export default class FileMakerConnection {
         return new Promise((resolve, reject) => {
             if (this.token)
                 throw new Error("Already logged in. Run logout() first");
-            if (this.databaseConDetails[0].method === "filemaker") {
+            if (this.databaseConDetails.database.method === "filemaker") {
                 fetch(`${this.endpoint}/sessions`, {
                     hostname: this.hostname,
                     port: 443,
@@ -92,11 +92,11 @@ export default class FileMakerConnection {
                     reject(e);
                 });
             }
-            else if (this.databaseConDetails[0].method === "token") {
+            else if (this.databaseConDetails.database.method === "token") {
                 this._token = this.databaseConDetails[0].token;
                 resolve(this.token);
             }
-            else if (this.databaseConDetails[0].method === "oauth") {
+            else if (this.databaseConDetails.database.method === "oauth") {
                 fetch(`${this.endpoint}/sessions`, {
                     method: "POST",
                     headers: {
@@ -118,7 +118,7 @@ export default class FileMakerConnection {
                     resolve(this.token);
                 });
             }
-            else if (this.databaseConDetails[0].method === "claris") {
+            else if (this.databaseConDetails.database.method === "claris") {
                 fetch(`${this.endpoint}/sessions`, {
                     method: "POST",
                     headers: {
