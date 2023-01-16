@@ -181,7 +181,7 @@ export default class FileMakerConnection {
         return this._token;
     }
     get endpoint() {
-        return `https://${this.hostname}/fmi/data/v2/databases/`;
+        return `https://${this.hostname}/fmi/data/v2/databases`;
     }
     apiRequest(url, options = {}) {
         return __awaiter(this, void 0, void 0, function* () {

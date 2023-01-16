@@ -266,7 +266,7 @@ export default class FileMakerConnection {
     }
 
     get endpoint(): string {
-        return `https://${this.hostname}/fmi/data/v2/databases/`
+        return `https://${this.hostname}/fmi/data/v2/databases`
     }
 
     async apiRequest(url: string | Request, options: any = {}): Promise<any> {
