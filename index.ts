@@ -302,7 +302,7 @@ class layout {
     runScript(script): Promise<string | FMError | Error> {
         return new Promise(async (resolve, reject) => {
             let url = `${this.endpoint}/script/${encodeURIComponent(script.name)}`
-            if (script.parameter) url += "?" + encodeURIComponent(script.parameter)
+            if (script.parameter) url += "?script.param=" + encodeURIComponent(script.parameter)
             this.database.apiRequest(url, {
                 port: 443,
                 method: "GET"
