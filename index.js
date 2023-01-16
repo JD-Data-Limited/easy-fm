@@ -22,62 +22,25 @@ import { fileURLToPath } from "url";
 import * as https from "https";
 // @ts-ignore
 const errs = JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'fmErrors.json')).toString());
-class database {
-    constructor() { }
-    get token() {
-        return this.host.token;
-    }
-    getLayout(name) {
-        return new layout(this, name);
-    }
-    setGlobals(globalFields) {
-        // console.log({globalFields})
-        return new Promise((resolve, reject) => {
-            this.host.apiRequest(`${this.endpoint}/globals`, {
-                method: "PATCH",
-                body: JSON.stringify({ globalFields })
-            }).then(res => {
-                // console.log(res)
-                if (res.messages[0].code === "0") {
-                    resolve();
-                }
-                else {
-                    reject(new FMError(res.messages[0].code, res.status, res));
-                }
-            })
-                .catch(e => {
-                reject(e);
-            });
-        });
-    }
-    script(name, parameter) {
-        return { name, parameter };
-    }
-    get endpoint() {
-        return `${this.host.endpoint}/${encodeURI(this.name)}`;
-    }
-    pairHost(db, details, returnConDetails = true) {
-        this.host = db;
-        this.name = details.database;
-        if (returnConDetails) {
-            if (details.method === "filemaker") {
-                return {
-                    database: this.name,
-                    username: details.username,
-                    password: details.password
-                };
-            }
-            else {
-                throw `Authentication method used for '${this.name}' is not supported for external data source connections`;
-            }
-        }
-    }
-}
 export default class FileMakerConnection {
     constructor(conn, rejectUnauthorized = true) {
         this.hostname = conn.hostname;
-        this.databaseConDetails = conn.databases;
+        this.name = conn.database.database;
+        this.databaseConDetails = conn;
         this.rejectUnauthroized = rejectUnauthorized;
+    }
+    generateExternalSourceLogin(data) {
+        if (data.method === "filemaker") {
+            let _data = data;
+            return {
+                database: _data.database,
+                username: _data.username,
+                password: _data.password
+            };
+        }
+        else {
+            throw "Not yet supported login method";
+        }
     }
     logout() {
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
@@ -100,15 +63,8 @@ export default class FileMakerConnection {
         return new Promise((resolve, reject) => {
             if (this.token)
                 throw new Error("Already logged in. Run logout() first");
-            this.databases = [new database()];
-            this.databases[0].pairHost(this, this.databaseConDetails[0], false);
-            let external_sources_cons = this.databaseConDetails.slice(1).map(con => {
-                let db = new database();
-                this.databases.push(db);
-                return db.pairHost(this, con);
-            });
             if (this.databaseConDetails[0].method === "filemaker") {
-                fetch(`${this.databases[0].endpoint}/sessions`, {
+                fetch(`${this.endpoint}/sessions`, {
                     hostname: this.hostname,
                     port: 443,
                     method: "POST",
@@ -117,7 +73,10 @@ export default class FileMakerConnection {
                         "Authorization": "Basic " + Buffer.from(this.databaseConDetails[0].username + ":" + this.databaseConDetails[0].password).toString("base64")
                     },
                     body: JSON.stringify({
-                        fmDataSource: external_sources_cons
+                        fmDataSource: this.databaseConDetails.externalSources.map(i => {
+                            let _i = i;
+                            return this.generateExternalSourceLogin(_i);
+                        })
                     })
                 }).then((res) => __awaiter(this, void 0, void 0, function* () {
                     if (res.status === 200) {
@@ -138,15 +97,18 @@ export default class FileMakerConnection {
                 resolve(this.token);
             }
             else if (this.databaseConDetails[0].method === "oauth") {
-                fetch(`${this.databases[0].endpoint}/sessions`, {
+                fetch(`${this.endpoint}/sessions`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         "X-FM-Data-OAuth-RequestId": this.databaseConDetails[0].oauth.requestId,
                         "X-FM-Data-OAuth-Identifier": this.databaseConDetails[0].oauth.requestIdentifier
                     },
-                    body: external_sources_cons.length === 0 ? "{}" : JSON.stringify({
-                        fmDataSource: external_sources_cons
+                    body: JSON.stringify({
+                        fmDataSource: this.databaseConDetails.externalSources.map(i => {
+                            let _i = i;
+                            return this.generateExternalSourceLogin(_i);
+                        })
                     })
                 })
                     .then(res => res.json())
@@ -157,7 +119,7 @@ export default class FileMakerConnection {
                 });
             }
             else if (this.databaseConDetails[0].method === "claris") {
-                fetch(`${this.databases[0].endpoint}/sessions`, {
+                fetch(`${this.endpoint}/sessions`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -174,14 +136,11 @@ export default class FileMakerConnection {
             }
         });
     }
-    getDatabase(database_name) {
-        return this.databases.find(db => db.name === database_name);
-    }
     get token() {
         return this._token;
     }
     get endpoint() {
-        return `https://${this.hostname}/fmi/data/v2/databases`;
+        return `https://${this.hostname}/fmi/data/v2/databases/${this.name}`;
     }
     apiRequest(url, options = {}) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -194,6 +153,32 @@ export default class FileMakerConnection {
             let data = yield _fetch.json();
             return data;
         });
+    }
+    getLayout(name) {
+        return new layout(this, name);
+    }
+    setGlobals(globalFields) {
+        // console.log({globalFields})
+        return new Promise((resolve, reject) => {
+            this.apiRequest(`${this.endpoint}/globals`, {
+                method: "PATCH",
+                body: JSON.stringify({ globalFields })
+            }).then(res => {
+                // console.log(res)
+                if (res.messages[0].code === "0") {
+                    resolve();
+                }
+                else {
+                    reject(new FMError(res.messages[0].code, res.status, res));
+                }
+            })
+                .catch(e => {
+                reject(e);
+            });
+        });
+    }
+    script(name, parameter) {
+        return { name, parameter };
     }
 }
 class layout {
@@ -230,7 +215,7 @@ class layout {
             let url = `${this.endpoint}/script/${encodeURI(script.name)}`;
             if (script.parameter)
                 url += "?" + encodeURI(script.parameter);
-            this.database.host.apiRequest(url, {
+            this.database.apiRequest(url, {
                 port: 443,
                 method: "GET"
             })
@@ -250,7 +235,7 @@ class layout {
     }
     getLayoutMeta() {
         return new Promise((resolve, reject) => {
-            this.database.host.apiRequest(this.endpoint).then(res => {
+            this.database.apiRequest(this.endpoint).then(res => {
                 this.metadata = res.response;
                 resolve(this);
             })
@@ -302,7 +287,7 @@ class record extends EventEmitter {
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
             if (!this.layout.metadata)
                 yield this.layout.getLayoutMeta();
-            this.layout.database.host.apiRequest(this.endpoint, {
+            this.layout.database.apiRequest(this.endpoint, {
                 port: 443,
                 method: "GET"
             })
@@ -335,7 +320,7 @@ class record extends EventEmitter {
             if (this.recordId === -1) {
                 // This is a new record
                 extraBody.fieldData = data.fieldData;
-                this.layout.database.host.apiRequest(`${this.layout.endpoint}/records`, {
+                this.layout.database.apiRequest(`${this.layout.endpoint}/records`, {
                     port: 443,
                     method: "POST",
                     body: JSON.stringify(extraBody)
@@ -361,7 +346,7 @@ class record extends EventEmitter {
             }
             for (let item of Object.keys(extraBody))
                 data[item] = extraBody[item];
-            this.layout.database.host.apiRequest(this.endpoint, {
+            this.layout.database.apiRequest(this.endpoint, {
                 port: 443,
                 method: "PATCH",
                 body: JSON.stringify(data)
@@ -568,7 +553,7 @@ class recordGetRange extends recordGetOperation {
     run() {
         return new Promise((resolve, reject) => {
             // console.log(this.#toObject())
-            this.layout.database.host.apiRequest(`${this.layout.endpoint}/records${this.generateQueryParams()}`, {
+            this.layout.database.apiRequest(`${this.layout.endpoint}/records${this.generateQueryParams()}`, {
                 method: "GET"
             }).then((res) => __awaiter(this, void 0, void 0, function* () {
                 // // console.log(res)
@@ -631,7 +616,7 @@ class find extends recordGetOperation {
     run() {
         return new Promise((resolve, reject) => {
             // console.log(this.#toObject())
-            this.layout.database.host.apiRequest(`${this.layout.endpoint}/_find`, {
+            this.layout.database.apiRequest(`${this.layout.endpoint}/_find`, {
                 port: 443,
                 method: "POST",
                 body: JSON.stringify(this.toObject())
