@@ -144,7 +144,7 @@ export default class FileMakerConnection {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "Authorization": "Basic " + Buffer.from((<loginOptionsFileMaker>this.databaseConDetails[0]).username + ":" + (<loginOptionsFileMaker>this.databaseConDetails[0]).password).toString("base64")
+                        "Authorization": "Basic " + Buffer.from((<loginOptionsFileMaker>this.databaseConDetails.database).username + ":" + (<loginOptionsFileMaker>this.databaseConDetails.database).password).toString("base64")
                     },
                     body: JSON.stringify({
                         fmDataSource: this.databaseConDetails.externalSources.map(i => {
@@ -165,15 +165,15 @@ export default class FileMakerConnection {
                         reject(e)
                     })
             } else if (this.databaseConDetails.database.method === "token") {
-                this._token = (<loginOptionsToken>this.databaseConDetails[0]).token
+                this._token = (<loginOptionsToken>this.databaseConDetails.database).token
                 resolve(this.token)
             } else if (this.databaseConDetails.database.method === "oauth") {
                 fetch(`${this.endpoint}/sessions`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "X-FM-Data-OAuth-RequestId": (<loginOptionsOAuth>this.databaseConDetails[0]).oauth.requestId,
-                        "X-FM-Data-OAuth-Identifier": (<loginOptionsOAuth>this.databaseConDetails[0]).oauth.requestIdentifier
+                        "X-FM-Data-OAuth-RequestId": (<loginOptionsOAuth>this.databaseConDetails.database).oauth.requestId,
+                        "X-FM-Data-OAuth-Identifier": (<loginOptionsOAuth>this.databaseConDetails.database).oauth.requestIdentifier
                     },
                     body: JSON.stringify({
                         fmDataSource: this.databaseConDetails.externalSources.map(i => {
@@ -193,7 +193,7 @@ export default class FileMakerConnection {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "Authorization": (<loginOptionsClaris>this.databaseConDetails[0]).claris.fmid,
+                        "Authorization": (<loginOptionsClaris>this.databaseConDetails.database).claris.fmid,
                     },
                     body: "{}"
                 })

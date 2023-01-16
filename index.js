@@ -70,7 +70,7 @@ export default class FileMakerConnection {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "Authorization": "Basic " + Buffer.from(this.databaseConDetails[0].username + ":" + this.databaseConDetails[0].password).toString("base64")
+                        "Authorization": "Basic " + Buffer.from(this.databaseConDetails.database.username + ":" + this.databaseConDetails.database.password).toString("base64")
                     },
                     body: JSON.stringify({
                         fmDataSource: this.databaseConDetails.externalSources.map(i => {
@@ -93,7 +93,7 @@ export default class FileMakerConnection {
                 });
             }
             else if (this.databaseConDetails.database.method === "token") {
-                this._token = this.databaseConDetails[0].token;
+                this._token = this.databaseConDetails.database.token;
                 resolve(this.token);
             }
             else if (this.databaseConDetails.database.method === "oauth") {
@@ -101,8 +101,8 @@ export default class FileMakerConnection {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "X-FM-Data-OAuth-RequestId": this.databaseConDetails[0].oauth.requestId,
-                        "X-FM-Data-OAuth-Identifier": this.databaseConDetails[0].oauth.requestIdentifier
+                        "X-FM-Data-OAuth-RequestId": this.databaseConDetails.database.oauth.requestId,
+                        "X-FM-Data-OAuth-Identifier": this.databaseConDetails.database.oauth.requestIdentifier
                     },
                     body: JSON.stringify({
                         fmDataSource: this.databaseConDetails.externalSources.map(i => {
@@ -123,7 +123,7 @@ export default class FileMakerConnection {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "Authorization": this.databaseConDetails[0].claris.fmid,
+                        "Authorization": this.databaseConDetails.database.claris.fmid,
                     },
                     body: "{}"
                 })
