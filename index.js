@@ -143,7 +143,7 @@ export default class FileMakerConnection extends EventEmitter {
     get endpoint() {
         return `https://${this.hostname}/fmi/data/v2/databases/${this.name}`;
     }
-    apiRequest(url, options = {}) {
+    apiRequest(url, options = {}, autoRelogin = true) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!options.headers)
                 options.headers = {};
@@ -152,6 +152,11 @@ export default class FileMakerConnection extends EventEmitter {
             options.rejectUnauthorized = this.rejectUnauthroized;
             let _fetch = yield fetch(url, options);
             let data = yield _fetch.json();
+            if (data.messages[0].code == "952" && autoRelogin) {
+                this._token = null;
+                yield this.login();
+                yield this.apiRequest(url, options, false);
+            }
             return data;
         });
     }
