@@ -216,7 +216,7 @@ export default class FileMakerConnection extends EventEmitter {
         return `https://${this.hostname}/fmi/data/v2/databases/${this.name}`
     }
 
-    async apiRequest(url: string | Request, options: any = {}): Promise<any> {
+    async apiRequest(url: string | Request, options: any = {}, autoRelogin = true): Promise<any> {
         if (!options.headers) options.headers = {}
         options.headers["content-type"] = options.headers["content-type"] ? options.headers["content-type"] : "application/json"
         options.headers["authorization"] = "Bearer " + this._token
@@ -224,6 +224,11 @@ export default class FileMakerConnection extends EventEmitter {
 
         let _fetch = await fetch(url, options)
         let data = await _fetch.json()
+        if (data.messages[0].code == "952" && autoRelogin) {
+            this._token = null
+            await this.login()
+            await this.apiRequest(url, options,false)
+        }
         return (data as any)
     }
 
