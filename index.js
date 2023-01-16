@@ -22,8 +22,9 @@ import { fileURLToPath } from "url";
 import * as https from "https";
 // @ts-ignore
 const errs = JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'fmErrors.json')).toString());
-export default class FileMakerConnection {
+export default class FileMakerConnection extends EventEmitter {
     constructor(conn, rejectUnauthorized = true) {
+        super();
         this.hostname = conn.hostname;
         this.name = conn.database.database;
         this.databaseConDetails = conn;
@@ -180,6 +181,9 @@ export default class FileMakerConnection {
     script(name, parameter) {
         return { name, parameter };
     }
+    _tokenExpired() {
+        this.emit("token_expired");
+    }
 }
 class layout {
     constructor(database, name) {
@@ -201,7 +205,7 @@ class layout {
                     fields[_field.name] = "";
                 }
                 resolve(new record(this, -1, 0, fields));
-            });
+            }).catch(e => { reject(e); });
         });
     }
     getRecord(recordId) {
@@ -212,9 +216,9 @@ class layout {
     }
     runScript(script) {
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
-            let url = `${this.endpoint}/script/${encodeURI(script.name)}`;
+            let url = `${this.endpoint}/script/${encodeURIComponent(script.name)}`;
             if (script.parameter)
-                url += "?" + encodeURI(script.parameter);
+                url += "?" + encodeURIComponent(script.parameter);
             this.database.apiRequest(url, {
                 port: 443,
                 method: "GET"
