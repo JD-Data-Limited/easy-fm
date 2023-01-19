@@ -152,10 +152,11 @@ export default class FileMakerConnection extends EventEmitter {
             options.rejectUnauthorized = this.rejectUnauthroized;
             let _fetch = yield fetch(url, options);
             let data = yield _fetch.json();
-            if (data.messages[0].code == "952" && autoRelogin) {
+            console.log(data.messages[0]);
+            if (data.messages[0].code == 952 && autoRelogin) {
                 this._token = null;
                 yield this.login();
-                yield this.apiRequest(url, options, false);
+                return yield this.apiRequest(url, options, false);
             }
             return data;
         });

@@ -224,10 +224,11 @@ export default class FileMakerConnection extends EventEmitter {
 
         let _fetch = await fetch(url, options)
         let data = await _fetch.json()
-        if (data.messages[0].code == "952" && autoRelogin) {
+        console.log(data.messages[0])
+        if (data.messages[0].code == 952 && autoRelogin) {
             this._token = null
             await this.login()
-            await this.apiRequest(url, options,false)
+            return await this.apiRequest(url, options,false)
         }
         return (data as any)
     }
