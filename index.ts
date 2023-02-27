@@ -85,7 +85,12 @@ interface Script {
 interface recordObject {
     recordId: number
     modId: number,
-    fieldData: any
+    fieldData: any,
+    portalData: portalDataObject | undefined
+}
+
+interface portalDataObject {
+    [key: string]: recordObject
 }
 
 export default class FileMakerConnection extends EventEmitter {
@@ -482,6 +487,54 @@ class record extends EventEmitter {
     getPortal(portal) {
         return this.portals.find(p => p.name === portal)
     }
+    
+    delete(): Promise<void> {
+        return new Promise(async (resolve, reject) => {
+            this.layout.database.apiRequest(this.endpoint, {
+                port: 443,
+                method: "DELETE"
+            })
+                .then(res => {
+                    if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
+                        reject(new FMError(res.response.scriptError, res.status, res))
+                    } else if (res.messages[0].code === "0") {
+                        this.emit("deleted")
+                        resolve()
+                    } else {
+                        reject(new FMError(res.messages[0].code, res.status, res))
+                    }
+                })
+                .catch(e => {
+                    reject(e)
+                })
+        })
+    }
+
+    duplicate(): Promise<record> {
+        return new Promise(async (resolve, reject) => {
+            this.layout.database.apiRequest(this.endpoint, {
+                port: 443,
+                method: "POST"
+            })
+                .then(res => {
+                    if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
+                        reject(new FMError(res.response.scriptError, res.status, res))
+                    } else if (res.messages[0].code === "0") {
+                        let data = this.toObject((a) => true, (a) => true, (a) => false, (a) => false)
+                        let _res = new record(this.layout, res.response.recordId, res.response.modId, data.fieldData, data.portalData)
+
+                        this.emit("duplicated")
+                        resolve(_res)
+                    } else {
+                        reject(new FMError(res.messages[0].code, res.status, res))
+                    }
+                })
+                .catch(e => {
+                    reject(e)
+                })
+        })
+    }
+
 
     toObject(filter = (a) => a.edited,
              portalFilter = (a) => a.records.find(record => record.edited),
