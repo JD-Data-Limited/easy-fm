@@ -11,7 +11,7 @@ import fetch, {
     fileFrom,
     fileFromSync,
     FormData,
-    Headers,
+    Headers, HeadersInit,
     Request,
     Response
 } from 'node-fetch';
@@ -23,31 +23,26 @@ import path from "path"
 // @ts-ignore
 import {fileURLToPath} from "url"
 import * as https from "https";
+import * as moment from "moment"
 
 // import * as btoa from "btoa";
-
-interface connectionOptions {
-    hostname: string | undefined,
-    database: databaseOptions
-}
-
-interface hostConnectionOptions {
-    hostname: string
-    database: loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken,
-    externalSources: (loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken)[]
-}
-
-interface databaseOptions {
-    method: any
+interface databaseOptionsBase {
     database: string
+    credentials: loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken,
 }
 
-interface loginOptionsToken extends databaseOptions {
+interface databaseOptionsWithExternalSources extends databaseOptionsBase {
+    database: string
+    credentials: loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken,
+    externalSources: databaseOptionsBase[]
+}
+
+interface loginOptionsToken {
     method: "token"
     token: string
 }
 
-interface loginOptionsOAuth extends databaseOptions {
+interface loginOptionsOAuth {
     method: "oauth"
     oauth: {
         requestId: string,
@@ -55,13 +50,13 @@ interface loginOptionsOAuth extends databaseOptions {
     }
 }
 
-interface loginOptionsFileMaker extends databaseOptions {
+interface loginOptionsFileMaker {
     method: "filemaker"
     username: string,
     password: string,
 }
 
-interface loginOptionsClaris extends databaseOptions {
+interface loginOptionsClaris {
     method: "claris"
     claris: {
         fmid: string
@@ -86,33 +81,121 @@ interface recordObject {
     recordId: number
     modId: number,
     fieldData: any,
-    portalData: portalDataObject | undefined
+    portalData?: portalDataObject
+}
+
+interface fileMakerResponse {
+    response: any,
+    messages: any[]
 }
 
 interface portalDataObject {
     [key: string]: recordObject
 }
 
-export default class FileMakerConnection extends EventEmitter {
-    private _token: any;
-    private hostname: string;
-    public readonly rejectUnauthroized: boolean;
-    private databaseConDetails: hostConnectionOptions
-    public name: string;
+interface fieldMetaData {
+    name: string,
+    type: string,
+    displayType: string,
+    result: string,
+    global: boolean,
+    autoEnter: boolean,
+    fourDigitYear: boolean,
+    maxRepeat: number,
+    maxCharacters: number,
+    notEmpty: boolean,
+    numeric: boolean,
+    timeOfDay: false,
+    repetitionStart: number,
+    repetitionEnd: number
+}
 
-    constructor(conn: hostConnectionOptions, rejectUnauthorized = true) {
-        super()
-        this.hostname = conn.hostname
-        this.name = conn.database.database
-        this.databaseConDetails = conn
-        this.rejectUnauthroized = rejectUnauthorized
+interface FMHostMetadata {
+    productInfo: {
+        buildDate: Date,
+        name: string,
+        version: string,
+        dateFormat: string,
+        timeFormat: string,
+        timeStampFormat: string
+    }
+}
+
+export default class FMHost {
+    readonly hostname: string
+    readonly timezoneOffset: number
+    readonly verify: boolean
+    metadata: FMHostMetadata
+
+    constructor(_hostname: string, timezoneOffset = 0 - (new Date()).getTimezoneOffset(), verify = true) {
+        if (!(/^https?:\/\//).test(_hostname)) throw "hostname MUST begin with either http:// or https://"
+        this.hostname = _hostname
+        this.timezoneOffset = timezoneOffset
+        this.verify = verify
     }
 
-    private generateExternalSourceLogin(data: databaseOptions | loginOptionsFileMaker) {
-        if (data.method === "filemaker") {
-            let _data = <loginOptionsFileMaker>data
+    async listDatabases(credentials?: loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris) {
+        let headers = {}
+        if (credentials) {
+            headers = generateAuthorizationHeaders(credentials)
+        }
+
+        let _fetch = await fetch(`${this.hostname}/fmi/data/v2/databases`, {
+            method: "GET",
+            headers
+        })
+        let data = await _fetch.json() as fileMakerResponse
+        // console.log(data.messages[0])
+
+        if (data.messages[0].code === "0") {
+            return data.response.databases
+        } else {
+            // @ts-ignore
+            throw new FMError(data.messages[0].code, data.status, data)
+        }
+    }
+
+    database(data: databaseOptionsWithExternalSources) {
+        return new Database(this, data)
+    }
+
+    async getMetadata() {
+        if (this.metadata) return this.metadata
+
+        let _fetch = await fetch(`${this.hostname}/fmi/data/v2/productInfo`, {
+            method: "GET",
+        })
+        let data = await _fetch.json() as fileMakerResponse
+        // console.log(data.messages[0])
+
+        if (data.messages[0].code === "0") {
+            this.metadata = data.response
+            return data.response
+        } else {
+            // @ts-ignore
+            throw new FMError(data.messages[0].code, data.status, data)
+        }
+    }
+}
+
+export class Database extends EventEmitter {
+    private _token: any;
+    readonly host: FMHost;
+    private connection_details: databaseOptionsWithExternalSources
+    readonly name: string;
+
+    constructor(host: FMHost, conn: databaseOptionsWithExternalSources) {
+        super()
+        this.host = host
+        this.name = conn.database
+        this.connection_details = conn
+    }
+
+    private generateExternalSourceLogin(data: databaseOptionsBase) {
+        if (data.credentials.method === "filemaker") {
+            let _data = <loginOptionsFileMaker>data.credentials
             return {
-                database: _data.database,
+                database: data.database,
                 username: _data.username,
                 password: _data.password
             }
@@ -134,80 +217,46 @@ export default class FileMakerConnection extends EventEmitter {
             let data = await _fetch.json()
             // console.log(data)
             this._token = null
-            this.hostname = null
             resolve()
         })
     }
 
     login() {
-        return new Promise<string>((resolve, reject) => {
+        return new Promise<string>(async (resolve, reject) => {
+            try {
+                await this.host.getMetadata()
+            } catch (e) {
+                reject(e)
+                return
+            }
             if (this.token) throw new Error("Already logged in. Run logout() first")
 
-            if (this.databaseConDetails.database.method === "filemaker") {
+            if (this.connection_details.credentials.method === "token") {
+                this._token = (<loginOptionsToken>this.connection_details.credentials).token
+                resolve(this.token)
+            } else {
                 fetch(`${this.endpoint}/sessions`, {
-                    hostname: this.hostname,
+                    hostname: this.host.hostname,
                     port: 443,
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": "Basic " + Buffer.from((<loginOptionsFileMaker>this.databaseConDetails.database).username + ":" + (<loginOptionsFileMaker>this.databaseConDetails.database).password).toString("base64")
-                    },
+                    headers: generateAuthorizationHeaders(this.connection_details.credentials) as unknown as HeadersInit,
                     body: JSON.stringify({
-                        fmDataSource: this.databaseConDetails.externalSources.map(i => {
-                            let _i = <databaseOptions>i
+                        fmDataSource: this.connection_details.externalSources.map(i => {
+                            let _i = <databaseOptionsBase>i
                             return this.generateExternalSourceLogin(_i)
                         })
                     })
                 }).then(async res => {
+                    let _res = <any>(await res.json())
                     if (res.status === 200) {
                         this._token = res.headers.get('x-fm-data-access-token')
                         resolve(this._token)
                     } else {
-                        let _res = <any>(await res.json())
                         reject(new FMError(_res.messages[0].code, _res.status, res))
                     }
                 })
                     .catch(e => {
                         reject(e)
-                    })
-            } else if (this.databaseConDetails.database.method === "token") {
-                this._token = (<loginOptionsToken>this.databaseConDetails.database).token
-                resolve(this.token)
-            } else if (this.databaseConDetails.database.method === "oauth") {
-                fetch(`${this.endpoint}/sessions`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-FM-Data-OAuth-RequestId": (<loginOptionsOAuth>this.databaseConDetails.database).oauth.requestId,
-                        "X-FM-Data-OAuth-Identifier": (<loginOptionsOAuth>this.databaseConDetails.database).oauth.requestIdentifier
-                    },
-                    body: JSON.stringify({
-                        fmDataSource: this.databaseConDetails.externalSources.map(i => {
-                            let _i = <databaseOptions>i
-                            return this.generateExternalSourceLogin(_i)
-                        })
-                    })
-                })
-                    .then(res => res.json())
-                    .then(res => {
-                        let _res = <any>res
-                        this._token = _res.headers["x-fm-data-access-token"]
-                        resolve(this.token)
-                    })
-            } else if (this.databaseConDetails.database.method === "claris") {
-                fetch(`${this.endpoint}/sessions`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": (<loginOptionsClaris>this.databaseConDetails.database).claris.fmid,
-                    },
-                    body: "{}"
-                })
-                    .then(res => res.json())
-                    .then(res => {
-                        let _res = <any>res
-                        this._token = _res.headers["x-fm-data-access-token"]
-                        resolve(this.token)
                     })
             }
         })
@@ -218,22 +267,22 @@ export default class FileMakerConnection extends EventEmitter {
     }
 
     get endpoint(): string {
-        return `https://${this.hostname}/fmi/data/v2/databases/${this.name}`
+        return `${this.host.hostname}/fmi/data/v2/databases/${this.name}`
     }
 
     async apiRequest(url: string | Request, options: any = {}, autoRelogin = true): Promise<any> {
         if (!options.headers) options.headers = {}
         options.headers["content-type"] = options.headers["content-type"] ? options.headers["content-type"] : "application/json"
         options.headers["authorization"] = "Bearer " + this._token
-        options.rejectUnauthorized = this.rejectUnauthroized
+        options.rejectUnauthorized = this.host.verify
 
         let _fetch = await fetch(url, options)
-        let data = await _fetch.json()
-        console.log(data.messages[0])
+        let data = await _fetch.json() as fileMakerResponse
+        // console.log(data.messages[0])
         if (data.messages[0].code == 952 && autoRelogin) {
             this._token = null
             await this.login()
-            return await this.apiRequest(url, options,false)
+            return await this.apiRequest(url, options, false)
         }
         return (data as any)
     }
@@ -272,11 +321,12 @@ export default class FileMakerConnection extends EventEmitter {
 }
 
 class layout {
-    readonly database: FileMakerConnection;
+    readonly database: Database;
+    readonly records = new layoutRecordManager(this)
     protected name: string;
     metadata: any;
 
-    constructor(database: FileMakerConnection, name: string) {
+    constructor(database: Database, name: string) {
         this.database = database
         this.name = name
     }
@@ -285,29 +335,25 @@ class layout {
         return `${this.database.endpoint}/layouts/${this.name}`
     }
 
-    getScript(script) {
-        return new script(this, script)
-    }
-
+    /**
+     * @deprecated use layout.records.create() instead
+     */
     createRecord(): Promise<record | Error | void> {
-        return new Promise((resolve, reject) => {
-            // Get the layout's metadata
-            this.getLayoutMeta().then(layout => {
-                let fields = {}
-                for (let _field of this.metadata.fieldMetaData) {
-                    fields[_field.name] = ""
-                }
-                resolve(new record(this, -1, 0, fields))
-            }).catch(e => {reject(e)})
-        })
+        return this.records.create()
     }
 
-    getRecord(recordId): record {
-        return new record(this, recordId)
+    /**
+     * @deprecated use layout.records.get() instead
+     */
+    getRecord(recordId): Promise<record> {
+        return this.records.get(recordId)
     }
 
+    /**
+     * @deprecated use layout.records.find() instead
+     */
     newFind(): find {
-        return new find(this)
+        return this.records.find()
     }
 
     runScript(script): Promise<string | FMError | Error> {
@@ -334,12 +380,65 @@ class layout {
 
     public getLayoutMeta(): Promise<layout | FMError> {
         return new Promise((resolve, reject) => {
+            if (this.metadata) {
+                resolve(this.metadata)
+                return
+            }
+
             this.database.apiRequest(this.endpoint).then(res => {
                 this.metadata = res.response
                 resolve(this)
             })
                 .catch(e => reject(e))
         })
+    }
+}
+
+class layoutRecordManager {
+    readonly layout: layout
+
+    constructor(layout: layout) {
+        this.layout = layout
+    }
+
+    create(): Promise<record | Error | void> {
+        return new Promise((resolve, reject) => {
+            // Get the layout's metadata
+            this.layout.getLayoutMeta().then(layout => {
+                let fields = {}
+                for (let _field of this.layout.metadata.fieldMetaData) {
+                    fields[_field.name] = ""
+                }
+                resolve(new record(this, -1, 0, fields))
+            }).catch(e => {
+                reject(e)
+            })
+        })
+    }
+
+    get(recordId): Promise<record> {
+        return new Promise((resolve, reject) => {
+            let record
+            this.layout.getLayoutMeta()
+                .then(layout => {
+                    record = new record(this.layout, recordId)
+                    return record.get()
+                })
+                .then(() => {
+                    resolve(record)
+                })
+                .catch(e => {
+                    reject(e)
+                })
+        })
+    }
+
+    range() {
+        return new recordGetRange(this.layout)
+    }
+
+    find(): find {
+        return new find(this.layout)
     }
 }
 
@@ -387,7 +486,33 @@ class record extends EventEmitter {
 
     processFieldData(fieldData): field[] {
         return Object.keys(fieldData).map(item => {
-            return new field(this, item, fieldData[item])
+            let _field = new field(this, item, fieldData[item])
+            if (!!fieldData[item]) {
+                if (_field.metadata.result === "timeStamp") {
+                    // @ts-ignore
+                    let date = moment.default(fieldData[item], this.layout.database.host.metadata.productInfo.timeStampFormat)
+                        .utcOffset(this.layout.database.host.timezoneOffset, true)
+                        .local()
+                    _field.set(date.toDate())
+                    _field.edited = false
+
+                } else if (_field.metadata.result === "time") {
+                    // @ts-ignore
+                    let date = moment.default(fieldData[item], this.layout.database.host.metadata.productInfo.timeFormat)
+                        .utcOffset(this.layout.database.host.timezoneOffset, true)
+                        .local()
+                    _field.set(date.toDate())
+                    _field.edited = false
+                } else if (_field.metadata.result === "date") {
+                    // @ts-ignore
+                    let date = moment.default(fieldData[item], this.layout.database.host.metadata.productInfo.dateFormat)
+                        .utcOffset(this.layout.database.host.timezoneOffset, true)
+                        .local()
+                    _field.set(date.toDate())
+                    _field.edited = false
+                }
+            }
+            return _field
         })
     }
 
@@ -441,7 +566,6 @@ class record extends EventEmitter {
                         if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
                             reject(new FMError(res.response.scriptError, res.status, res))
                         } else if (res.messages[0].code === "0") {
-                            console.log(res)
                             this.recordId = parseInt(res.response.recordId)
                             this.modId = parseInt(res.response.modId)
                             resolve(this)
@@ -456,17 +580,16 @@ class record extends EventEmitter {
                 return
             }
 
-            for (let item of Object.keys(extraBody)) data[item] = extraBody[item]
+            for (let item of Object.keys(data)) extraBody[item] = data[item]
             this.layout.database.apiRequest(this.endpoint, {
                 port: 443,
                 method: "PATCH",
-                body: JSON.stringify(data)
+                body: JSON.stringify(extraBody)
             })
                 .then(res => {
                     if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
                         reject(new FMError(res.response.scriptError, res.status, res))
                     } else if (res.messages[0].code === "0") {
-                        console.log(res)
                         this.modId = res.response.modId
                         this.emit("saved")
                         resolve(this)
@@ -487,7 +610,7 @@ class record extends EventEmitter {
     getPortal(portal) {
         return this.portals.find(p => p.name === portal)
     }
-    
+
     delete(): Promise<void> {
         return new Promise(async (resolve, reject) => {
             this.layout.database.apiRequest(this.endpoint, {
@@ -543,7 +666,26 @@ class record extends EventEmitter {
     ): recordObject {
         let fields_processed = {}
         for (let field of this.fields.filter(field => filter(field))) {
-            fields_processed[field.id] = field.value
+            let value = field.value
+            if (value instanceof Date) {
+                // @ts-ignore
+                let _value = moment.default(value)
+                    .utcOffset(this.layout.database.host.timezoneOffset)
+
+                // @ts-ignore
+
+                switch (field.metadata.result) {
+                    case "time":
+                        value = _value.format(this.layout.database.host.metadata.productInfo.timeFormat.replace("dd", "DD"))
+                        break
+                    case "date":
+                        value = _value.format(this.layout.database.host.metadata.productInfo.dateFormat.replace("dd", "DD"))
+                        break
+                    default:
+                        value = _value.format(this.layout.database.host.metadata.productInfo.timeStampFormat.replace("dd", "DD"))
+                }
+            }
+            fields_processed[field.id] = value
         }
         let obj = {
             "recordId": this.recordId,
@@ -568,33 +710,93 @@ class record extends EventEmitter {
 class field {
     record: record;
     id: number;
-    value: string | number;
+    private _value: string | number | Date;
     edited: boolean;
 
     constructor(record, id, contents) {
         this.record = record
         this.id = id
-        this.value = contents
+        this._value = contents
         this.edited = false
     }
 
-    set(content) {
-        if (this.dataType === "container") throw "Cannot set container value using set(). Use upload() instead."
-        this.value = content
+    set(content: string | number | Date) {
+        if (this.metadata.result === "container") throw "Cannot set container value using set(). Use upload() instead."
+        if (
+            (this.metadata.result === "timeStamp" ||
+                this.metadata.result === "date" ||
+                this.metadata.result === "time")
+            && !(content instanceof Date) && !!content
+        ) {
+            throw "Value was not an instance of Date: " + content
+        }
+        this._value = content
         this.edited = true
     }
 
-    get dataType() {
-        if (!this.record.layout.metadata) return "unknown"
+    get metadata(): fieldMetaData {
+        if (!this.record.layout.metadata) {
+            // Default to a regular text field
+            return {
+                name: this.id.toString(),
+                type: 'normal',
+                displayType: 'editText',
+                result: 'text',
+                global: false,
+                autoEnter: true,
+                fourDigitYear: false,
+                maxRepeat: 1,
+                maxCharacters: 0,
+                notEmpty: false,
+                numeric: false,
+                timeOfDay: false,
+                repetitionStart: 1,
+                repetitionEnd: 1
+            } as fieldMetaData
+        }
         if (this.record instanceof portalItem) {
-            return this.record.layout.metadata.portalMetaData.find(i => i.name === this.id).result || "unknown"
+            return this.record.layout.metadata.portalMetaData.find(i => i.name === this.id) as fieldMetaData || {
+                name: this.id.toString(),
+                type: 'normal',
+                displayType: 'editText',
+                result: 'text',
+                global: false,
+                autoEnter: true,
+                fourDigitYear: false,
+                maxRepeat: 1,
+                maxCharacters: 0,
+                notEmpty: false,
+                numeric: false,
+                timeOfDay: false,
+                repetitionStart: 1,
+                repetitionEnd: 1
+            } as fieldMetaData
         } else {
-            return this.record.layout.metadata.fieldMetaData.find(i => i.name === this.id).result || "unknown"
+            return this.record.layout.metadata.fieldMetaData.find(i => i.name === this.id) as fieldMetaData || {
+                name: this.id.toString(),
+                type: 'normal',
+                displayType: 'editText',
+                result: 'text',
+                global: false,
+                autoEnter: true,
+                fourDigitYear: false,
+                maxRepeat: 1,
+                maxCharacters: 0,
+                notEmpty: false,
+                numeric: false,
+                timeOfDay: false,
+                repetitionStart: 1,
+                repetitionEnd: 1
+            } as fieldMetaData
         }
     }
 
+    get value() {
+        return this._value
+    }
+
     upload(buffer: Buffer, filename: string, mime: string): Promise<void | FMError> {
-        if (this.dataType !== "container") throw "Cannot upload a file to the field; " + this.id + " (not a container field)"
+        if (this.metadata.result !== "container") throw "Cannot upload a file to the field; " + this.id + " (not a container field)"
         return new Promise(async (resolve, reject) => {
             let form = new FormData()
             form.append("upload", new File([buffer], filename, {type: mime}))
@@ -734,24 +936,27 @@ class recordGetRange extends recordGetOperation {
         return "?" + params.join("&")
     }
 
-    run() {
+    run(): Promise<record[]> {
         return new Promise((resolve, reject) => {
             // console.log(this.#toObject())
-            this.layout.database.apiRequest(`${this.layout.endpoint}/records${this.generateQueryParams()}`, {
-                method: "GET"
-            }).then(async res => {
-                // // console.log(res)
-                if (res.messages[0].code === "0") {
-                    // console.log("RESOLVING")
-                    if (!this.layout.metadata) await this.layout.getLayoutMeta()
-                    let data = res.response.data.map(item => {
-                        return new record(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
-                    })
-                    resolve(data)
-                } else {
-                    reject(new FMError(res.messages[0].code, res.status, res))
-                }
+            this.layout.getLayoutMeta().then(() => {
+                return this.layout.database.apiRequest(`${this.layout.endpoint}/records${this.generateQueryParams()}`, {
+                    method: "GET"
+                })
             })
+                .then(async res => {
+                    // // console.log(res)
+                    if (res.messages[0].code === "0") {
+                        // console.log("RESOLVING")
+                        if (!this.layout.metadata) await this.layout.getLayoutMeta()
+                        let data = res.response.data.map(item => {
+                            return new record(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
+                        })
+                        resolve(data)
+                    } else {
+                        reject(new FMError(res.messages[0].code, res.status, res))
+                    }
+                })
                 .catch(e => {
                     reject(e)
                 })
@@ -800,26 +1005,30 @@ class find extends recordGetOperation {
         return this.run()
     }
 
-    run() {
+    run(): Promise<record[]> {
         return new Promise((resolve, reject) => {
             // console.log(this.#toObject())
-            this.layout.database.apiRequest(`${this.layout.endpoint}/_find`, {
-                port: 443,
-                method: "POST",
-                body: JSON.stringify(this.toObject())
-            }).then(async res => {
-                // // console.log(res)
-                if (res.messages[0].code === "0") {
-                    // console.log("RESOLVING")
-                    if (!this.layout.metadata) await this.layout.getLayoutMeta()
-                    let data = res.response.data.map(item => {
-                        return new record(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
+            this.layout.getLayoutMeta()
+                .then(() => {
+                    return this.layout.database.apiRequest(`${this.layout.endpoint}/_find`, {
+                        port: 443,
+                        method: "POST",
+                        body: JSON.stringify(this.toObject())
                     })
-                    resolve(data)
-                } else {
-                    reject(new FMError(res.messages[0].code, res.status, res))
-                }
-            })
+                })
+                .then(async res => {
+                    // // console.log(res)
+                    if (res.messages[0].code === "0") {
+                        // console.log("RESOLVING")
+                        if (!this.layout.metadata) await this.layout.getLayoutMeta()
+                        let data = res.response.data.map(item => {
+                            return new record(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
+                        })
+                        resolve(data)
+                    } else {
+                        reject(new FMError(res.messages[0].code, res.status, res))
+                    }
+                })
                 .catch(e => {
                     reject(e)
                 })
@@ -849,3 +1058,35 @@ export class FMError extends Error {
 // module.exports = {
 //     default: {FileMakerConnection}
 // }
+
+interface AuthorizationHeaders {
+    "Content-Type": "application/json"
+    Authorization: string
+}
+
+interface AuthorizationHeadersOAuth {
+    "Content-Type": "application/json"
+    "X-FM-Data-OAuth-RequestId": string,
+    "X-FM-Data-OAuth-Identifier": string
+}
+
+function generateAuthorizationHeaders(credentials: loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris): AuthorizationHeaders | AuthorizationHeadersOAuth {
+    switch (credentials.method) {
+        case "filemaker":
+            return {
+                "Content-Type": "application/json",
+                "Authorization": "Basic " + Buffer.from((<loginOptionsFileMaker>credentials).username + ":" + (<loginOptionsFileMaker>credentials).password).toString("base64")
+            } as AuthorizationHeaders
+        case "claris":
+            return {
+                "Content-Type": "application/json",
+                "Authorization": (<loginOptionsClaris>credentials).claris.fmid,
+            } as AuthorizationHeaders
+        case "oauth":
+            return {
+                "Content-Type": "application/json",
+                "X-FM-Data-OAuth-RequestId": (<loginOptionsOAuth>credentials).oauth.requestId,
+                "X-FM-Data-OAuth-Identifier": (<loginOptionsOAuth>credentials).oauth.requestIdentifier
+            } as AuthorizationHeadersOAuth
+    }
+}
