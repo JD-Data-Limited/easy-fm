@@ -20,21 +20,73 @@ import path from "path";
 // @ts-ignore
 import { fileURLToPath } from "url";
 import * as https from "https";
+import * as moment from "moment";
 // @ts-ignore
 const errs = JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'fmErrors.json')).toString());
-export default class FileMakerConnection extends EventEmitter {
-    constructor(conn, rejectUnauthorized = true) {
+export default class FMHost {
+    constructor(_hostname, timezoneOffset = 0 - (new Date()).getTimezoneOffset(), verify = true) {
+        if (!(/^https?:\/\//).test(_hostname))
+            throw "hostname MUST begin with either http:// or https://";
+        this.hostname = _hostname;
+        this.timezoneOffset = timezoneOffset;
+        this.verify = verify;
+    }
+    listDatabases(credentials) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let headers = {};
+            if (credentials) {
+                headers = generateAuthorizationHeaders(credentials);
+            }
+            let _fetch = yield fetch(`${this.hostname}/fmi/data/v2/databases`, {
+                method: "GET",
+                headers
+            });
+            let data = yield _fetch.json();
+            // console.log(data.messages[0])
+            if (data.messages[0].code === "0") {
+                return data.response.databases;
+            }
+            else {
+                // @ts-ignore
+                throw new FMError(data.messages[0].code, data.status, data);
+            }
+        });
+    }
+    database(data) {
+        return new Database(this, data);
+    }
+    getMetadata() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.metadata)
+                return this.metadata;
+            let _fetch = yield fetch(`${this.hostname}/fmi/data/v2/productInfo`, {
+                method: "GET",
+            });
+            let data = yield _fetch.json();
+            // console.log(data.messages[0])
+            if (data.messages[0].code === "0") {
+                this.metadata = data.response;
+                return data.response;
+            }
+            else {
+                // @ts-ignore
+                throw new FMError(data.messages[0].code, data.status, data);
+            }
+        });
+    }
+}
+export class Database extends EventEmitter {
+    constructor(host, conn) {
         super();
-        this.hostname = conn.hostname;
-        this.name = conn.database.database;
-        this.databaseConDetails = conn;
-        this.rejectUnauthroized = rejectUnauthorized;
+        this.host = host;
+        this.name = conn.database;
+        this.connection_details = conn;
     }
     generateExternalSourceLogin(data) {
-        if (data.method === "filemaker") {
-            let _data = data;
+        if (data.credentials.method === "filemaker") {
+            let _data = data.credentials;
             return {
-                database: _data.database,
+                database: data.database,
                 username: _data.username,
                 password: _data.password
             };
@@ -56,36 +108,43 @@ export default class FileMakerConnection extends EventEmitter {
             let data = yield _fetch.json();
             // console.log(data)
             this._token = null;
-            this.hostname = null;
             resolve();
         }));
     }
     login() {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                yield this.host.getMetadata();
+            }
+            catch (e) {
+                reject(e);
+                return;
+            }
             if (this.token)
                 throw new Error("Already logged in. Run logout() first");
-            if (this.databaseConDetails.database.method === "filemaker") {
+            if (this.connection_details.credentials.method === "token") {
+                this._token = this.connection_details.credentials.token;
+                resolve(this.token);
+            }
+            else {
                 fetch(`${this.endpoint}/sessions`, {
-                    hostname: this.hostname,
+                    hostname: this.host.hostname,
                     port: 443,
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": "Basic " + Buffer.from(this.databaseConDetails.database.username + ":" + this.databaseConDetails.database.password).toString("base64")
-                    },
+                    headers: generateAuthorizationHeaders(this.connection_details.credentials),
                     body: JSON.stringify({
-                        fmDataSource: this.databaseConDetails.externalSources.map(i => {
+                        fmDataSource: this.connection_details.externalSources.map(i => {
                             let _i = i;
                             return this.generateExternalSourceLogin(_i);
                         })
                     })
                 }).then((res) => __awaiter(this, void 0, void 0, function* () {
+                    let _res = (yield res.json());
                     if (res.status === 200) {
                         this._token = res.headers.get('x-fm-data-access-token');
                         resolve(this._token);
                     }
                     else {
-                        let _res = (yield res.json());
                         reject(new FMError(_res.messages[0].code, _res.status, res));
                     }
                 }))
@@ -93,55 +152,13 @@ export default class FileMakerConnection extends EventEmitter {
                     reject(e);
                 });
             }
-            else if (this.databaseConDetails.database.method === "token") {
-                this._token = this.databaseConDetails.database.token;
-                resolve(this.token);
-            }
-            else if (this.databaseConDetails.database.method === "oauth") {
-                fetch(`${this.endpoint}/sessions`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-FM-Data-OAuth-RequestId": this.databaseConDetails.database.oauth.requestId,
-                        "X-FM-Data-OAuth-Identifier": this.databaseConDetails.database.oauth.requestIdentifier
-                    },
-                    body: JSON.stringify({
-                        fmDataSource: this.databaseConDetails.externalSources.map(i => {
-                            let _i = i;
-                            return this.generateExternalSourceLogin(_i);
-                        })
-                    })
-                })
-                    .then(res => res.json())
-                    .then(res => {
-                    let _res = res;
-                    this._token = _res.headers["x-fm-data-access-token"];
-                    resolve(this.token);
-                });
-            }
-            else if (this.databaseConDetails.database.method === "claris") {
-                fetch(`${this.endpoint}/sessions`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": this.databaseConDetails.database.claris.fmid,
-                    },
-                    body: "{}"
-                })
-                    .then(res => res.json())
-                    .then(res => {
-                    let _res = res;
-                    this._token = _res.headers["x-fm-data-access-token"];
-                    resolve(this.token);
-                });
-            }
-        });
+        }));
     }
     get token() {
         return this._token;
     }
     get endpoint() {
-        return `https://${this.hostname}/fmi/data/v2/databases/${this.name}`;
+        return `${this.host.hostname}/fmi/data/v2/databases/${this.name}`;
     }
     apiRequest(url, options = {}, autoRelogin = true) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -149,10 +166,10 @@ export default class FileMakerConnection extends EventEmitter {
                 options.headers = {};
             options.headers["content-type"] = options.headers["content-type"] ? options.headers["content-type"] : "application/json";
             options.headers["authorization"] = "Bearer " + this._token;
-            options.rejectUnauthorized = this.rejectUnauthroized;
+            options.rejectUnauthorized = this.host.verify;
             let _fetch = yield fetch(url, options);
             let data = yield _fetch.json();
-            console.log(data.messages[0]);
+            // console.log(data.messages[0])
             if (data.messages[0].code == 952 && autoRelogin) {
                 this._token = null;
                 yield this.login();
@@ -193,32 +210,30 @@ export default class FileMakerConnection extends EventEmitter {
 }
 class layout {
     constructor(database, name) {
+        this.records = new layoutRecordManager(this);
         this.database = database;
         this.name = name;
     }
     get endpoint() {
         return `${this.database.endpoint}/layouts/${this.name}`;
     }
-    getScript(script) {
-        return new script(this, script);
-    }
+    /**
+     * @deprecated use layout.records.create() instead
+     */
     createRecord() {
-        return new Promise((resolve, reject) => {
-            // Get the layout's metadata
-            this.getLayoutMeta().then(layout => {
-                let fields = {};
-                for (let _field of this.metadata.fieldMetaData) {
-                    fields[_field.name] = "";
-                }
-                resolve(new record(this, -1, 0, fields));
-            }).catch(e => { reject(e); });
-        });
+        return this.records.create();
     }
+    /**
+     * @deprecated use layout.records.get() instead
+     */
     getRecord(recordId) {
-        return new record(this, recordId);
+        return this.records.get(recordId);
     }
+    /**
+     * @deprecated use layout.records.find() instead
+     */
     newFind() {
-        return new find(this);
+        return this.records.find();
     }
     runScript(script) {
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
@@ -245,12 +260,57 @@ class layout {
     }
     getLayoutMeta() {
         return new Promise((resolve, reject) => {
+            if (this.metadata) {
+                resolve(this.metadata);
+                return;
+            }
             this.database.apiRequest(this.endpoint).then(res => {
                 this.metadata = res.response;
                 resolve(this);
             })
                 .catch(e => reject(e));
         });
+    }
+}
+class layoutRecordManager {
+    constructor(layout) {
+        this.layout = layout;
+    }
+    create() {
+        return new Promise((resolve, reject) => {
+            // Get the layout's metadata
+            this.layout.getLayoutMeta().then(layout => {
+                let fields = {};
+                for (let _field of this.layout.metadata.fieldMetaData) {
+                    fields[_field.name] = "";
+                }
+                resolve(new record(this.layout, -1, 0, fields));
+            }).catch(e => {
+                reject(e);
+            });
+        });
+    }
+    get(recordId) {
+        return new Promise((resolve, reject) => {
+            let record;
+            this.layout.getLayoutMeta()
+                .then(layout => {
+                record = new record(this.layout, recordId);
+                return record.get();
+            })
+                .then(() => {
+                resolve(record);
+            })
+                .catch(e => {
+                reject(e);
+            });
+        });
+    }
+    range() {
+        return new recordGetRange(this.layout);
+    }
+    find() {
+        return new find(this.layout);
     }
 }
 class record extends EventEmitter {
@@ -287,7 +347,34 @@ class record extends EventEmitter {
     }
     processFieldData(fieldData) {
         return Object.keys(fieldData).map(item => {
-            return new field(this, item, fieldData[item]);
+            let _field = new field(this, item, fieldData[item]);
+            if (!!fieldData[item]) {
+                if (_field.metadata.result === "timeStamp") {
+                    // @ts-ignore
+                    let date = moment.default(fieldData[item], this.layout.database.host.metadata.productInfo.timeStampFormat)
+                        .utcOffset(this.layout.database.host.timezoneOffset, true)
+                        .local();
+                    _field.set(date.toDate());
+                    _field.edited = false;
+                }
+                else if (_field.metadata.result === "time") {
+                    // @ts-ignore
+                    let date = moment.default(fieldData[item], this.layout.database.host.metadata.productInfo.timeFormat)
+                        .utcOffset(this.layout.database.host.timezoneOffset, true)
+                        .local();
+                    _field.set(date.toDate());
+                    _field.edited = false;
+                }
+                else if (_field.metadata.result === "date") {
+                    // @ts-ignore
+                    let date = moment.default(fieldData[item], this.layout.database.host.metadata.productInfo.dateFormat)
+                        .utcOffset(this.layout.database.host.timezoneOffset, true)
+                        .local();
+                    _field.set(date.toDate());
+                    _field.edited = false;
+                }
+            }
+            return _field;
         });
     }
     get() {
@@ -340,7 +427,6 @@ class record extends EventEmitter {
                         reject(new FMError(res.response.scriptError, res.status, res));
                     }
                     else if (res.messages[0].code === "0") {
-                        console.log(res);
                         this.recordId = parseInt(res.response.recordId);
                         this.modId = parseInt(res.response.modId);
                         resolve(this);
@@ -354,19 +440,18 @@ class record extends EventEmitter {
                 });
                 return;
             }
-            for (let item of Object.keys(extraBody))
-                data[item] = extraBody[item];
+            for (let item of Object.keys(data))
+                extraBody[item] = data[item];
             this.layout.database.apiRequest(this.endpoint, {
                 port: 443,
                 method: "PATCH",
-                body: JSON.stringify(data)
+                body: JSON.stringify(extraBody)
             })
                 .then(res => {
                 if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
                     reject(new FMError(res.response.scriptError, res.status, res));
                 }
                 else if (res.messages[0].code === "0") {
-                    console.log(res);
                     this.modId = res.response.modId;
                     this.emit("saved");
                     resolve(this);
@@ -437,7 +522,24 @@ class record extends EventEmitter {
     toObject(filter = (a) => a.edited, portalFilter = (a) => a.records.find(record => record.edited), portalRowFilter = (a) => a.edited, portalFieldFilter = (a) => a.edited) {
         let fields_processed = {};
         for (let field of this.fields.filter(field => filter(field))) {
-            fields_processed[field.id] = field.value;
+            let value = field.value;
+            if (value instanceof Date) {
+                // @ts-ignore
+                let _value = moment.default(value)
+                    .utcOffset(this.layout.database.host.timezoneOffset);
+                // @ts-ignore
+                switch (field.metadata.result) {
+                    case "time":
+                        value = _value.format(this.layout.database.host.metadata.productInfo.timeFormat.replace("dd", "DD"));
+                        break;
+                    case "date":
+                        value = _value.format(this.layout.database.host.metadata.productInfo.dateFormat.replace("dd", "DD"));
+                        break;
+                    default:
+                        value = _value.format(this.layout.database.host.metadata.productInfo.timeStampFormat.replace("dd", "DD"));
+                }
+            }
+            fields_processed[field.id] = value;
         }
         let obj = {
             "recordId": this.recordId,
@@ -461,27 +563,83 @@ class field {
     constructor(record, id, contents) {
         this.record = record;
         this.id = id;
-        this.value = contents;
+        this._value = contents;
         this.edited = false;
     }
     set(content) {
-        if (this.dataType === "container")
+        if (this.metadata.result === "container")
             throw "Cannot set container value using set(). Use upload() instead.";
-        this.value = content;
+        if ((this.metadata.result === "timeStamp" ||
+            this.metadata.result === "date" ||
+            this.metadata.result === "time")
+            && !(content instanceof Date) && !!content) {
+            throw "Value was not an instance of Date: " + content;
+        }
+        this._value = content;
         this.edited = true;
     }
-    get dataType() {
-        if (!this.record.layout.metadata)
-            return "unknown";
+    get metadata() {
+        if (!this.record.layout.metadata) {
+            // Default to a regular text field
+            return {
+                name: this.id.toString(),
+                type: 'normal',
+                displayType: 'editText',
+                result: 'text',
+                global: false,
+                autoEnter: true,
+                fourDigitYear: false,
+                maxRepeat: 1,
+                maxCharacters: 0,
+                notEmpty: false,
+                numeric: false,
+                timeOfDay: false,
+                repetitionStart: 1,
+                repetitionEnd: 1
+            };
+        }
         if (this.record instanceof portalItem) {
-            return this.record.layout.metadata.portalMetaData.find(i => i.name === this.id).result || "unknown";
+            return this.record.layout.metadata.portalMetaData.find(i => i.name === this.id) || {
+                name: this.id.toString(),
+                type: 'normal',
+                displayType: 'editText',
+                result: 'text',
+                global: false,
+                autoEnter: true,
+                fourDigitYear: false,
+                maxRepeat: 1,
+                maxCharacters: 0,
+                notEmpty: false,
+                numeric: false,
+                timeOfDay: false,
+                repetitionStart: 1,
+                repetitionEnd: 1
+            };
         }
         else {
-            return this.record.layout.metadata.fieldMetaData.find(i => i.name === this.id).result || "unknown";
+            return this.record.layout.metadata.fieldMetaData.find(i => i.name === this.id) || {
+                name: this.id.toString(),
+                type: 'normal',
+                displayType: 'editText',
+                result: 'text',
+                global: false,
+                autoEnter: true,
+                fourDigitYear: false,
+                maxRepeat: 1,
+                maxCharacters: 0,
+                notEmpty: false,
+                numeric: false,
+                timeOfDay: false,
+                repetitionStart: 1,
+                repetitionEnd: 1
+            };
         }
     }
+    get value() {
+        return this._value;
+    }
     upload(buffer, filename, mime) {
-        if (this.dataType !== "container")
+        if (this.metadata.result !== "container")
             throw "Cannot upload a file to the field; " + this.id + " (not a container field)";
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
             let form = new FormData();
@@ -611,9 +769,12 @@ class recordGetRange extends recordGetOperation {
     run() {
         return new Promise((resolve, reject) => {
             // console.log(this.#toObject())
-            this.layout.database.apiRequest(`${this.layout.endpoint}/records${this.generateQueryParams()}`, {
-                method: "GET"
-            }).then((res) => __awaiter(this, void 0, void 0, function* () {
+            this.layout.getLayoutMeta().then(() => {
+                return this.layout.database.apiRequest(`${this.layout.endpoint}/records${this.generateQueryParams()}`, {
+                    method: "GET"
+                });
+            })
+                .then((res) => __awaiter(this, void 0, void 0, function* () {
                 // // console.log(res)
                 if (res.messages[0].code === "0") {
                     // console.log("RESOLVING")
@@ -674,11 +835,15 @@ class find extends recordGetOperation {
     run() {
         return new Promise((resolve, reject) => {
             // console.log(this.#toObject())
-            this.layout.database.apiRequest(`${this.layout.endpoint}/_find`, {
-                port: 443,
-                method: "POST",
-                body: JSON.stringify(this.toObject())
-            }).then((res) => __awaiter(this, void 0, void 0, function* () {
+            this.layout.getLayoutMeta()
+                .then(() => {
+                return this.layout.database.apiRequest(`${this.layout.endpoint}/_find`, {
+                    port: 443,
+                    method: "POST",
+                    body: JSON.stringify(this.toObject())
+                });
+            })
+                .then((res) => __awaiter(this, void 0, void 0, function* () {
                 // // console.log(res)
                 if (res.messages[0].code === "0") {
                     // console.log("RESOLVING")
@@ -711,7 +876,23 @@ export class FMError extends Error {
         Error.captureStackTrace(this, FMError);
     }
 }
-//
-// module.exports = {
-//     default: {FileMakerConnection}
-// }
+function generateAuthorizationHeaders(credentials) {
+    switch (credentials.method) {
+        case "filemaker":
+            return {
+                "Content-Type": "application/json",
+                "Authorization": "Basic " + Buffer.from(credentials.username + ":" + credentials.password).toString("base64")
+            };
+        case "claris":
+            return {
+                "Content-Type": "application/json",
+                "Authorization": credentials.claris.fmid,
+            };
+        case "oauth":
+            return {
+                "Content-Type": "application/json",
+                "X-FM-Data-OAuth-RequestId": credentials.oauth.requestId,
+                "X-FM-Data-OAuth-Identifier": credentials.oauth.requestIdentifier
+            };
+    }
+}
