@@ -58,7 +58,7 @@ interface loginOptionsClaris {
 }
 
 interface limitPortalsInterface {
-    portal: portal,
+    portal: Portal,
     offset: number,
     limit: number
 }
@@ -1307,8 +1307,8 @@ export class Database extends EventEmitter {
         return (data as any)
     }
 
-    getLayout(name): layout {
-        return new layout(this, name)
+    getLayout(name): Layout {
+        return new Layout(this, name)
     }
 
     setGlobals(globalFields): Promise<void> {
@@ -1341,9 +1341,9 @@ export class Database extends EventEmitter {
     }
 }
 
-class layout {
+export class Layout {
     readonly database: Database;
-    readonly records = new layoutRecordManager(this)
+    readonly records = new LayourRecordManager(this)
     protected name: string;
     metadata: any;
 
@@ -1373,7 +1373,7 @@ class layout {
     /**
      * @deprecated use layout.records.find() instead
      */
-    newFind(): find {
+    newFind(): Find {
         return this.records.find()
     }
 
@@ -1399,7 +1399,7 @@ class layout {
         })
     }
 
-    public getLayoutMeta(): Promise<layout | FMError> {
+    public getLayoutMeta(): Promise<Layout | FMError> {
         return new Promise((resolve, reject) => {
             if (this.metadata) {
                 resolve(this.metadata)
@@ -1415,10 +1415,10 @@ class layout {
     }
 }
 
-class layoutRecordManager {
-    readonly layout: layout
+class LayourRecordManager {
+    readonly layout: Layout
 
-    constructor(layout: layout) {
+    constructor(layout: Layout) {
         this.layout = layout
     }
 
@@ -1455,20 +1455,20 @@ class layoutRecordManager {
     }
 
     range() {
-        return new recordGetRange(this.layout)
+        return new RecordGetRange(this.layout)
     }
 
-    find(): find {
-        return new find(this.layout)
+    find(): Find {
+        return new Find(this.layout)
     }
 }
 
-class RecordBase extends EventEmitter {
-    readonly layout: layout;
+export class RecordBase extends EventEmitter {
+    readonly layout: Layout;
     public recordId: number;
     modId: number;
-    fields: field[];
-    portals: portal[] = [];
+    fields: Field[];
+    portals: Portal[] = [];
     protected portalData: any[];
 
     constructor(layout, recordId, modId = recordId) {
@@ -1488,7 +1488,7 @@ class RecordBase extends EventEmitter {
 
     protected processPortalData(portalData): void {
         for (let item of Object.keys(portalData)) {
-            let _portal = new portal(this, item)
+            let _portal = new Portal(this, item)
             _portal.records = portalData[item].map(item => {
                 let fieldData = item;
                 delete fieldData.recordId;
@@ -1499,9 +1499,9 @@ class RecordBase extends EventEmitter {
         }
     }
 
-    processFieldData(fieldData): field[] {
+    processFieldData(fieldData): Field[] {
         return Object.keys(fieldData).map(item => {
-            let _field = new field(this, item, fieldData[item])
+            let _field = new Field(this, item, fieldData[item])
             if (!!fieldData[item]) {
                 if (_field.metadata.result === "timeStamp") {
                     // @ts-ignore
@@ -1726,8 +1726,8 @@ class RecordBase extends EventEmitter {
         return obj
     }
 }
-class LayoutRecord extends RecordBase {
-    portals: portal[];
+export class LayoutRecord extends RecordBase {
+    portals: Portal[];
 
     constructor(layout, recordId, modId = recordId, fieldData = {}, portalData = null) {
         super(layout, recordId, modId);
@@ -1739,7 +1739,7 @@ class LayoutRecord extends RecordBase {
     }
 }
 
-class field {
+export class Field {
     record: RecordBase;
     id: number;
     private _value: string | number | Date;
@@ -1860,7 +1860,7 @@ class field {
     }
 }
 
-class portal {
+export class Portal {
     readonly record: RecordBase;
     readonly name: string;
     public records: PortalRecord[];
@@ -1871,8 +1871,8 @@ class portal {
     }
 }
 
-class PortalRecord extends RecordBase {
-    readonly portal: portal;
+export class PortalRecord extends RecordBase {
+    readonly portal: Portal;
 
     constructor(record, portal, recordId, modId = recordId, fieldData = {}) {
         super(record.layout, recordId, modId);
@@ -1901,8 +1901,8 @@ class PortalRecord extends RecordBase {
     }
 }
 
-class recordGetOperation {
-    protected layout: layout
+export class RecordGetOperation {
+    protected layout: Layout
     protected limit: number = 100
     protected scripts: object
     protected sort: object[]
@@ -1923,7 +1923,7 @@ class recordGetOperation {
     addToPortalLimit() will adjust the results of the get request so that if a layout has multiple portals in it,
     only data from the specified ones will be read. This may help reduce load on your FileMaker API
     */
-    addToPortalLimit(portal: portal, offset = 0, limit = 100) {
+    addToPortalLimit(portal: Portal, offset = 0, limit = 100) {
         if (offset < 0) throw "Portal offset cannot be less than 0"
         this.limitPortals.push({portal, offset, limit})
         return this
@@ -1947,7 +1947,7 @@ class recordGetOperation {
     }
 }
 
-class recordGetRange extends recordGetOperation {
+export class RecordGetRange extends RecordGetOperation {
     constructor(layout) {
         super(layout)
     }
@@ -2011,7 +2011,7 @@ class recordGetRange extends recordGetOperation {
     }
 }
 
-class find extends recordGetOperation {
+export class Find extends RecordGetOperation {
     protected queries: object[]
 
     constructor(layout) {
