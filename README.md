@@ -68,7 +68,7 @@ let range_request = layout.records.range()
 range_request.setOffset(50) // Starting from the 50th record...
 range_request.setLimit(100) // Fetch 100 records
 
-let records = await range_request.run()
+let records = await range_request.fetch()
 console.log(records)
 ```
 

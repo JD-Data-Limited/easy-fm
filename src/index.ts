@@ -18,6 +18,8 @@ import fetch, {
 import {EventEmitter} from "events";
 // @ts-ignore
 import * as moment from "moment"
+import * as http from "http";
+import * as https from "https";
 
 // import * as btoa from "btoa";
 interface databaseOptionsBase {
@@ -78,6 +80,11 @@ interface extraBodyOptions {
             param?: string
         },
     }
+}
+
+export enum DOWNLOAD_MODES {
+    Stream,
+    Buffer
 }
 
 // @ts-ignore
@@ -1141,6 +1148,11 @@ interface FMHostMetadata {
     }
 }
 
+export interface ContainerBufferResult {
+    buffer: Buffer,
+    mime: string,
+    request: http.IncomingMessage
+}
 export default class FMHost {
     readonly hostname: string
     readonly timezoneOffset: number
@@ -1169,7 +1181,8 @@ export default class FMHost {
 
         if (data.messages[0].code === "0") {
             return data.response.databases
-        } else {
+        }
+        else {
             // @ts-ignore
             throw new FMError(data.messages[0].code, data.status, data)
         }
@@ -1191,7 +1204,8 @@ export default class FMHost {
         if (data.messages[0].code === "0") {
             this.metadata = data.response
             return data.response
-        } else {
+        }
+        else {
             // @ts-ignore
             throw new FMError(data.messages[0].code, data.status, data)
         }
@@ -1202,6 +1216,7 @@ export class Database extends EventEmitter {
     private _token: any;
     readonly host: FMHost;
     private connection_details: databaseOptionsWithExternalSources
+    private cookies: { [key: string]: string } = {}
     readonly name: string;
 
     constructor(host: FMHost, conn: databaseOptionsWithExternalSources) {
@@ -1219,7 +1234,8 @@ export class Database extends EventEmitter {
                 username: _data.username,
                 password: _data.password
             }
-        } else {
+        }
+        else {
             throw "Not yet supported login method"
         }
     }
@@ -1254,7 +1270,8 @@ export class Database extends EventEmitter {
             if (this.connection_details.credentials.method === "token") {
                 this._token = (<loginOptionsToken>this.connection_details.credentials).token
                 resolve(this.token)
-            } else {
+            }
+            else {
                 fetch(`${this.endpoint}/sessions`, {
                     hostname: this.host.hostname,
                     port: 443,
@@ -1271,7 +1288,8 @@ export class Database extends EventEmitter {
                     if (res.status === 200) {
                         this._token = res.headers.get('x-fm-data-access-token')
                         resolve(this._token)
-                    } else {
+                    }
+                    else {
                         reject(new FMError(_res.messages[0].code, _res.status, res))
                     }
                 })
@@ -1297,6 +1315,12 @@ export class Database extends EventEmitter {
         options.rejectUnauthorized = this.host.verify
 
         let _fetch = await fetch(url, options)
+        if (_fetch.headers.get('set-cookie')) {
+            for (let cookie of _fetch.headers.get('set-cookie')) {
+                let cookie_split = cookie.split("=")
+                this.cookies[cookie_split[0]] = cookie_split[1]
+            }
+        }
         let data = await _fetch.json() as fileMakerResponse
         // console.log(data.messages[0])
         if (data.messages[0].code == 952 && autoRelogin) {
@@ -1321,7 +1345,8 @@ export class Database extends EventEmitter {
                 // console.log(res)
                 if (res.messages[0].code === "0") {
                     resolve()
-                } else {
+                }
+                else {
                     reject(
                         (res.messages[0].code, res.status, res))
                 }
@@ -1338,6 +1363,44 @@ export class Database extends EventEmitter {
 
     _tokenExpired() {
         this.emit("token_expired")
+    }
+
+    streamContainer(field, url): Promise<http.IncomingMessage> {
+        return new Promise((resolve, reject) => {
+            if (field.metadata.result !== "container") {
+                reject("Cannot stream the field " + field.id + " as it is not a container")
+                return
+            }
+            if (!url || typeof url !== "string") {
+                reject("Container is empty, or has invalid value")
+                return
+            }
+
+            let headers = {}
+            if (Object.keys(this.cookies).length !== 0) {
+                headers["Cookie"] = Object.keys(this.cookies)
+                    .map(key => {
+                        return key + "=" + this.cookies[key]
+                    })
+                    .join("; ")
+            }
+
+            // Automatically switch between the http and https modules, based on which is needed
+            (url.startsWith("https") ? https : http).get(url, {
+                headers
+            }, (res) => {
+                // Check for the 'set-cookie' header. If it exists, remember it and strip it for better security.
+                if (res.headers['set-cookie']) {
+                    for (let cookie of res.headers['set-cookie']) {
+                        let cookie_split = cookie.split("=")
+                        this.cookies[cookie_split[0]] = cookie_split[1]
+                    }
+                    res.headers['set-cookie'] = null
+                }
+
+                resolve(res)
+            })
+        })
     }
 }
 
@@ -1388,7 +1451,8 @@ export class Layout {
                 .then(res => {
                     if (res.messages[0].code === "0") {
                         resolve(res.response)
-                    } else {
+                    }
+                    else {
                         // console.log(res)
                         reject(new FMError(res.messages[0].code, res.status, res))
                     }
@@ -1454,8 +1518,8 @@ class LayourRecordManager {
         })
     }
 
-    range() {
-        return new RecordGetRange(this.layout)
+    range(start = 0, limit = 100) {
+        return new RecordGetRange(this.layout, start, limit)
     }
 
     find(): Find {
@@ -1511,14 +1575,16 @@ export class RecordBase extends EventEmitter {
                     _field.set(date.toDate())
                     _field.edited = false
 
-                } else if (_field.metadata.result === "time") {
+                }
+                else if (_field.metadata.result === "time") {
                     // @ts-ignore
                     let date = moment.default(fieldData[item], this.layout.database.host.metadata.productInfo.timeFormat)
                         .utcOffset(this.layout.database.host.timezoneOffset, true)
                         .local()
                     _field.set(date.toDate())
                     _field.edited = false
-                } else if (_field.metadata.result === "date") {
+                }
+                else if (_field.metadata.result === "date") {
                     // @ts-ignore
                     let date = moment.default(fieldData[item], this.layout.database.host.metadata.productInfo.dateFormat)
                         .utcOffset(this.layout.database.host.timezoneOffset, true)
@@ -1550,7 +1616,8 @@ export class RecordBase extends EventEmitter {
                         this.portalData = []
                         if (res.response.data[0].portalData) this.processPortalData(res.response.data[0].portalData)
                         resolve(this)
-                    } else {
+                    }
+                    else {
                         reject(new FMError(res.messages[0].code, res.status, res))
                     }
                 })
@@ -1580,11 +1647,13 @@ export class RecordBase extends EventEmitter {
                     .then(res => {
                         if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
                             reject(new FMError(res.response.scriptError, res.status, res))
-                        } else if (res.messages[0].code === "0") {
+                        }
+                        else if (res.messages[0].code === "0") {
                             this.recordId = parseInt(res.response.recordId)
                             this.modId = parseInt(res.response.modId)
                             resolve(this)
-                        } else {
+                        }
+                        else {
                             reject(new FMError(res.messages[0].code, res.status, res))
                         }
                     })
@@ -1604,11 +1673,13 @@ export class RecordBase extends EventEmitter {
                 .then(res => {
                     if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
                         reject(new FMError(res.response.scriptError, res.status, res))
-                    } else if (res.messages[0].code === "0") {
+                    }
+                    else if (res.messages[0].code === "0") {
                         this.modId = res.response.modId
                         this._onSave()
                         resolve(this)
-                    } else {
+                    }
+                    else {
                         reject(new FMError(res.messages[0].code, res.status, res))
                     }
                 })
@@ -1617,7 +1688,7 @@ export class RecordBase extends EventEmitter {
                 })
         })
     }
-    
+
     _onSave() {
         this.emit("saved")
         for (let field of this.fields) field.edited = false
@@ -1640,10 +1711,12 @@ export class RecordBase extends EventEmitter {
                 .then(res => {
                     if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
                         reject(new FMError(res.response.scriptError, res.status, res))
-                    } else if (res.messages[0].code === "0") {
+                    }
+                    else if (res.messages[0].code === "0") {
                         this.emit("deleted")
                         resolve()
-                    } else {
+                    }
+                    else {
                         reject(new FMError(res.messages[0].code, res.status, res))
                     }
                 })
@@ -1662,13 +1735,15 @@ export class RecordBase extends EventEmitter {
                 .then(res => {
                     if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
                         reject(new FMError(res.response.scriptError, res.status, res))
-                    } else if (res.messages[0].code === "0") {
+                    }
+                    else if (res.messages[0].code === "0") {
                         let data = this.toObject((a) => true, (a) => true, (a) => false, (a) => false)
                         let _res = new LayoutRecord(this.layout, res.response.recordId, res.response.modId, data.fieldData, data.portalData)
 
                         this.emit("duplicated")
                         resolve(_res)
-                    } else {
+                    }
+                    else {
                         reject(new FMError(res.messages[0].code, res.status, res))
                     }
                 })
@@ -1726,6 +1801,7 @@ export class RecordBase extends EventEmitter {
         return obj
     }
 }
+
 export class LayoutRecord extends RecordBase {
     portals: Portal[];
 
@@ -1742,7 +1818,7 @@ export class LayoutRecord extends RecordBase {
 export class Field {
     record: RecordBase;
     id: number;
-    private _value: string | number | Date;
+    protected _value: string | number | Date;
     edited: boolean;
 
     constructor(record, id, contents) {
@@ -1803,7 +1879,8 @@ export class Field {
                 repetitionStart: 1,
                 repetitionEnd: 1
             } as fieldMetaData
-        } else {
+        }
+        else {
             return this.record.layout.metadata.fieldMetaData.find(i => i.name === this.id) as fieldMetaData || {
                 name: this.id.toString(),
                 type: 'normal',
@@ -1824,6 +1901,7 @@ export class Field {
     }
 
     get value() {
+        // if (this.metadata.result === "container") throw "Use await field.stream() to get the contents of a container field, instead of field.value"
         return this._value
     }
 
@@ -1842,7 +1920,8 @@ export class Field {
                     let _res = data as any
                     if (_res.messages[0].code === "0") {
                         resolve()
-                    } else {
+                    }
+                    else {
                         reject(new FMError(_res.messages[0].code, _res.status, data))
                     }
                 })
@@ -1852,10 +1931,35 @@ export class Field {
         })
     }
 
-    download() {
+    download(mode: DOWNLOAD_MODES.Stream): Promise<http.IncomingMessage>
+    download(mode: DOWNLOAD_MODES.Buffer): Promise<ContainerBufferResult>
+    download(mode: DOWNLOAD_MODES = DOWNLOAD_MODES.Stream): Promise<http.IncomingMessage | ContainerBufferResult> {
         return new Promise((resolve, reject) => {
-            fetch(this.value.toString())
-                .then(res => resolve(res))
+            this.record.layout.database.streamContainer(this, this._value)
+                .then(stream => {
+                    if (mode === DOWNLOAD_MODES.Stream) {
+                        resolve(stream)
+                        return
+                    }
+
+                    let body = []
+                    stream.on("data", chunk => {
+                        body.push(chunk)
+                    })
+                    stream.on("error", (e) => {
+                        reject(e)
+                    })
+                    stream.on("end", () => {
+                        resolve({
+                            buffer: Buffer.concat(body),
+                            mime: stream.headers["content-type"],
+                            request: stream
+                        } as ContainerBufferResult)
+                    })
+                })
+                .catch(e => {
+                    reject(e)
+                })
         })
     }
 }
@@ -1948,8 +2052,10 @@ export class RecordGetOperation {
 }
 
 export class RecordGetRange extends RecordGetOperation {
-    constructor(layout) {
+    constructor(layout, start = 0, limit = 100) {
         super(layout)
+        this.setOffset(start)
+        this.setLimit(limit)
     }
 
     private generateQueryParams(extraBody: extraBodyOptions = {}) {
@@ -1983,7 +2089,14 @@ export class RecordGetRange extends RecordGetOperation {
         return "?" + params.join("&")
     }
 
+    /**
+     * @deprecated in favour of .fetch()
+     */
     run(extraBody: extraBodyOptions = {}): Promise<RecordBase[]> {
+        return this.fetch(extraBody)
+    }
+
+    fetch(extraBody: extraBodyOptions = {}): Promise<RecordBase[]> {
         return new Promise((resolve, reject) => {
             // console.log(this.#toObject())
             this.layout.getLayoutMeta().then(() => {
@@ -2000,7 +2113,8 @@ export class RecordGetRange extends RecordGetOperation {
                             return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
                         })
                         resolve(data)
-                    } else {
+                    }
+                    else {
                         reject(new FMError(res.messages[0].code, res.status, res))
                     }
                 })
@@ -2048,11 +2162,14 @@ export class Find extends RecordGetOperation {
         return this
     }
 
-    find() {
-        return this.run()
+    /**
+     * @deprecated in favour of .fetch()
+     */
+    run() {
+        return this.fetch()
     }
 
-    run(): Promise<RecordBase[]> {
+    fetch(): Promise<RecordBase[]> {
         return new Promise((resolve, reject) => {
             // console.log(this.#toObject())
             this.layout.getLayoutMeta()
@@ -2072,7 +2189,8 @@ export class Find extends RecordGetOperation {
                             return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
                         })
                         resolve(data)
-                    } else {
+                    }
+                    else {
                         reject(new FMError(res.messages[0].code, res.status, res))
                     }
                 })
