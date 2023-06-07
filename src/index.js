@@ -1,83 +1,27 @@
 /*
  * Copyright (c) 2022-2023. See LICENSE file for more information
  */
-
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 // const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-import fetch, {
-    Blob,
-    blobFrom,
-    blobFromSync,
-    File,
-    fileFrom,
-    fileFromSync,
-    FormData,
-    Headers, HeadersInit,
-    Request,
-    Response
-} from 'node-fetch';
-import {EventEmitter} from "events";
+import fetch, { File, FormData } from 'node-fetch';
+import { EventEmitter } from "events";
 // @ts-ignore
-import * as moment from "moment"
+import * as moment from "moment";
 import * as http from "http";
 import * as https from "https";
-
-// import * as btoa from "btoa";
-interface databaseOptionsBase {
-    database: string
-    credentials: loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken,
-}
-
-interface databaseOptionsWithExternalSources extends databaseOptionsBase {
-    database: string
-    credentials: loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken,
-    externalSources: databaseOptionsBase[]
-}
-
-interface loginOptionsToken {
-    method: "token"
-    token: string
-}
-
-interface loginOptionsOAuth {
-    method: "oauth"
-    oauth: {
-        requestId: string,
-        requestIdentifier: string
-    }
-}
-
-interface loginOptionsFileMaker {
-    method: "filemaker"
-    username: string,
-    password: string,
-}
-
-interface loginOptionsClaris {
-    method: "claris"
-    claris: {
-        fmid: string
-    }
-}
-
-interface limitPortalsInterface {
-    portal: Portal,
-    offset: number,
-    limit: number
-}
-
-interface extraBodyOptions {
-    scripts?: {
-        prerequest?: Script,
-        presort?: Script,
-        after?: Script,
-    }
-}
-
-export enum DOWNLOAD_MODES {
-    Stream,
-    Buffer
-}
-
+export var DOWNLOAD_MODES;
+(function (DOWNLOAD_MODES) {
+    DOWNLOAD_MODES[DOWNLOAD_MODES["Stream"] = 0] = "Stream";
+    DOWNLOAD_MODES[DOWNLOAD_MODES["Buffer"] = 1] = "Buffer";
+})(DOWNLOAD_MODES || (DOWNLOAD_MODES = {}));
 // @ts-ignore
 const errs = [
     {
@@ -1088,304 +1032,218 @@ const errs = [
         "e": 1635,
         "d": "Connection is unencrypted"
     }
-]
-
-interface Script {
-    name: string
-    parameter: string
-}
-
-interface recordObject {
-    recordId: number
-    modId: number,
-    fieldData: any,
-    portalData?: portalDataObject
-}
-
-interface fileMakerResponse {
-    response: any,
-    messages: any[]
-}
-
-interface portalDataObject {
-    [key: string]: recordObject
-}
-
-interface FieldMetaData {
-    name: string,
-    type: string,
-    displayType: string,
-    result: string,
-    global: boolean,
-    autoEnter: boolean,
-    fourDigitYear: boolean,
-    maxRepeat: number,
-    maxCharacters: number,
-    notEmpty: boolean,
-    numeric: boolean,
-    timeOfDay: false,
-    repetitionStart: number,
-    repetitionEnd: number
-}
-
-interface LayoutMetaData {
-    fieldMetaData: FieldMetaData[],
-    portalMetaData?: {
-        [key: string]: FieldMetaData[]
-    }
-}
-
-interface FMHostMetadata {
-    productInfo: {
-        buildDate: Date,
-        name: string,
-        version: string,
-        dateFormat: string,
-        timeFormat: string,
-        timeStampFormat: string
-    }
-}
-
-export interface ContainerBufferResult {
-    buffer: Buffer,
-    mime: string,
-    request: http.IncomingMessage
-}
+];
 export default class FMHost {
-    readonly hostname: string
-    readonly timezoneOffset: number
-    readonly verify: boolean
-    metadata: FMHostMetadata
-
-    constructor(_hostname: string, timezoneOffset = 0 - (new Date()).getTimezoneOffset(), verify = true) {
-        if (!(/^https?:\/\//).test(_hostname)) throw "hostname MUST begin with either http:// or https://"
-        this.hostname = _hostname
-        this.timezoneOffset = timezoneOffset
-        this.verify = verify
+    constructor(_hostname, timezoneOffset = 0 - (new Date()).getTimezoneOffset(), verify = true) {
+        if (!(/^https?:\/\//).test(_hostname))
+            throw "hostname MUST begin with either http:// or https://";
+        this.hostname = _hostname;
+        this.timezoneOffset = timezoneOffset;
+        this.verify = verify;
     }
-
-    async listDatabases(credentials?: loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris) {
-        let headers = {}
-        if (credentials) {
-            headers = generateAuthorizationHeaders(credentials)
-        }
-
-        let _fetch = await fetch(`${this.hostname}/fmi/data/v2/databases`, {
-            method: "GET",
-            headers
-        })
-        let data = await _fetch.json() as fileMakerResponse
-        // console.log(data.messages[0])
-
-        if (data.messages[0].code === "0") {
-            return data.response.databases
-        }
-        else {
-            // @ts-ignore
-            throw new FMError(data.messages[0].code, data.status, data)
-        }
+    listDatabases(credentials) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let headers = {};
+            if (credentials) {
+                headers = generateAuthorizationHeaders(credentials);
+            }
+            let _fetch = yield fetch(`${this.hostname}/fmi/data/v2/databases`, {
+                method: "GET",
+                headers
+            });
+            let data = yield _fetch.json();
+            // console.log(data.messages[0])
+            if (data.messages[0].code === "0") {
+                return data.response.databases;
+            }
+            else {
+                // @ts-ignore
+                throw new FMError(data.messages[0].code, data.status, data);
+            }
+        });
     }
-
-    database(data: databaseOptionsWithExternalSources) {
-        return new Database(this, data)
+    database(data) {
+        return new Database(this, data);
     }
-
-    async getMetadata() {
-        if (this.metadata) return this.metadata
-
-        let _fetch = await fetch(`${this.hostname}/fmi/data/v2/productInfo`, {
-            method: "GET",
-        })
-        let data = await _fetch.json() as fileMakerResponse
-        // console.log(data.messages[0])
-
-        if (data.messages[0].code === "0") {
-            this.metadata = data.response
-            return data.response
-        }
-        else {
-            // @ts-ignore
-            throw new FMError(data.messages[0].code, data.status, data)
-        }
+    getMetadata() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.metadata)
+                return this.metadata;
+            let _fetch = yield fetch(`${this.hostname}/fmi/data/v2/productInfo`, {
+                method: "GET",
+            });
+            let data = yield _fetch.json();
+            // console.log(data.messages[0])
+            if (data.messages[0].code === "0") {
+                this.metadata = data.response;
+                return data.response;
+            }
+            else {
+                // @ts-ignore
+                throw new FMError(data.messages[0].code, data.status, data);
+            }
+        });
     }
 }
-
 export class Database extends EventEmitter {
-    private _token: any;
-    readonly host: FMHost;
-    private connection_details: databaseOptionsWithExternalSources
-    private cookies: { [key: string]: string } = {}
-    readonly name: string;
-
-    constructor(host: FMHost, conn: databaseOptionsWithExternalSources) {
-        super()
-        this.host = host
-        this.name = conn.database
-        this.connection_details = conn
+    constructor(host, conn) {
+        super();
+        this.cookies = {};
+        this.host = host;
+        this.name = conn.database;
+        this.connection_details = conn;
     }
-
-    private generateExternalSourceLogin(data: databaseOptionsBase) {
+    generateExternalSourceLogin(data) {
         if (data.credentials.method === "filemaker") {
-            let _data = <loginOptionsFileMaker>data.credentials
+            let _data = data.credentials;
             return {
                 database: data.database,
                 username: _data.username,
                 password: _data.password
-            }
+            };
         }
         else {
-            throw "Not yet supported login method"
+            throw "Not yet supported login method";
         }
     }
-
-    logout(): Promise<void> {
-        return new Promise(async (resolve, reject) => {
-            if (!this.token) reject(new Error("Not logged in"))
-
-            let _fetch = await fetch(`${this.endpoint}/sessions/${this.token}`, {
+    logout() {
+        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+            if (!this.token)
+                reject(new Error("Not logged in"));
+            let _fetch = yield fetch(`${this.endpoint}/sessions/${this.token}`, {
                 method: "DELETE",
                 headers: {
                     "content-type": "application/json"
                 }
-            })
-            let data = await _fetch.json()
+            });
+            let data = yield _fetch.json();
             // console.log(data)
-            this._token = null
-            resolve()
-        })
+            this._token = null;
+            resolve();
+        }));
     }
-
     login() {
-        return new Promise<string>(async (resolve, reject) => {
+        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
             // Reset cookies
-            this.cookies = {}
-
+            this.cookies = {};
             try {
-                await this.host.getMetadata()
-            } catch (e) {
-                reject(e)
-                return
+                yield this.host.getMetadata();
             }
-            if (this.token) throw new Error("Already logged in. Run logout() first")
-
+            catch (e) {
+                reject(e);
+                return;
+            }
+            if (this.token)
+                throw new Error("Already logged in. Run logout() first");
             if (this.connection_details.credentials.method === "token") {
-                this._token = (<loginOptionsToken>this.connection_details.credentials).token
-                resolve(this.token)
+                this._token = this.connection_details.credentials.token;
+                resolve(this.token);
             }
             else {
                 fetch(`${this.endpoint}/sessions`, {
                     hostname: this.host.hostname,
                     port: 443,
                     method: "POST",
-                    headers: generateAuthorizationHeaders(this.connection_details.credentials) as unknown as HeadersInit,
+                    headers: generateAuthorizationHeaders(this.connection_details.credentials),
                     body: JSON.stringify({
                         fmDataSource: this.connection_details.externalSources.map(i => {
-                            let _i = <databaseOptionsBase>i
-                            return this.generateExternalSourceLogin(_i)
+                            let _i = i;
+                            return this.generateExternalSourceLogin(_i);
                         })
                     })
-                }).then(async res => {
-                    let _res = <any>(await res.json())
+                }).then((res) => __awaiter(this, void 0, void 0, function* () {
+                    let _res = (yield res.json());
                     if (res.status === 200) {
-                        this._token = res.headers.get('x-fm-data-access-token')
-                        resolve(this._token)
+                        this._token = res.headers.get('x-fm-data-access-token');
+                        resolve(this._token);
                     }
                     else {
-                        reject(new FMError(_res.messages[0].code, _res.status, res))
+                        reject(new FMError(_res.messages[0].code, _res.status, res));
                     }
-                })
+                }))
                     .catch(e => {
-                        reject(e)
-                    })
+                    reject(e);
+                });
             }
-        })
+        }));
     }
-
     get token() {
-        return this._token
+        return this._token;
     }
-
-    get endpoint(): string {
-        return `${this.host.hostname}/fmi/data/v2/databases/${this.name}`
+    get endpoint() {
+        return `${this.host.hostname}/fmi/data/v2/databases/${this.name}`;
     }
-
-    async apiRequest(url: string | Request, options: any = {}, autoRelogin = true): Promise<any> {
-        if (!options.headers) options.headers = {}
-        options.headers["content-type"] = options.headers["content-type"] ? options.headers["content-type"] : "application/json"
-        options.headers["authorization"] = "Bearer " + this._token
-        options.rejectUnauthorized = this.host.verify
-
-        let _fetch = await fetch(url, options)
-        if (_fetch.headers.get('set-cookie')) {
-            for (let cookie of _fetch.headers.get('set-cookie')) {
-                let cookie_split = cookie.split("=")
-                this.cookies[cookie_split[0]] = cookie_split[1]
+    apiRequest(url, options = {}, autoRelogin = true) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!options.headers)
+                options.headers = {};
+            options.headers["content-type"] = options.headers["content-type"] ? options.headers["content-type"] : "application/json";
+            options.headers["authorization"] = "Bearer " + this._token;
+            options.rejectUnauthorized = this.host.verify;
+            let _fetch = yield fetch(url, options);
+            if (_fetch.headers.get('set-cookie')) {
+                for (let cookie of _fetch.headers.get('set-cookie')) {
+                    let cookie_split = cookie.split("=");
+                    this.cookies[cookie_split[0]] = cookie_split[1];
+                }
             }
-        }
-        let data = await _fetch.json() as fileMakerResponse
-        // console.log(data.messages[0])
-        if (data.messages[0].code == 952 && autoRelogin) {
-            this._token = null
-            await this.login()
-            return await this.apiRequest(url, options, false)
-        }
-        return (data as any)
+            let data = yield _fetch.json();
+            // console.log(data.messages[0])
+            if (data.messages[0].code == 952 && autoRelogin) {
+                this._token = null;
+                yield this.login();
+                return yield this.apiRequest(url, options, false);
+            }
+            return data;
+        });
     }
-
-    getLayout(name): Layout {
-        return new Layout(this, name)
+    getLayout(name) {
+        return new Layout(this, name);
     }
-
-    setGlobals(globalFields): Promise<void> {
+    setGlobals(globalFields) {
         // console.log({globalFields})
         return new Promise((resolve, reject) => {
             this.apiRequest(`${this.endpoint}/globals`, {
                 method: "PATCH",
-                body: JSON.stringify({globalFields})
+                body: JSON.stringify({ globalFields })
             }).then(res => {
                 // console.log(res)
                 if (res.messages[0].code === "0") {
-                    resolve()
+                    resolve();
                 }
                 else {
-                    reject(
-                        (res.messages[0].code, res.status, res))
+                    reject((res.messages[0].code, res.status, res));
                 }
             })
                 .catch(e => {
-                    reject(e)
-                })
-        })
+                reject(e);
+            });
+        });
     }
-
-    script(name, parameter = ""): Script {
-        return ({name, parameter} as Script)
+    script(name, parameter = "") {
+        return { name, parameter };
     }
-
     _tokenExpired() {
-        this.emit("token_expired")
+        this.emit("token_expired");
     }
-
-    streamContainer(field, url): Promise<http.IncomingMessage> {
+    streamContainer(field, url) {
         return new Promise((resolve, reject) => {
             if (field.metadata.result !== "container") {
-                reject("Cannot stream the field " + field.id + " as it is not a container")
-                return
+                reject("Cannot stream the field " + field.id + " as it is not a container");
+                return;
             }
             if (!url || typeof url !== "string") {
-                reject("Container is empty, or has invalid value")
-                return
+                reject("Container is empty, or has invalid value");
+                return;
             }
-
-            let headers = {}
+            let headers = {};
             if (Object.keys(this.cookies).length !== 0) {
                 headers["Cookie"] = Object.keys(this.cookies)
                     .map(key => {
-                        return key + "=" + this.cookies[key]
-                    })
-                    .join("; ")
+                    return key + "=" + this.cookies[key];
+                })
+                    .join("; ");
             }
-
             // Automatically switch between the http and https modules, based on which is needed
             (url.startsWith("https") ? https : http).get(url, {
                 headers
@@ -1393,318 +1251,262 @@ export class Database extends EventEmitter {
                 // Check for the 'set-cookie' header. If it exists, remember it and strip it for better security.
                 if (res.headers['set-cookie']) {
                     for (let cookie of res.headers['set-cookie']) {
-                        let cookie_split = cookie.split("=")
-                        this.cookies[cookie_split[0]] = cookie_split[1]
+                        let cookie_split = cookie.split("=");
+                        this.cookies[cookie_split[0]] = cookie_split[1];
                     }
-                    res.headers['set-cookie'] = null
+                    res.headers['set-cookie'] = null;
                 }
-
-                resolve(res)
-            })
-        })
+                resolve(res);
+            });
+        });
     }
 }
-
 export class Layout {
-    readonly database: Database;
-    readonly records = new LayoutRecordManager(this)
-    protected name: string;
-    metadata: any;
-
-    constructor(database: Database, name: string) {
-        this.database = database
-        this.name = name
+    constructor(database, name) {
+        this.records = new LayoutRecordManager(this);
+        this.database = database;
+        this.name = name;
     }
-
     get endpoint() {
-        return `${this.database.endpoint}/layouts/${this.name}`
+        return `${this.database.endpoint}/layouts/${this.name}`;
     }
-
     /**
      * @deprecated use layout.records.create() instead
      */
-    createRecord(): Promise<LayoutRecord> {
-        return this.records.create()
+    createRecord() {
+        return this.records.create();
     }
-
     /**
      * @deprecated use layout.records.get() instead
      */
-    getRecord(recordId): Promise<LayoutRecord> {
-        return this.records.get(recordId)
+    getRecord(recordId) {
+        return this.records.get(recordId);
     }
-
     /**
      * @deprecated use layout.records.find() instead
      */
-    newFind(): Find {
-        return this.records.find()
+    newFind() {
+        return this.records.find();
     }
-
-    runScript(script): Promise<string> {
-        let trace = new Error()
-        return new Promise(async (resolve, reject) => {
-            let url = `${this.endpoint}/script/${encodeURIComponent(script.name)}`
-            if (script.parameter) url += "?script.param=" + encodeURIComponent(script.parameter)
+    runScript(script) {
+        let trace = new Error();
+        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+            let url = `${this.endpoint}/script/${encodeURIComponent(script.name)}`;
+            if (script.parameter)
+                url += "?script.param=" + encodeURIComponent(script.parameter);
             this.database.apiRequest(url, {
                 port: 443,
                 method: "GET"
             })
                 .then(res => {
-                    if (res.messages[0].code === "0") {
-                        resolve(res.response)
-                    }
-                    else {
-                        // console.log(res)
-                        reject(new FMError(res.messages[0].code, res.status, res, trace))
-                    }
-                })
+                if (res.messages[0].code === "0") {
+                    resolve(res.response);
+                }
+                else {
+                    // console.log(res)
+                    reject(new FMError(res.messages[0].code, res.status, res, trace));
+                }
+            })
                 .catch(e => {
-                    reject(e)
-                })
-        })
+                reject(e);
+            });
+        }));
     }
-
-    public getLayoutMeta(): Promise<Layout | FMError> {
+    getLayoutMeta() {
         return new Promise((resolve, reject) => {
             if (this.metadata) {
-                resolve(this.metadata)
-                return
+                resolve(this.metadata);
+                return;
             }
-
             this.database.apiRequest(this.endpoint).then(res => {
-                this.metadata = res.response
-                resolve(this)
+                this.metadata = res.response;
+                resolve(this);
             })
-                .catch(e => reject(e))
-        })
+                .catch(e => reject(e));
+        });
     }
 }
-
 class LayoutRecordManager {
-    readonly layout: Layout
-
-    constructor(layout: Layout) {
-        this.layout = layout
+    constructor(layout) {
+        this.layout = layout;
     }
-
-    create(): Promise<LayoutRecord> {
+    create() {
         return new Promise((resolve, reject) => {
             // Get the layout's metadata
             this.layout.getLayoutMeta().then(layout => {
-                let fields = {}
+                let fields = {};
                 for (let _field of this.layout.metadata.fieldMetaData) {
-                    fields[_field.name] = ""
+                    fields[_field.name] = "";
                 }
-                let portals = {}
-                for (let _portal of Object.keys(this.layout.metadata.portalMetaData)) portals[_portal] = []
-                resolve(new LayoutRecord(this.layout, -1, 0, fields, portals))
+                let portals = {};
+                for (let _portal of Object.keys(this.layout.metadata.portalMetaData))
+                    portals[_portal] = [];
+                resolve(new LayoutRecord(this.layout, -1, 0, fields, portals));
             }).catch(e => {
-                reject(e)
-            })
-        })
+                reject(e);
+            });
+        });
     }
-
-    get(recordId): Promise<LayoutRecord> {
+    get(recordId) {
         return new Promise((resolve, reject) => {
-            let record
+            let record;
             this.layout.getLayoutMeta()
                 .then(layout => {
-                    record = new LayoutRecord(this.layout, recordId)
-                    return record.get()
-                })
+                record = new LayoutRecord(this.layout, recordId);
+                return record.get();
+            })
                 .then(() => {
-                    resolve(record)
-                })
+                resolve(record);
+            })
                 .catch(e => {
-                    reject(e)
-                })
-        })
+                reject(e);
+            });
+        });
     }
-
     range(start = 0, limit = 100) {
-        return new RecordGetRange(this.layout, start, limit)
+        return new RecordGetRange(this.layout, start, limit);
     }
-
-    find(start = 0, limit = 100): Find {
-        return new Find(this.layout, start, limit)
+    find(start = 0, limit = 100) {
+        return new Find(this.layout, start, limit);
     }
 }
-
 export class RecordBase extends EventEmitter {
-    readonly layout: Layout;
-    public recordId: number;
-    modId: number;
-    fields: Field[];
-    portals: Portal[] = [];
-    protected portalData: any[];
-
     constructor(layout, recordId, modId = recordId) {
         super();
-        this.layout = layout
-        this.recordId = recordId
-        this.modId = modId
+        this.portals = [];
+        this.layout = layout;
+        this.recordId = recordId;
+        this.modId = modId;
     }
-
-    get endpoint(): string {
-        return `${this.layout.endpoint}/records/${this.recordId}`
+    get endpoint() {
+        return `${this.layout.endpoint}/records/${this.recordId}`;
     }
-
-    get edited(): boolean {
-        return !!this.fields.find(i => i.edited)
+    get edited() {
+        return !!this.fields.find(i => i.edited);
     }
-
-    processFieldData(fieldData): Field[] {
+    processPortalData(portalData) {
+        this.portals = [];
+        for (let item of Object.keys(portalData)) {
+            let _portal = new Portal(this, item);
+            _portal.records = portalData[item].map(item => {
+                let fieldData = item;
+                delete fieldData.recordId;
+                delete fieldData.modId;
+                return new PortalRecord(this, _portal, item.recordId, item.modId, fieldData);
+            });
+            this.portals.push(_portal);
+        }
+    }
+    processFieldData(fieldData) {
         return Object.keys(fieldData).map(item => {
-            let _field = new Field(this, item, fieldData[item])
+            let _field = new Field(this, item, fieldData[item]);
             if (!!fieldData[item]) {
                 if (_field.metadata.result === "timeStamp") {
                     // @ts-ignore
                     let date = moment.default(fieldData[item], this.layout.database.host.metadata.productInfo.timeStampFormat)
                         .utcOffset(this.layout.database.host.timezoneOffset, true)
-                        .local()
-                    _field.set(date.toDate())
-                    _field.edited = false
-
+                        .local();
+                    _field.set(date.toDate());
+                    _field.edited = false;
                 }
                 else if (_field.metadata.result === "time") {
                     // @ts-ignore
                     let date = moment.default(fieldData[item], this.layout.database.host.metadata.productInfo.timeFormat)
                         .utcOffset(this.layout.database.host.timezoneOffset, true)
-                        .local()
-                    _field.set(date.toDate())
-                    _field.edited = false
+                        .local();
+                    _field.set(date.toDate());
+                    _field.edited = false;
                 }
                 else if (_field.metadata.result === "date") {
                     // @ts-ignore
                     let date = moment.default(fieldData[item], this.layout.database.host.metadata.productInfo.dateFormat)
                         .utcOffset(this.layout.database.host.timezoneOffset, true)
-                        .local()
-                    _field.set(date.toDate())
-                    _field.edited = false
+                        .local();
+                    _field.set(date.toDate());
+                    _field.edited = false;
                 }
             }
-            return _field
-        })
+            return _field;
+        });
     }
-
-    _onSave() {
-        this.emit("saved")
-        for (let field of this.fields) field.edited = false
-    }
-
-    getField(field) {
-        return this.fields.find(_field => _field.id === field)
-    }
-
-    toObject(filter = (a) => a.edited,
-             portalFilter = (a) => a.records.find(record => record.edited),
-             portalRowFilter = (a) => a.edited,
-             portalFieldFilter = (a) => a.edited
-    ): recordObject {
-        let fields_processed = {}
-        for (let field of this.fields.filter(field => filter(field))) {
-            let value = field.value
-            if (value instanceof Date) {
-                // @ts-ignore
-                let _value = moment.default(value)
-                    .utcOffset(this.layout.database.host.timezoneOffset)
-
-                // @ts-ignore
-
-                switch (field.metadata.result) {
-                    case "time":
-                        value = _value.format(this.layout.database.host.metadata.productInfo.timeFormat.replace("dd", "DD"))
-                        break
-                    case "date":
-                        value = _value.format(this.layout.database.host.metadata.productInfo.dateFormat.replace("dd", "DD"))
-                        break
-                    default:
-                        value = _value.format(this.layout.database.host.metadata.productInfo.timeStampFormat.replace("dd", "DD"))
+    get() {
+        let trace = new Error();
+        if (this.recordId === -1) {
+            throw "Cannot get this RecordBase until a commit() is done.";
+        }
+        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+            if (!this.layout.metadata)
+                yield this.layout.getLayoutMeta();
+            this.layout.database.apiRequest(this.endpoint, {
+                port: 443,
+                method: "GET"
+            })
+                .then(res => {
+                if (res.messages[0].code === "0") {
+                    // console.log(res, res.response.data)
+                    this.modId = res.response.data[0].modId;
+                    this.fields = this.processFieldData(res.response.data[0].fieldData);
+                    this.portalData = [];
+                    if (res.response.data[0].portalData)
+                        this.processPortalData(res.response.data[0].portalData);
+                    resolve(this);
                 }
-            }
-            fields_processed[field.id] = value
-        }
-        let obj = {
-            "recordId": this.recordId,
-            "modId": this.modId,
-            "fieldData": fields_processed
-        }
-
-        // Check if there's been any edited portal information
-        let portals = this.portals.filter(a => portalFilter(a))
-        if (portals) {
-            obj["portalData"] = {}
-            for (let portal of portals) {
-                obj["portalData"][portal.name] = portal.records.filter(a => portalRowFilter(a)).map(record => {
-                    return record.toObject(portalFieldFilter)
-                })
-            }
-        }
-        return obj
+                else {
+                    reject(new FMError(res.messages[0].code, res.status, res, trace));
+                }
+            })
+                .catch(e => {
+                reject(e);
+            });
+        }));
     }
-}
-
-export class LayoutRecord extends RecordBase {
-    portals: Portal[];
-
-    constructor(layout, recordId, modId = recordId, fieldData = {}, portalData = null) {
-        super(layout, recordId, modId);
-        this.fields = this.processFieldData(fieldData)
-        this.portals = []
-        if (portalData) {
-            this.processPortalData(portalData)
-        }
-    }
-
-    commit(extraBody: extraBodyOptions = {}): Promise<this> {
-        let trace = new Error()
-        return new Promise(async (resolve, reject) => {
-            let data = this.toObject()
-            delete data.recordId
-            delete data.modId
-
-            if (extraBody.scripts?.after) {
-                data["script"] = extraBody.scripts.after.name
-                if (extraBody.scripts.after.parameter) data["param"] = extraBody.scripts.after.parameter
+    commit(extraBody = {}) {
+        let trace = new Error();
+        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+            var _a, _b, _c;
+            let data = this.toObject();
+            delete data.recordId;
+            delete data.modId;
+            if ((_a = extraBody.scripts) === null || _a === void 0 ? void 0 : _a.after) {
+                data["script"] = extraBody.scripts.after.name;
+                if (extraBody.scripts.after.parameter)
+                    data["param"] = extraBody.scripts.after.parameter;
             }
-            if (extraBody.scripts?.prerequest) {
-                data["script"] = extraBody.scripts.after.name
-                if (extraBody.scripts.prerequest.parameter) data["param"] = extraBody.scripts.prerequest.parameter
+            if ((_b = extraBody.scripts) === null || _b === void 0 ? void 0 : _b.prerequest) {
+                data["script"] = extraBody.scripts.after.name;
+                if (extraBody.scripts.prerequest.parameter)
+                    data["param"] = extraBody.scripts.prerequest.parameter;
             }
-            if (extraBody.scripts?.presort) {
-                data["script"] = extraBody.scripts.presort.name
-                if (extraBody.scripts.presort.parameter) data["param"] = extraBody.scripts.presort.parameter
+            if ((_c = extraBody.scripts) === null || _c === void 0 ? void 0 : _c.presort) {
+                data["script"] = extraBody.scripts.presort.name;
+                if (extraBody.scripts.presort.parameter)
+                    data["param"] = extraBody.scripts.presort.parameter;
             }
-
             if (this.recordId === -1) {
                 // This is a new LayoutRecord
-
                 this.layout.database.apiRequest(`${this.layout.endpoint}/records`, {
                     port: 443,
                     method: "POST",
                     body: JSON.stringify(data)
                 })
                     .then(res => {
-                        if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
-                            reject(new FMError(res.response.scriptError, res.status, res, trace))
-                        }
-                        else if (res.messages[0].code === "0") {
-                            this.recordId = parseInt(res.response.recordId)
-                            this.modId = parseInt(res.response.modId)
-                            resolve(this)
-                        }
-                        else {
-                            reject(new FMError(res.messages[0].code, res.status, res, trace))
-                        }
-                    })
+                    if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
+                        reject(new FMError(res.response.scriptError, res.status, res, trace));
+                    }
+                    else if (res.messages[0].code === "0") {
+                        this.recordId = parseInt(res.response.recordId);
+                        this.modId = parseInt(res.response.modId);
+                        resolve(this);
+                    }
+                    else {
+                        reject(new FMError(res.messages[0].code, res.status, res, trace));
+                    }
+                })
                     .catch(e => {
-                        reject(e)
-                    })
-
-                return
+                    reject(e);
+                });
+                return;
             }
-
             // for (let item of Object.keys(data)) extraBody[item] = data[item]
             this.layout.database.apiRequest(this.endpoint, {
                 port: 443,
@@ -1712,155 +1514,154 @@ export class LayoutRecord extends RecordBase {
                 body: JSON.stringify(data)
             })
                 .then(res => {
-                    if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
-                        reject(new FMError(res.response.scriptError, res.status, res, trace))
-                    }
-                    else if (res.messages[0].code === "0") {
-                        this.modId = res.response.modId
-                        this._onSave()
-                        resolve(this)
-                    }
-                    else {
-                        reject(new FMError(res.messages[0].code, res.status, res, trace))
-                    }
-                })
-                .catch(e => {
-                    reject(e)
-                })
-        })
-    }
-
-    protected processPortalData(portalData): void {
-        this.portals = []
-        for (let item of Object.keys(portalData)) {
-            let _portal = new Portal(this, item)
-            _portal.records = portalData[item].map(item => {
-                let fieldData = item;
-                delete fieldData.recordId;
-                delete fieldData.modId;
-                return new PortalRecord(this, _portal, item.recordId, item.modId, fieldData);
+                if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
+                    reject(new FMError(res.response.scriptError, res.status, res, trace));
+                }
+                else if (res.messages[0].code === "0") {
+                    this.modId = res.response.modId;
+                    this._onSave();
+                    resolve(this);
+                }
+                else {
+                    reject(new FMError(res.messages[0].code, res.status, res, trace));
+                }
             })
-            this.portals.push(_portal);
-        }
-    }
-
-    get(): Promise<this> {
-        let trace = new Error()
-        if (this.recordId === -1) {
-            throw "Cannot get this RecordBase until a commit() is done."
-        }
-        return new Promise(async (resolve, reject) => {
-            if (!this.layout.metadata) await this.layout.getLayoutMeta()
-
-            this.layout.database.apiRequest(this.endpoint, {
-                port: 443,
-                method: "GET"
-            })
-                .then(res => {
-                    if (res.messages[0].code === "0") {
-                        // console.log(res, res.response.data)
-                        this.modId = res.response.data[0].modId
-                        this.fields = this.processFieldData(res.response.data[0].fieldData)
-                        this.portalData = []
-                        if (res.response.data[0].portalData) this.processPortalData(res.response.data[0].portalData)
-                        resolve(this)
-                    }
-                    else {
-                        reject(new FMError(res.messages[0].code, res.status, res, trace))
-                    }
-                })
                 .catch(e => {
-                    reject(e)
-                })
-        })
+                reject(e);
+            });
+        }));
     }
-
+    _onSave() {
+        this.emit("saved");
+        for (let field of this.fields)
+            field.edited = false;
+    }
+    getField(field) {
+        return this.fields.find(_field => _field.id === field);
+    }
     getPortal(portal) {
-        return this.portals.find(p => p.name === portal)
+        return this.portals.find(p => p.name === portal);
     }
-
-    duplicate(): Promise<LayoutRecord> {
-        let trace = new Error()
-        return new Promise(async (resolve, reject) => {
-            this.layout.database.apiRequest(this.endpoint, {
-                port: 443,
-                method: "POST"
-            })
-                .then(res => {
-                    if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
-                        reject(new FMError(res.response.scriptError, res.status, res, trace))
-                    }
-                    else if (res.messages[0].code === "0") {
-                        let data = this.toObject((a) => true, (a) => true, (a) => false, (a) => false)
-                        let _res = new LayoutRecord(this.layout, res.response.recordId, res.response.modId, data.fieldData, data.portalData)
-
-                        this.emit("duplicated")
-                        resolve(_res)
-                    }
-                    else {
-                        reject(new FMError(res.messages[0].code, res.status, res, trace))
-                    }
-                })
-                .catch(e => {
-                    reject(e)
-                })
-        })
-    }
-
-    delete(): Promise<void> {
-        let trace = new Error()
-        return new Promise(async (resolve, reject) => {
+    delete() {
+        let trace = new Error();
+        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
             this.layout.database.apiRequest(this.endpoint, {
                 port: 443,
                 method: "DELETE"
             })
                 .then(res => {
-                    if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
-                        reject(new FMError(res.response.scriptError, res.status, res, trace))
-                    }
-                    else if (res.messages[0].code === "0") {
-                        this.emit("deleted")
-                        resolve()
-                    }
-                    else {
-                        reject(new FMError(res.messages[0].code, res.status, res, trace))
-                    }
-                })
+                if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
+                    reject(new FMError(res.response.scriptError, res.status, res, trace));
+                }
+                else if (res.messages[0].code === "0") {
+                    this.emit("deleted");
+                    resolve();
+                }
+                else {
+                    reject(new FMError(res.messages[0].code, res.status, res, trace));
+                }
+            })
                 .catch(e => {
-                    reject(e)
-                })
-        })
+                reject(e);
+            });
+        }));
+    }
+    duplicate() {
+        let trace = new Error();
+        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+            this.layout.database.apiRequest(this.endpoint, {
+                port: 443,
+                method: "POST"
+            })
+                .then(res => {
+                if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
+                    reject(new FMError(res.response.scriptError, res.status, res, trace));
+                }
+                else if (res.messages[0].code === "0") {
+                    let data = this.toObject((a) => true, (a) => true, (a) => false, (a) => false);
+                    let _res = new LayoutRecord(this.layout, res.response.recordId, res.response.modId, data.fieldData, data.portalData);
+                    this.emit("duplicated");
+                    resolve(_res);
+                }
+                else {
+                    reject(new FMError(res.messages[0].code, res.status, res, trace));
+                }
+            })
+                .catch(e => {
+                reject(e);
+            });
+        }));
+    }
+    toObject(filter = (a) => a.edited, portalFilter = (a) => a.records.find(record => record.edited), portalRowFilter = (a) => a.edited, portalFieldFilter = (a) => a.edited) {
+        let fields_processed = {};
+        for (let field of this.fields.filter(field => filter(field))) {
+            let value = field.value;
+            if (value instanceof Date) {
+                // @ts-ignore
+                let _value = moment.default(value)
+                    .utcOffset(this.layout.database.host.timezoneOffset);
+                // @ts-ignore
+                switch (field.metadata.result) {
+                    case "time":
+                        value = _value.format(this.layout.database.host.metadata.productInfo.timeFormat.replace("dd", "DD"));
+                        break;
+                    case "date":
+                        value = _value.format(this.layout.database.host.metadata.productInfo.dateFormat.replace("dd", "DD"));
+                        break;
+                    default:
+                        value = _value.format(this.layout.database.host.metadata.productInfo.timeStampFormat.replace("dd", "DD"));
+                }
+            }
+            fields_processed[field.id] = value;
+        }
+        let obj = {
+            "recordId": this.recordId,
+            "modId": this.modId,
+            "fieldData": fields_processed
+        };
+        // Check if there's been any edited portal information
+        let portals = this.portals.filter(a => portalFilter(a));
+        if (portals) {
+            obj["portalData"] = {};
+            for (let portal of portals) {
+                obj["portalData"][portal.name] = portal.records.filter(a => portalRowFilter(a)).map(record => {
+                    return record.toObject(portalFieldFilter);
+                });
+            }
+        }
+        return obj;
     }
 }
-
-export class Field {
-    record: RecordBase;
-    id: string;
-    protected _value: string | number | Date;
-    edited: boolean;
-
-    constructor(record, id, contents) {
-        this.record = record
-        this.id = id
-        this._value = contents
-        this.edited = false
-    }
-
-    set(content: string | number | Date) {
-        if (this.metadata.result === "container") throw "Cannot set container value using set(). Use upload() instead."
-        if (
-            (this.metadata.result === "timeStamp" ||
-                this.metadata.result === "date" ||
-                this.metadata.result === "time")
-            && !(content instanceof Date) && !!content
-        ) {
-            throw "Value was not an instance of Date: " + content
+export class LayoutRecord extends RecordBase {
+    constructor(layout, recordId, modId = recordId, fieldData = {}, portalData = null) {
+        super(layout, recordId, modId);
+        this.fields = this.processFieldData(fieldData);
+        this.portals = [];
+        if (portalData) {
+            this.processPortalData(portalData);
         }
-        this._value = content
-        this.edited = true
     }
-
-    get metadata(): FieldMetaData {
+}
+export class Field {
+    constructor(record, id, contents) {
+        this.record = record;
+        this.id = id;
+        this._value = contents;
+        this.edited = false;
+    }
+    set(content) {
+        if (this.metadata.result === "container")
+            throw "Cannot set container value using set(). Use upload() instead.";
+        if ((this.metadata.result === "timeStamp" ||
+            this.metadata.result === "date" ||
+            this.metadata.result === "time")
+            && !(content instanceof Date) && !!content) {
+            throw "Value was not an instance of Date: " + content;
+        }
+        this._value = content;
+        this.edited = true;
+    }
+    get metadata() {
         if (!this.record.layout.metadata) {
             // Default to a regular text field
             return {
@@ -1878,10 +1679,10 @@ export class Field {
                 timeOfDay: false,
                 repetitionStart: 1,
                 repetitionEnd: 1
-            } as FieldMetaData
+            };
         }
         if (this.record instanceof PortalRecord) {
-            return this.record.layout.metadata.portalMetaData[this.record.portal.name || "portal not attached"].find(i => i.name === this.id) as FieldMetaData || {
+            return this.record.layout.metadata.portalMetaData[this.record.portal.name || "portal not attached"].find(i => i.name === this.id) || {
                 name: this.id.toString(),
                 type: 'normal',
                 displayType: 'editText',
@@ -1896,10 +1697,10 @@ export class Field {
                 timeOfDay: false,
                 repetitionStart: 1,
                 repetitionEnd: 1
-            } as FieldMetaData
+            };
         }
         else {
-            return this.record.layout.metadata.fieldMetaData.find(i => i.name === this.id) as FieldMetaData || {
+            return this.record.layout.metadata.fieldMetaData.find(i => i.name === this.id) || {
                 name: this.id.toString(),
                 type: 'normal',
                 displayType: 'editText',
@@ -1914,404 +1715,336 @@ export class Field {
                 timeOfDay: false,
                 repetitionStart: 1,
                 repetitionEnd: 1
-            } as FieldMetaData
+            };
         }
     }
-
     get value() {
         // if (this.metadata.result === "container") throw "Use await field.stream() to get the contents of a container field, instead of field.value"
-        return this._value
+        return this._value;
     }
-
-    get string(): string {
-        if (typeof this._value === "string") {
-            return this._value
-        }
-        throw "Field value is not a string"
-    }
-
-    get date(): Date {
-        if (this._value instanceof Date) {
-            return this._value
-        }
-        throw "Field value is not a date"
-    }
-
-    get number(): number {
-        if (typeof this._value === "number") {
-            return this._value
-        }
-        throw "Field value is not a number"
-    }
-
-    upload(buffer: Buffer, filename: string, mime: string): Promise<void> {
-        let trace = new Error()
-        if (this.metadata.result !== "container") throw "Cannot upload a file to the field; " + this.id + " (not a container field)"
-        return new Promise(async (resolve, reject) => {
-            let form = new FormData()
-            form.append("upload", new File([buffer], filename, {type: mime}))
-
-            let _fetch = await fetch(`${this.record.endpoint}/containers/${this.id}/1`, {
+    upload(buffer, filename, mime) {
+        let trace = new Error();
+        if (this.metadata.result !== "container")
+            throw "Cannot upload a file to the field; " + this.id + " (not a container field)";
+        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+            let form = new FormData();
+            form.append("upload", new File([buffer], filename, { type: mime }));
+            let _fetch = yield fetch(`${this.record.endpoint}/containers/${this.id}/1`, {
                 method: "POST",
-                headers: {"Authorization": "Bearer " + this.record.layout.database.token},
+                headers: { "Authorization": "Bearer " + this.record.layout.database.token },
                 body: form
             }).then(res => res.json())
                 .then(data => {
-                    let _res = data as any
-                    if (_res.messages[0].code === "0") {
-                        resolve()
-                    }
-                    else {
-                        reject(new FMError(_res.messages[0].code, _res.status, data, trace))
-                    }
-                })
+                let _res = data;
+                if (_res.messages[0].code === "0") {
+                    resolve();
+                }
+                else {
+                    reject(new FMError(_res.messages[0].code, _res.status, data, trace));
+                }
+            })
                 .catch(e => {
-                    reject(e)
-                })
-        })
+                reject(e);
+            });
+        }));
     }
-
-    download(mode: DOWNLOAD_MODES.Stream): Promise<http.IncomingMessage>
-    download(mode: DOWNLOAD_MODES.Buffer): Promise<ContainerBufferResult>
-    download(mode: DOWNLOAD_MODES = DOWNLOAD_MODES.Stream): Promise<http.IncomingMessage | ContainerBufferResult> {
+    download(mode = DOWNLOAD_MODES.Stream) {
         return new Promise((resolve, reject) => {
             this.record.layout.database.streamContainer(this, this._value)
                 .then(stream => {
-                    if (mode === DOWNLOAD_MODES.Stream) {
-                        resolve(stream)
-                        return
-                    }
-
-                    let body = []
-                    stream.on("data", chunk => {
-                        body.push(chunk)
-                    })
-                    stream.on("error", (e) => {
-                        reject(e)
-                    })
-                    stream.on("end", () => {
-                        resolve({
-                            buffer: Buffer.concat(body),
-                            mime: stream.headers["content-type"],
-                            request: stream
-                        } as ContainerBufferResult)
-                    })
-                })
+                if (mode === DOWNLOAD_MODES.Stream) {
+                    resolve(stream);
+                    return;
+                }
+                let body = [];
+                stream.on("data", chunk => {
+                    body.push(chunk);
+                });
+                stream.on("error", (e) => {
+                    reject(e);
+                });
+                stream.on("end", () => {
+                    resolve({
+                        buffer: Buffer.concat(body),
+                        mime: stream.headers["content-type"],
+                        request: stream
+                    });
+                });
+            })
                 .catch(e => {
-                    reject(e)
-                })
-        })
+                reject(e);
+            });
+        });
     }
 }
-
 export class Portal {
-    readonly record: LayoutRecord;
-    readonly name: string;
-    public records: PortalRecord[];
-
-    constructor(record: LayoutRecord, name: string) {
-        this.record = record
-        this.name = name
+    constructor(record, name) {
+        this.record = record;
+        this.name = name;
     }
-
     create() {
-        let fields = {}
+        let fields = {};
         for (let _field of this.record.layout.metadata.portalMetaData[this.name]) {
-            fields[_field.name] = ""
+            fields[_field.name] = "";
         }
-        let record = new PortalRecord(this.record, this, -1, -1, fields)
-        this.records.push(record)
-        return record
+        let record = new PortalRecord(this.record, this, -1, -1, fields);
+        this.records.push(record);
+        return record;
     }
 }
-
 export class PortalRecord extends RecordBase {
-    readonly portal: Portal;
-
     constructor(record, portal, recordId, modId = recordId, fieldData = {}) {
         super(record.layout, recordId, modId);
-
-        this.portal = portal
-        this.fields = this.processFieldData(fieldData)
+        this.portal = portal;
+        this.fields = this.processFieldData(fieldData);
     }
-
     _onSave() {
         super._onSave();
-        this.portal.record._onSave()
+        this.portal.record._onSave();
     }
-
-    commit(extraBody: extraBodyOptions = {}) {
-        return this.portal.record.commit(extraBody)
+    commit(extraBody = {}) {
+        return this.portal.record.commit(extraBody);
     }
-
-    toObject(fieldFilter): any {
-        super.toObject()
+    toObject(fieldFilter) {
+        super.toObject();
         let res = {
-            recordId: this.recordId === -1 ? undefined : this.recordId, modId: this.modId === - 1 ? undefined : this.modId
-        } as recordObject
-        for (let field of this.fields.filter(a => fieldFilter(a))) res[field.id] = field.value
+            recordId: this.recordId === -1 ? undefined : this.recordId, modId: this.modId === -1 ? undefined : this.modId
+        };
+        for (let field of this.fields.filter(a => fieldFilter(a)))
+            res[field.id] = field.value;
         // console.log(res)
-        return res
+        return res;
     }
-
     getField(field) {
-        return this.fields.find(_field => _field.id === field) || this.fields.find(_field => _field.id === this.portal.name + "::" + field)
+        return this.fields.find(_field => _field.id === field) || this.fields.find(_field => _field.id === this.portal.name + "::" + field);
     }
 }
-
 export class RecordGetOperation {
-    protected layout: Layout
-    protected limit: number = 100
-    protected scripts: object
-    protected sort: object[]
-    protected limitPortals: limitPortalsInterface[] = []
-    protected offset: number = 0
-
     constructor(layout) {
-        this.layout = layout
+        this.limit = 100;
+        this.limitPortals = [];
+        this.offset = 0;
+        this.layout = layout;
         this.scripts = {
-            "script": null, // Runs after everything
-            "script.prerequeset": null, // Runs before the request
+            "script": null,
+            "script.prerequeset": null,
             "script.presort": null // Runs before the sort
-        }
-        this.sort = []
+        };
+        this.sort = [];
     }
-
     /*
     addToPortalLimit() will adjust the results of the get request so that if a layout has multiple portals in it,
     only data from the specified ones will be read. This may help reduce load on your FileMaker API
     */
-    addToPortalLimit(portal: Portal, offset = 0, limit = 100) {
-        if (offset < 0) throw "Portal offset cannot be less than 0"
-        this.limitPortals.push({portal, offset, limit})
-        return this
+    addToPortalLimit(portal, offset = 0, limit = 100) {
+        if (offset < 0)
+            throw "Portal offset cannot be less than 0";
+        this.limitPortals.push({ portal, offset, limit });
+        return this;
     }
-
-    setLimit(limit: number) {
-        if (limit < 1) throw "Record limit too low"
-        this.limit = limit
-        return this
+    setLimit(limit) {
+        if (limit < 1)
+            throw "Record limit too low";
+        this.limit = limit;
+        return this;
     }
-
     addSort(fieldName, sortOrder) {
-        this.sort.push({fieldName, sortOrder})
-        return this
+        this.sort.push({ fieldName, sortOrder });
+        return this;
     }
-
-    setOffset(offset: number) {
-        if (offset < 0) throw "Record offset too low"
-        this.limit = offset
-        return this
+    setOffset(offset) {
+        if (offset < 0)
+            throw "Record offset too low";
+        this.limit = offset;
+        return this;
     }
 }
-
 export class RecordGetRange extends RecordGetOperation {
     constructor(layout, start = 0, limit = 100) {
-        super(layout)
-        this.setOffset(start)
-        this.setLimit(limit)
+        super(layout);
+        this.setOffset(start);
+        this.setLimit(limit);
     }
-
-    private generateQueryParams(extraBody: extraBodyOptions = {}) {
-        let params = []
-        if (this.limit !== 100) params.push("_limit=" + this.limit)
-        if (this.offset !== 0) params.push("_offset=" + this.offset)
-        if (this.sort.length > 0) params.push("_sort=" + encodeURI(JSON.stringify(this.sort)))
+    generateQueryParams(extraBody = {}) {
+        let params = [];
+        if (this.limit !== 100)
+            params.push("_limit=" + this.limit);
+        if (this.offset !== 0)
+            params.push("_offset=" + this.offset);
+        if (this.sort.length > 0)
+            params.push("_sort=" + encodeURI(JSON.stringify(this.sort)));
         if (this.limitPortals.length > 0) {
-            params.push("portal=" + encodeURI(JSON.stringify(this.limitPortals.map(p => p.portal.name))))
+            params.push("portal=" + encodeURI(JSON.stringify(this.limitPortals.map(p => p.portal.name))));
             for (let item of this.limitPortals) {
-                if (item.offset !== 0) params.push("_offset." + item.portal.name.replace(/[^0-9A-z]/g, "") + "=" + item.offset)
-                if (item.limit !== 100) params.push("_limit." + item.portal.name.replace(/[^0-9A-z]/g, "") + "=" + item.limit)
+                if (item.offset !== 0)
+                    params.push("_offset." + item.portal.name.replace(/[^0-9A-z]/g, "") + "=" + item.offset);
+                if (item.limit !== 100)
+                    params.push("_limit." + item.portal.name.replace(/[^0-9A-z]/g, "") + "=" + item.limit);
             }
         }
         if (extraBody.scripts) {
             if (extraBody.scripts.prerequest) {
-                params.push("script.prerequest=" + extraBody.scripts.prerequest.name)
-                if (extraBody.scripts.prerequest.parameter) params.push("script.prerequest.param=" + extraBody.scripts.prerequest.parameter)
+                params.push("script.prerequest=" + extraBody.scripts.prerequest.name);
+                if (extraBody.scripts.prerequest.parameter)
+                    params.push("script.prerequest.param=" + extraBody.scripts.prerequest.parameter);
             }
             if (extraBody.scripts.presort) {
-                params.push("script.presort=" + extraBody.scripts.presort.name)
-                if (extraBody.scripts.presort.parameter) params.push("script.presort.param=" + extraBody.scripts.presort.parameter)
+                params.push("script.presort=" + extraBody.scripts.presort.name);
+                if (extraBody.scripts.presort.parameter)
+                    params.push("script.presort.param=" + extraBody.scripts.presort.parameter);
             }
             if (extraBody.scripts.after) {
-                params.push("script=" + extraBody.scripts.after.name)
-                if (extraBody.scripts.after.parameter) params.push("script.param=" + extraBody.scripts.after.parameter)
+                params.push("script=" + extraBody.scripts.after.name);
+                if (extraBody.scripts.after.parameter)
+                    params.push("script.param=" + extraBody.scripts.after.parameter);
             }
         }
-
-        if (params.length === 0) return ""
-        return "?" + params.join("&")
+        if (params.length === 0)
+            return "";
+        return "?" + params.join("&");
     }
-
     /**
      * @deprecated in favour of .fetch()
      */
-    run(extraBody: extraBodyOptions = {}): Promise<LayoutRecord[]> {
-        return this.fetch(extraBody)
+    run(extraBody = {}) {
+        return this.fetch(extraBody);
     }
-
-    fetch(extraBody: extraBodyOptions = {}): Promise<LayoutRecord[]> {
-        let trace = new Error()
+    fetch(extraBody = {}) {
+        let trace = new Error();
         return new Promise((resolve, reject) => {
             // console.log(this.#toObject())
             this.layout.getLayoutMeta().then(() => {
                 return this.layout.database.apiRequest(`${this.layout.endpoint}/records${this.generateQueryParams(extraBody)}`, {
                     method: "GET"
-                })
+                });
             })
-                .then(async res => {
-                    // // console.log(res)
-                    if (res.messages[0].code === "0") {
-                        // console.log("RESOLVING")
-                        if (!this.layout.metadata) await this.layout.getLayoutMeta()
-                        let data = res.response.data.map(item => {
-                            return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
-                        })
-                        resolve(data)
-                    }
-                    else {
-                        reject(new FMError(res.messages[0].code, res.status, res, trace))
-                    }
-                })
+                .then((res) => __awaiter(this, void 0, void 0, function* () {
+                // // console.log(res)
+                if (res.messages[0].code === "0") {
+                    // console.log("RESOLVING")
+                    if (!this.layout.metadata)
+                        yield this.layout.getLayoutMeta();
+                    let data = res.response.data.map(item => {
+                        return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData);
+                    });
+                    resolve(data);
+                }
+                else {
+                    reject(new FMError(res.messages[0].code, res.status, res, trace));
+                }
+            }))
                 .catch(e => {
-                    reject(e)
-                })
-        })
+                reject(e);
+            });
+        });
     }
 }
-
 export class Find extends RecordGetOperation {
-    protected queries: object[]
-
     constructor(layout, start = 0, limit = 100) {
-        super(layout)
-        this.setOffset(start)
-        this.setLimit(limit)
-        this.queries = []
+        super(layout);
+        this.setOffset(start);
+        this.setLimit(limit);
+        this.queries = [];
     }
-
-    private toObject() {
-        let out = {query: this.queries, sort: undefined}
-        if (this.sort.length !== 0) out.sort = this.sort
-
+    toObject() {
+        let out = { query: this.queries, sort: undefined };
+        if (this.sort.length !== 0)
+            out.sort = this.sort;
         for (let item of Object.keys(this.scripts)) {
             if (this.scripts[item]) {
-                out[item] = this.scripts[item].name
-                if (this.scripts[item].parameter) out[item + ".param"] = this.scripts[item].parameter
+                out[item] = this.scripts[item].name;
+                if (this.scripts[item].parameter)
+                    out[item + ".param"] = this.scripts[item].parameter;
             }
         }
-
-        if (this.limit !== 100) out["limit"] = this.limit
-        if (this.offset !== 0) out["offset"] = this.offset
+        if (this.limit !== 100)
+            out["limit"] = this.limit;
+        if (this.offset !== 0)
+            out["offset"] = this.offset;
         if (this.limitPortals.length > 0) {
-            out["portal"] = this.limitPortals.map(p => p.portal.name)
+            out["portal"] = this.limitPortals.map(p => p.portal.name);
             for (let item of this.limitPortals) {
-                out["offset." + item.portal.name.replace(/[^0-9A-z]/g, "")] = item.offset
-                out["limit." + item.portal.name.replace(/[^0-9A-z]/g, "")] = item.limit
+                out["offset." + item.portal.name.replace(/[^0-9A-z]/g, "")] = item.offset;
+                out["limit." + item.portal.name.replace(/[^0-9A-z]/g, "")] = item.limit;
             }
         }
-
-        return out
+        return out;
     }
-
     addRequests(...requests) {
-        for (let item of requests) this.queries.push(item)
-        return this
+        for (let item of requests)
+            this.queries.push(item);
+        return this;
     }
-
     /**
      * @deprecated in favour of .fetch()
      */
     run() {
-        return this.fetch()
+        return this.fetch();
     }
-
-    fetch(): Promise<LayoutRecord[]> {
-        let trace = new Error()
+    fetch() {
+        let trace = new Error();
         return new Promise((resolve, reject) => {
             // console.log(this.#toObject())
             this.layout.getLayoutMeta()
                 .then(() => {
-                    return this.layout.database.apiRequest(`${this.layout.endpoint}/_find`, {
-                        port: 443,
-                        method: "POST",
-                        body: JSON.stringify(this.toObject())
-                    })
-                })
-                .then(async res => {
-                    // // console.log(res)
-                    if (res.messages[0].code === "0") {
-                        // console.log("RESOLVING")
-                        if (!this.layout.metadata) await this.layout.getLayoutMeta()
-                        let data = res.response.data.map(item => {
-                            return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
-                        })
-                        resolve(data)
-                    }
-                    else {
-                        reject(new FMError(res.messages[0].code, res.status, res, trace))
-                    }
-                })
+                return this.layout.database.apiRequest(`${this.layout.endpoint}/_find`, {
+                    port: 443,
+                    method: "POST",
+                    body: JSON.stringify(this.toObject())
+                });
+            })
+                .then((res) => __awaiter(this, void 0, void 0, function* () {
+                // // console.log(res)
+                if (res.messages[0].code === "0") {
+                    // console.log("RESOLVING")
+                    if (!this.layout.metadata)
+                        yield this.layout.getLayoutMeta();
+                    let data = res.response.data.map(item => {
+                        return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData);
+                    });
+                    resolve(data);
+                }
+                else {
+                    reject(new FMError(res.messages[0].code, res.status, res, trace));
+                }
+            }))
                 .catch(e => {
-                    reject(e)
-                })
-        })
+                reject(e);
+            });
+        });
     }
 }
-
 export class FMError extends Error {
-    readonly httpStatus: number
-    readonly res: any
-    readonly code: number
-    readonly message: string
-    readonly messages: string
-
-    constructor(code, httpStatus, res, trace?: Error) {
-        if (typeof code === "string") code = parseInt(code)
+    constructor(code, httpStatus, res, trace) {
+        if (typeof code === "string")
+            code = parseInt(code);
         super(errs.find(err => err.e === code).d || "Unknown error");
-        this.httpStatus = httpStatus
-        this.res = res
-        this.messages = res.messages
-        this.code = typeof code === "string" ? parseInt(code) : code
-        Error.captureStackTrace(this, FMError)
-
-        if (trace) this.stack = trace.stack
+        this.httpStatus = httpStatus;
+        this.res = res;
+        this.messages = res.messages;
+        this.code = typeof code === "string" ? parseInt(code) : code;
+        Error.captureStackTrace(this, FMError);
+        if (trace)
+            this.stack = trace.stack;
     }
 }
-
-//
-// module.exports = {
-//     default: {FileMakerConnection}
-// }
-
-interface AuthorizationHeaders {
-    "Content-Type": "application/json"
-    Authorization: string
-}
-
-interface AuthorizationHeadersOAuth {
-    "Content-Type": "application/json"
-    "X-FM-Data-OAuth-RequestId": string,
-    "X-FM-Data-OAuth-Identifier": string
-}
-
-function generateAuthorizationHeaders(credentials: loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris): AuthorizationHeaders | AuthorizationHeadersOAuth {
+function generateAuthorizationHeaders(credentials) {
     switch (credentials.method) {
         case "filemaker":
             return {
                 "Content-Type": "application/json",
-                "Authorization": "Basic " + Buffer.from((<loginOptionsFileMaker>credentials).username + ":" + (<loginOptionsFileMaker>credentials).password).toString("base64")
-            } as AuthorizationHeaders
+                "Authorization": "Basic " + Buffer.from(credentials.username + ":" + credentials.password).toString("base64")
+            };
         case "claris":
             return {
                 "Content-Type": "application/json",
-                "Authorization": (<loginOptionsClaris>credentials).claris.fmid,
-            } as AuthorizationHeaders
+                "Authorization": credentials.claris.fmid,
+            };
         case "oauth":
             return {
                 "Content-Type": "application/json",
-                "X-FM-Data-OAuth-RequestId": (<loginOptionsOAuth>credentials).oauth.requestId,
-                "X-FM-Data-OAuth-Identifier": (<loginOptionsOAuth>credentials).oauth.requestIdentifier
-            } as AuthorizationHeadersOAuth
+                "X-FM-Data-OAuth-RequestId": credentials.oauth.requestId,
+                "X-FM-Data-OAuth-Identifier": credentials.oauth.requestIdentifier
+            };
     }
 }

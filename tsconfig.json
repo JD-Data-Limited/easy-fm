@@ -4,7 +4,6 @@
     "module": "es2022",
     "lib": ["es2021.intl", "es2015"],
     "moduleResolution": "Node",
-    "outDir": "dist"
   },
   "files": [
     "src/index.ts"
