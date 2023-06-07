@@ -1384,19 +1384,6 @@ export class RecordBase extends EventEmitter {
     get edited() {
         return !!this.fields.find(i => i.edited);
     }
-    processPortalData(portalData) {
-        this.portals = [];
-        for (let item of Object.keys(portalData)) {
-            let _portal = new Portal(this, item);
-            _portal.records = portalData[item].map(item => {
-                let fieldData = item;
-                delete fieldData.recordId;
-                delete fieldData.modId;
-                return new PortalRecord(this, _portal, item.recordId, item.modId, fieldData);
-            });
-            this.portals.push(_portal);
-        }
-    }
     processFieldData(fieldData) {
         return Object.keys(fieldData).map(item => {
             let _field = new Field(this, item, fieldData[item]);
@@ -1429,36 +1416,62 @@ export class RecordBase extends EventEmitter {
             return _field;
         });
     }
-    get() {
-        let trace = new Error();
-        if (this.recordId === -1) {
-            throw "Cannot get this RecordBase until a commit() is done.";
+    _onSave() {
+        this.emit("saved");
+        for (let field of this.fields)
+            field.edited = false;
+    }
+    getField(field) {
+        return this.fields.find(_field => _field.id === field);
+    }
+    toObject(filter = (a) => a.edited, portalFilter = (a) => a.records.find(record => record.edited), portalRowFilter = (a) => a.edited, portalFieldFilter = (a) => a.edited) {
+        let fields_processed = {};
+        for (let field of this.fields.filter(field => filter(field))) {
+            let value = field.value;
+            if (value instanceof Date) {
+                // @ts-ignore
+                let _value = moment.default(value)
+                    .utcOffset(this.layout.database.host.timezoneOffset);
+                // @ts-ignore
+                switch (field.metadata.result) {
+                    case "time":
+                        value = _value.format(this.layout.database.host.metadata.productInfo.timeFormat.replace("dd", "DD"));
+                        break;
+                    case "date":
+                        value = _value.format(this.layout.database.host.metadata.productInfo.dateFormat.replace("dd", "DD"));
+                        break;
+                    default:
+                        value = _value.format(this.layout.database.host.metadata.productInfo.timeStampFormat.replace("dd", "DD"));
+                }
+            }
+            fields_processed[field.id] = value;
         }
-        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
-            if (!this.layout.metadata)
-                yield this.layout.getLayoutMeta();
-            this.layout.database.apiRequest(this.endpoint, {
-                port: 443,
-                method: "GET"
-            })
-                .then(res => {
-                if (res.messages[0].code === "0") {
-                    // console.log(res, res.response.data)
-                    this.modId = res.response.data[0].modId;
-                    this.fields = this.processFieldData(res.response.data[0].fieldData);
-                    this.portalData = [];
-                    if (res.response.data[0].portalData)
-                        this.processPortalData(res.response.data[0].portalData);
-                    resolve(this);
-                }
-                else {
-                    reject(new FMError(res.messages[0].code, res.status, res, trace));
-                }
-            })
-                .catch(e => {
-                reject(e);
-            });
-        }));
+        let obj = {
+            "recordId": this.recordId,
+            "modId": this.modId,
+            "fieldData": fields_processed
+        };
+        // Check if there's been any edited portal information
+        let portals = this.portals.filter(a => portalFilter(a));
+        if (portals) {
+            obj["portalData"] = {};
+            for (let portal of portals) {
+                obj["portalData"][portal.name] = portal.records.filter(a => portalRowFilter(a)).map(record => {
+                    return record.toObject(portalFieldFilter);
+                });
+            }
+        }
+        return obj;
+    }
+}
+export class LayoutRecord extends RecordBase {
+    constructor(layout, recordId, modId = recordId, fieldData = {}, portalData = null) {
+        super(layout, recordId, modId);
+        this.fields = this.processFieldData(fieldData);
+        this.portals = [];
+        if (portalData) {
+            this.processPortalData(portalData);
+        }
     }
     commit(extraBody = {}) {
         let trace = new Error();
@@ -1531,31 +1544,40 @@ export class RecordBase extends EventEmitter {
             });
         }));
     }
-    _onSave() {
-        this.emit("saved");
-        for (let field of this.fields)
-            field.edited = false;
+    processPortalData(portalData) {
+        this.portals = [];
+        for (let item of Object.keys(portalData)) {
+            let _portal = new Portal(this, item);
+            _portal.records = portalData[item].map(item => {
+                let fieldData = item;
+                delete fieldData.recordId;
+                delete fieldData.modId;
+                return new PortalRecord(this, _portal, item.recordId, item.modId, fieldData);
+            });
+            this.portals.push(_portal);
+        }
     }
-    getField(field) {
-        return this.fields.find(_field => _field.id === field);
-    }
-    getPortal(portal) {
-        return this.portals.find(p => p.name === portal);
-    }
-    delete() {
+    get() {
         let trace = new Error();
+        if (this.recordId === -1) {
+            throw "Cannot get this RecordBase until a commit() is done.";
+        }
         return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+            if (!this.layout.metadata)
+                yield this.layout.getLayoutMeta();
             this.layout.database.apiRequest(this.endpoint, {
                 port: 443,
-                method: "DELETE"
+                method: "GET"
             })
                 .then(res => {
-                if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
-                    reject(new FMError(res.response.scriptError, res.status, res, trace));
-                }
-                else if (res.messages[0].code === "0") {
-                    this.emit("deleted");
-                    resolve();
+                if (res.messages[0].code === "0") {
+                    // console.log(res, res.response.data)
+                    this.modId = res.response.data[0].modId;
+                    this.fields = this.processFieldData(res.response.data[0].fieldData);
+                    this.portalData = [];
+                    if (res.response.data[0].portalData)
+                        this.processPortalData(res.response.data[0].portalData);
+                    resolve(this);
                 }
                 else {
                     reject(new FMError(res.messages[0].code, res.status, res, trace));
@@ -1565,6 +1587,9 @@ export class RecordBase extends EventEmitter {
                 reject(e);
             });
         }));
+    }
+    getPortal(portal) {
+        return this.portals.find(p => p.name === portal);
     }
     duplicate() {
         let trace = new Error();
@@ -1592,54 +1617,29 @@ export class RecordBase extends EventEmitter {
             });
         }));
     }
-    toObject(filter = (a) => a.edited, portalFilter = (a) => a.records.find(record => record.edited), portalRowFilter = (a) => a.edited, portalFieldFilter = (a) => a.edited) {
-        let fields_processed = {};
-        for (let field of this.fields.filter(field => filter(field))) {
-            let value = field.value;
-            if (value instanceof Date) {
-                // @ts-ignore
-                let _value = moment.default(value)
-                    .utcOffset(this.layout.database.host.timezoneOffset);
-                // @ts-ignore
-                switch (field.metadata.result) {
-                    case "time":
-                        value = _value.format(this.layout.database.host.metadata.productInfo.timeFormat.replace("dd", "DD"));
-                        break;
-                    case "date":
-                        value = _value.format(this.layout.database.host.metadata.productInfo.dateFormat.replace("dd", "DD"));
-                        break;
-                    default:
-                        value = _value.format(this.layout.database.host.metadata.productInfo.timeStampFormat.replace("dd", "DD"));
+    delete() {
+        let trace = new Error();
+        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+            this.layout.database.apiRequest(this.endpoint, {
+                port: 443,
+                method: "DELETE"
+            })
+                .then(res => {
+                if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
+                    reject(new FMError(res.response.scriptError, res.status, res, trace));
                 }
-            }
-            fields_processed[field.id] = value;
-        }
-        let obj = {
-            "recordId": this.recordId,
-            "modId": this.modId,
-            "fieldData": fields_processed
-        };
-        // Check if there's been any edited portal information
-        let portals = this.portals.filter(a => portalFilter(a));
-        if (portals) {
-            obj["portalData"] = {};
-            for (let portal of portals) {
-                obj["portalData"][portal.name] = portal.records.filter(a => portalRowFilter(a)).map(record => {
-                    return record.toObject(portalFieldFilter);
-                });
-            }
-        }
-        return obj;
-    }
-}
-export class LayoutRecord extends RecordBase {
-    constructor(layout, recordId, modId = recordId, fieldData = {}, portalData = null) {
-        super(layout, recordId, modId);
-        this.fields = this.processFieldData(fieldData);
-        this.portals = [];
-        if (portalData) {
-            this.processPortalData(portalData);
-        }
+                else if (res.messages[0].code === "0") {
+                    this.emit("deleted");
+                    resolve();
+                }
+                else {
+                    reject(new FMError(res.messages[0].code, res.status, res, trace));
+                }
+            })
+                .catch(e => {
+                reject(e);
+            });
+        }));
     }
 }
 export class Field {
@@ -1721,6 +1721,24 @@ export class Field {
     get value() {
         // if (this.metadata.result === "container") throw "Use await field.stream() to get the contents of a container field, instead of field.value"
         return this._value;
+    }
+    get string() {
+        if (typeof this._value === "string") {
+            return this._value;
+        }
+        throw "Field value is not a string";
+    }
+    get date() {
+        if (this._value instanceof Date) {
+            return this._value;
+        }
+        throw "Field value is not a date";
+    }
+    get number() {
+        if (typeof this._value === "number") {
+            return this._value;
+        }
+        throw "Field value is not a number";
     }
     upload(buffer, filename, mime) {
         let trace = new Error();
