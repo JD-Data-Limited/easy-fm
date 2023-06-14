@@ -1560,7 +1560,7 @@ export class RecordBase extends EventEmitter {
             if (!!fieldData[item]) {
                 if (_field.metadata.result === "timeStamp") {
                     // @ts-ignore
-                    let date = moment.default(fieldData[item], this.layout.database.host.metadata.productInfo.timeStampFormat)
+                    let date = moment.default(fieldData[item], this.layout.database.host.metadata.productInfo.timeStampFormat.replace("dd", "DD"))
                         .utcOffset(this.layout.database.host.timezoneOffset, true)
                         .local()
                     _field.set(date.toDate())
@@ -1569,7 +1569,7 @@ export class RecordBase extends EventEmitter {
                 }
                 else if (_field.metadata.result === "time") {
                     // @ts-ignore
-                    let date = moment.default(fieldData[item], this.layout.database.host.metadata.productInfo.timeFormat)
+                    let date = moment.default(fieldData[item], this.layout.database.host.metadata.productInfo.timeFormat.replace("dd", "DD"))
                         .utcOffset(this.layout.database.host.timezoneOffset, true)
                         .local()
                     _field.set(date.toDate())
@@ -1577,7 +1577,7 @@ export class RecordBase extends EventEmitter {
                 }
                 else if (_field.metadata.result === "date") {
                     // @ts-ignore
-                    let date = moment.default(fieldData[item], this.layout.database.host.metadata.productInfo.dateFormat)
+                    let date = moment.default(fieldData[item], this.layout.database.host.metadata.productInfo.dateFormat.replace("dd", "DD"))
                         .utcOffset(this.layout.database.host.timezoneOffset, true)
                         .local()
                     _field.set(date.toDate())
