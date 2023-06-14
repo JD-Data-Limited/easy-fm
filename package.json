@@ -1,6 +1,6 @@
 {
   "name": "@jd-data-limited/easy-fm",
-  "version": "3.0.6",
+  "version": "3.0.7",
   "dependencies": {
     "@types/btoa": "^1.2.3",
     "@types/events": "^3.0.0",
