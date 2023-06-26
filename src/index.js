@@ -1300,7 +1300,12 @@ export class Layout {
             })
                 .then(res => {
                 if (res.messages[0].code === "0") {
-                    resolve(res.response);
+                    let error = parseInt(res.response.scriptError);
+                    let msg = {
+                        scriptError: error ? new FMError(error, 200, res, trace) : undefined,
+                        scriptResult: res.response.scriptResult
+                    };
+                    resolve(msg);
                 }
                 else {
                     // console.log(res)
@@ -1483,17 +1488,17 @@ export class LayoutRecord extends RecordBase {
             if ((_a = extraBody.scripts) === null || _a === void 0 ? void 0 : _a.after) {
                 data["script"] = extraBody.scripts.after.name;
                 if (extraBody.scripts.after.parameter)
-                    data["param"] = extraBody.scripts.after.parameter;
+                    data["script.param"] = extraBody.scripts.after.parameter;
             }
             if ((_b = extraBody.scripts) === null || _b === void 0 ? void 0 : _b.prerequest) {
-                data["script"] = extraBody.scripts.after.name;
+                data["script.prerequest"] = extraBody.scripts.after.name;
                 if (extraBody.scripts.prerequest.parameter)
-                    data["param"] = extraBody.scripts.prerequest.parameter;
+                    data["script.prerequest.param"] = extraBody.scripts.prerequest.parameter;
             }
             if ((_c = extraBody.scripts) === null || _c === void 0 ? void 0 : _c.presort) {
-                data["script"] = extraBody.scripts.presort.name;
+                data["script.presort"] = extraBody.scripts.presort.name;
                 if (extraBody.scripts.presort.parameter)
-                    data["param"] = extraBody.scripts.presort.parameter;
+                    data["script.presort.param"] = extraBody.scripts.presort.parameter;
             }
             if (this.recordId === -1) {
                 // This is a new LayoutRecord
