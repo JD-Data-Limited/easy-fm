@@ -1146,6 +1146,11 @@ interface FMHostMetadata {
     }
 }
 
+export interface ScriptResult {
+    scriptError?: FMError,
+    scriptResult?: string
+}
+
 export interface ContainerBufferResult {
     buffer: Buffer,
     mime: string,
@@ -1441,9 +1446,9 @@ export class Layout {
         return this.records.find()
     }
 
-    runScript(script): Promise<string> {
+    runScript(script): Promise<ScriptResult> {
         let trace = new Error()
-        return new Promise(async (resolve, reject) => {
+        return new Promise(async (resolve, reject)  => {
             let url = `${this.endpoint}/script/${encodeURIComponent(script.name)}`
             if (script.parameter) url += "?script.param=" + encodeURIComponent(script.parameter)
             this.database.apiRequest(url, {
@@ -1452,7 +1457,12 @@ export class Layout {
             })
                 .then(res => {
                     if (res.messages[0].code === "0") {
-                        resolve(res.response)
+                        let error = parseInt(res.response.scriptError)
+                        let msg: ScriptResult = {
+                            scriptError: error ? new FMError(error, 200, res, trace) : undefined,
+                            scriptResult: res.response.scriptResult
+                        }
+                        resolve(msg)
                     }
                     else {
                         // console.log(res)
@@ -1666,15 +1676,15 @@ export class LayoutRecord extends RecordBase {
 
             if (extraBody.scripts?.after) {
                 data["script"] = extraBody.scripts.after.name
-                if (extraBody.scripts.after.parameter) data["param"] = extraBody.scripts.after.parameter
+                if (extraBody.scripts.after.parameter) data["script.param"] = extraBody.scripts.after.parameter
             }
             if (extraBody.scripts?.prerequest) {
-                data["script"] = extraBody.scripts.after.name
-                if (extraBody.scripts.prerequest.parameter) data["param"] = extraBody.scripts.prerequest.parameter
+                data["script.prerequest"] = extraBody.scripts.after.name
+                if (extraBody.scripts.prerequest.parameter) data["script.prerequest.param"] = extraBody.scripts.prerequest.parameter
             }
             if (extraBody.scripts?.presort) {
-                data["script"] = extraBody.scripts.presort.name
-                if (extraBody.scripts.presort.parameter) data["param"] = extraBody.scripts.presort.parameter
+                data["script.presort"] = extraBody.scripts.presort.name
+                if (extraBody.scripts.presort.parameter) data["script.presort.param"] = extraBody.scripts.presort.parameter
             }
 
             if (this.recordId === -1) {
