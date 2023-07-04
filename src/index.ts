@@ -1856,7 +1856,7 @@ export class Field {
         this.edited = false
     }
 
-    set(content: string | number | Date) {
+    set(content: string | number | Date | undefined | null) {
         if (this.metadata.result === "container") throw "Cannot set container value using set(). Use upload() instead."
         if (
             (this.metadata.result === "timeStamp" ||
@@ -1866,7 +1866,8 @@ export class Field {
         ) {
             throw "Value was not an instance of Date: " + content
         }
-        this._value = content
+        if (!content) this._value = ""
+        else this._value = content
         this.edited = true
     }
 
