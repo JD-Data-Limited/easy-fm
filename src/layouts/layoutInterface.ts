@@ -18,4 +18,5 @@ export interface RecordFieldsMap {
     [fieldName: string]: Field<FieldValue>
 }
 
-export type FieldValue = string | number | Date
+export type Container = null
+export type FieldValue = string | number | Date | Container
