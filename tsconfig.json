@@ -4,7 +4,11 @@
     "module": "es2022",
     "lib": ["es2021.intl", "es2015"],
     "moduleResolution": "Node",
+    "declaration": true
   },
+  "exclude": [
+    "node_modules"
+  ],
   "files": [
     "src/index.ts"
   ]
