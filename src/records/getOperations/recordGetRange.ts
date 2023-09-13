@@ -2,11 +2,11 @@
  * Copyright (c) 2023. See LICENSE file for more information
  */
 
-import {LayoutInterface} from "../../layouts/layoutInterface";
-import {RecordGetOperation} from "./recordGetOperation";
-import {LayoutRecord} from "../layoutRecord";
+import {LayoutInterface} from "../../layouts/layoutInterface.js";
+import {RecordGetOperation} from "./recordGetOperation.js";
+import {LayoutRecord} from "../layoutRecord.js";
 import {extraBodyOptions} from "../../types.js";
-import {FMError} from "../../FMError";
+import {FMError} from "../../FMError.js";
 
 export class RecordGetRange<T extends LayoutInterface> extends RecordGetOperation<T> {
     constructor(layout, start = 0, limit = 100) {

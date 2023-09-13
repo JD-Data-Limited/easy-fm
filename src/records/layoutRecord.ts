@@ -3,11 +3,11 @@
  */
 
 import {extraBodyOptions, recordObject} from "../types.js";
-import {RecordBase} from "./recordBase";
-import {PortalRecord} from "./portalRecord";
-import {Portal} from "./portal";
-import {PortalInterface, RecordFieldsMap} from "../layouts/layoutInterface";
-import {FMError} from "../FMError";
+import {RecordBase} from "./recordBase.js";
+import {PortalRecord} from "./portalRecord.js";
+import {Portal} from "./portal.js";
+import {PortalInterface, RecordFieldsMap} from "../layouts/layoutInterface.js";
+import {FMError} from "../FMError.js";
 
 export class LayoutRecord<T extends RecordFieldsMap, P extends PortalInterface> extends RecordBase<T> {
     portals: P

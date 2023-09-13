@@ -2,9 +2,9 @@
  * Copyright (c) 2023. See LICENSE file for more information
  */
 
-import {LayoutInterface} from "../../layouts/layoutInterface";
-import {Layout} from "../../layouts/layout";
-import {Portal} from "../portal";
+import {LayoutInterface} from "../../layouts/layoutInterface.js";
+import {Layout} from "../../layouts/layout.js";
+import {Portal} from "../portal.js";
 import {limitPortalsInterface} from "../../types.js";
 
 export class RecordGetOperation<T extends LayoutInterface> {

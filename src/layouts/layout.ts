@@ -2,13 +2,13 @@
  * Copyright (c) 2023. See LICENSE file for more information
  */
 
-import {LayoutRecordManager} from "./layoutRecordManager";
-import {LayoutRecord} from "../records/layoutRecord";
+import {LayoutRecordManager} from "./layoutRecordManager.js";
+import {LayoutRecord} from "../records/layoutRecord.js";
 import {ScriptResult} from "../types.js";
-import {LayoutInterface} from "./layoutInterface";
-import {Find} from "../records/getOperations/find";
-import {FMError} from "../FMError";
-import {Database} from "../connection/database";
+import {LayoutInterface} from "./layoutInterface.js";
+import {Find} from "../records/getOperations/find.js";
+import {FMError} from "../FMError.js";
+import {Database} from "../connection/database.js";
 
 export class Layout<T extends LayoutInterface> {
     readonly database: Database;

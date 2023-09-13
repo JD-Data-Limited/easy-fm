@@ -2,13 +2,13 @@
  * Copyright (c) 2023. See LICENSE file for more information
  */
 
-import {RecordBase} from "./recordBase";
+import {RecordBase} from "./recordBase.js";
 import fetch, {File, FormData} from "node-fetch";
 import * as http from "http";
 import {ContainerBufferResult, DOWNLOAD_MODES, FieldMetaData} from "../types.js";
-import {PortalRecord} from "./portalRecord";
-import {FieldValue} from "../layouts/layoutInterface";
-import {FMError} from "../FMError";
+import {PortalRecord} from "./portalRecord.js";
+import {FieldValue} from "../layouts/layoutInterface.js";
+import {FMError} from "../FMError.js";
 
 export class Field<T extends FieldValue> {
     record: RecordBase<any>;
