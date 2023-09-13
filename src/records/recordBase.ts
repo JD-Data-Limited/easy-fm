@@ -3,7 +3,7 @@
  */
 
 import {EventEmitter} from "events";
-import * as moment from "moment/moment";
+import * as moment from "moment/moment.js";
 import {Field} from "./field.js";
 import {Layout} from "../layouts/layout.js";
 import {RecordFieldsMap} from "../layouts/layoutInterface.js";
