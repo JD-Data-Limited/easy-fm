@@ -2,8 +2,8 @@
  * Copyright (c) 2023. See LICENSE file for more information
  */
 
-import {LayoutRecord} from "./layoutRecord";
-import {PortalRecord} from "./portalRecord";
+import {LayoutRecord} from "./layoutRecord.js";
+import {PortalRecord} from "./portalRecord.js";
 import {LayoutInterface, PortalInterface, RecordFieldsMap} from "../layouts/layoutInterface";
 
 export class Portal<T extends RecordFieldsMap> {

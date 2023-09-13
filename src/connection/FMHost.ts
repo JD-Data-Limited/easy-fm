@@ -2,10 +2,10 @@
  * Copyright (c) 2023. See LICENSE file for more information
  */
 
-import {generateAuthorizationHeaders} from "./generateAuthorizationHeaders";
+import {generateAuthorizationHeaders} from "./generateAuthorizationHeaders.js";
 import fetch from "node-fetch";
-import {FMError} from "../FMError";
-import {Database} from "./database";
+import {FMError} from "../FMError.js";
+import {Database} from "./database.js";
 import {
     databaseOptionsWithExternalSources,
     fileMakerResponse,

@@ -4,10 +4,9 @@
 
 import {EventEmitter} from "events";
 import * as moment from "moment/moment";
-import {Field} from "./field";
-import {Portal} from "./portal";
-import {Layout} from "../layouts/layout";
-import {FieldValue, RecordFieldsMap} from "../layouts/layoutInterface";
+import {Field} from "./field.js";
+import {Layout} from "../layouts/layout.js";
+import {RecordFieldsMap} from "../layouts/layoutInterface.js";
 import {recordObject} from "../types.js";
 
 export class RecordBase<T extends RecordFieldsMap> extends EventEmitter {

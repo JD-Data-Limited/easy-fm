@@ -2,8 +2,8 @@
  * Copyright (c) 2023. See LICENSE file for more information
  */
 
-import {Portal} from "../records/portal";
-import {Field} from "../records/field";
+import {Portal} from "../records/portal.js";
+import {Field} from "../records/field.js";
 
 export interface LayoutInterface {
     fields: RecordFieldsMap,

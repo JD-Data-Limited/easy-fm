@@ -2,11 +2,11 @@
  * Copyright (c) 2023. See LICENSE file for more information
  */
 
-import {RecordGetOperation} from "./recordGetOperation";
-import {LayoutRecord} from "../layoutRecord";
+import {RecordGetOperation} from "./recordGetOperation.js";
+import {LayoutRecord} from "../layoutRecord.js";
 import {LayoutInterface} from "../../layouts/layoutInterface";
-import {Layout} from "../../layouts/layout";
-import {FMError} from "../../FMError";
+import {Layout} from "../../layouts/layout.js";
+import {FMError} from "../../FMError.js";
 
 export class Find<T extends LayoutInterface> extends RecordGetOperation<T> {
     protected queries: object[]

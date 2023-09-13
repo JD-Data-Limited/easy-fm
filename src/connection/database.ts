@@ -4,10 +4,10 @@
 
 import {EventEmitter} from "events";
 import fetch, {HeadersInit, Request} from "node-fetch";
-import {generateAuthorizationHeaders} from "./generateAuthorizationHeaders";
-import {FMError} from "../FMError";
-import {LayoutInterface} from "../layouts/layoutInterface";
-import {Layout} from "../layouts/layout";
+import {generateAuthorizationHeaders} from "./generateAuthorizationHeaders.js";
+import {FMError} from "../FMError.js";
+import {LayoutInterface} from "../layouts/layoutInterface.js";
+import {Layout} from "../layouts/layout.js";
 import * as http from "http";
 import * as https from "https";
 import {
@@ -18,7 +18,7 @@ import {
     loginOptionsToken,
     Script
 } from "../types.js";
-import FMHost from "./FMHost";
+import FMHost from "./FMHost.js";
 
 export class Database extends EventEmitter {
     private _token: any;

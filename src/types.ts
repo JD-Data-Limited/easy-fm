@@ -6,8 +6,8 @@
 // @ts-ignore
 import * as moment from "moment"
 import * as http from "http";
-import {Portal} from "./records/portal";
-import {FMError} from "./FMError";
+import {Portal} from "./records/portal.js";
+import {FMError} from "./FMError.js";
 
 // import * as btoa from "btoa";
 export interface databaseOptionsBase {
