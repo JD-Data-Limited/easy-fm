@@ -50,10 +50,10 @@ export class LayoutRecordManager<T extends LayoutInterface> {
     }
 
     range(start = 0, limit = 100) {
-        return new RecordGetRange(this.layout, start, limit)
+        return new RecordGetRange<T>(this.layout, start, limit)
     }
 
     find(start = 0, limit = 100): Find<T> {
-        return new Find(this.layout, start, limit)
+        return new Find<T>(this.layout, start, limit)
     }
 }
