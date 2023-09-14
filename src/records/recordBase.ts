@@ -3,17 +3,24 @@
  */
 
 import {EventEmitter} from "events";
-import * as moment from "moment/moment.js";
+import * as moment from "moment";
 import {Field} from "./field.js";
 import {Layout} from "../layouts/layout.js";
-import {RecordFieldsMap} from "../layouts/layoutInterface.js";
 import {recordObject} from "../types.js";
+import {RecordFieldsMap} from "../layouts/recordFieldsMap";
+
+export enum RecordTypes {
+    UNKNOWN,
+    LAYOUT,
+    PORTAL
+}
 
 export class RecordBase<T extends RecordFieldsMap> extends EventEmitter {
     readonly layout: Layout<any>;
+    readonly type: RecordTypes = RecordTypes.UNKNOWN;
     public recordId: number;
     modId: number;
-    fields: T
+    fields: T;
     protected portalData: any[];
 
     constructor(layout, recordId, modId = recordId) {
@@ -76,10 +83,6 @@ export class RecordBase<T extends RecordFieldsMap> extends EventEmitter {
     _onSave() {
         this.emit("saved")
         for (let field of this.fieldsArray) field.edited = false
-    }
-
-    getField(field) {
-        return this.fieldsArray.find(_field => _field.id === field)
     }
 
     toObject(filter = (a) => a.edited,

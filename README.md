@@ -20,8 +20,7 @@ or [FileMaker Cloud](https://store.claris.com/filemaker-cloud). This module inte
 ## Before you begin
 
 - You need to know what your server's UTC time offset (in minutes) is.
-  - Running `0 - (new Date()).getTimezoneOffset()` in javascript will the UTC time offset for your current timezone.
-
+    - Running `0 - (new Date()).getTimezoneOffset()` in javascript will the UTC time offset for your current timezone.
 
 ## Connecting to a database
 
@@ -40,7 +39,8 @@ const database = host.database({
         method: "filemaker",
         username: "<username>",
         password: "<password>"
-    }
+    },
+    externalSources: []
 })
 
 database.login().then(() => {
@@ -82,11 +82,11 @@ find_request.addRequests({"GroupID": "abc"}) // Find only the records with field
 find_request.setOffset(30) // Starting from the 30th matching record
 find_request.setLimit(10) // Fetch only 10 records
 
-let records = await range_request.run()
+let records = await range_request.fetch()
 console.log(records)
 ```
 
-### Fetch a record using its record ID
+### Fetch a record using its record ID (NOT RECOMMENDED)
 
 > Please note: When in FileMaker Pro, a record's ID is returned when using Get(RecordID). If you need to fetch a record
 > using a different ID, use the search method above.
@@ -103,9 +103,9 @@ console.log(record)
 let layout = database.getLayout("Your layout name")
 let record = await layout.records.create()
 
-record.getField("Field1").set("Value here")
-record.getField("Field2").set("Value here")
-record.getField("Field3").set("Value here")
+record.fields["Field1"].value = "Value here"
+record.fields["Field2"].value = "Value here"
+record.fields["Field3"].value = "Value here"
 
 await record.commit()
 ```
@@ -116,19 +116,72 @@ await record.commit()
 let layout = database.getLayout("Your layout name")
 let record = await layout.records.get(164)
 
-record.getField("Field1").set("Value here")
-record.getField("Field2").set("Value here")
-record.getField("Field3").set("Value here")
+record.fields["Field1"].value = "Value here"
+record.fields["Field2"].value = "Value here"
+record.fields["Field3"].value = "Value here"
 
 await record.commit()
 ```
 
-# Documentation
+# Field names
 
-## FMHost
+When interacting with FileMaker, it is important to remember how FileMaker field names work.
 
-`hostname`: string
-> The hostname of the server you are connecting to
+| Field name format             | Use when....                                                                                        |
+|-------------------------------|-----------------------------------------------------------------------------------------------------|
+| `FieldName`                   | Use this when the field you are accessing is in the same table that the layout has been assigned to |
+| `RelatedTableName::FieldName` | Use this when the field **is not** in the same table that the layout has been assigned to           |
 
-`timezoneOffset`: number
-> The server's timezone offset
+> **NOTE:** You will not be able to access any fields that are not on the layout.
+
+# Portal names
+
+> Please read this section carefully if you are working with portals
+
+It is important to note that a portal's name **is not** the same as the name of the table that it links to. The name of a
+portal matches the object name it was assigned in FileMaker's layout editor.
+
+> **NOTE**: When no name has been manually assigned to it, it will default to the name of the related table.
+
+# Typescript Implementation
+
+`easy-fm` supports the use of TypeScript. Here's an example of how this works with `easy-fm`:
+
+```typescript
+import FMHost, {Portal, Field, Container} from "@jd-data-limited/easy-fm";
+
+interface UsersLayout {
+    fields: {
+        // Map each field on the layout to a field type.
+        first_name: Field<string>
+        age: Field<number>
+        birthdate: Field<Date>
+        profile_picture: Field<Container>
+        "MyRelatedTable::MyRelatedField": Field<string>
+    },
+    portals: {
+        Files: {
+            "Files::Field1": Field<string>
+        }
+    }
+}
+
+interface DatabaseStructure {
+    layouts: {
+        users: UsersLayout
+    }
+}
+
+const host = new FMHost("https://example_filemaker_server.com")
+const database = host.database<DatabaseStructure>({
+    database: "ExampleDatabase.fmp12",
+    credentials: {method: "filemaker", username: "test", passsword: "test"},
+    externalSources: []
+})
+await database.login()
+
+const layout = database.getLayout("users") // The UsersLayout interface will be automatically applied to all records within this layout
+const record = await layout.records.create()
+record.fields["first_name"].value = "Joe"
+record.fields["age"].value = 38
+```

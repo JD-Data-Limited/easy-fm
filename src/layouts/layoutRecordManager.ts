@@ -3,15 +3,15 @@
  */
 
 import {LayoutRecord} from "../records/layoutRecord.js";
-import {Layout} from "./layout.js";
 import {LayoutInterface} from "./layoutInterface.js";
 import {RecordGetRange} from "../records/getOperations/recordGetRange.js";
 import {Find} from "../records/getOperations/find.js";
+import {LayoutBase} from "./layoutBase.js"
 
 export class LayoutRecordManager<T extends LayoutInterface> {
-    readonly layout: Layout<T>
+    readonly layout: LayoutBase
 
-    constructor(layout: Layout<T>) {
+    constructor(layout: LayoutBase) {
         this.layout = layout
     }
 

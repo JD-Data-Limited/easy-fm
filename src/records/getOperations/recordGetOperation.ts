@@ -3,19 +3,19 @@
  */
 
 import {LayoutInterface} from "../../layouts/layoutInterface.js";
-import {Layout} from "../../layouts/layout.js";
 import {Portal} from "../portal.js";
 import {limitPortalsInterface} from "../../types.js";
+import {LayoutBase} from "../../layouts/layoutBase.js"
 
 export class RecordGetOperation<T extends LayoutInterface> {
-    protected layout: Layout<T>
+    protected layout: LayoutBase
     protected limit: number = 100
     protected scripts: object
     protected sort: object[]
     protected limitPortals: limitPortalsInterface[] = []
     protected offset: number = 0
 
-    constructor(layout: Layout<T>) {
+    constructor(layout: LayoutBase) {
         this.layout = layout
         this.scripts = {
             "script": null, // Runs after everything
@@ -31,7 +31,7 @@ export class RecordGetOperation<T extends LayoutInterface> {
     */
     addToPortalLimit(portal: Portal<any>, offset = 0, limit = 100) {
         if (offset < 0) throw "Portal offset cannot be less than 0"
-        this.limitPortals.push({portal, offset, limit})
+        this.limitPortals.push({portalName: portal.name, offset, limit})
         return this
     }
 

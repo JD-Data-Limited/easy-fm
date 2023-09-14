@@ -4,12 +4,17 @@
 
 // const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 // @ts-ignore
-import * as moment from "moment"
 import * as http from "http";
-import {Portal} from "./records/portal.js";
 import {FMError} from "./FMError.js";
+import {LayoutInterface} from "./layouts/layoutInterface";
 
 // import * as btoa from "btoa";
+export interface DatabaseStructure {
+    layouts: {
+        [key: string]: LayoutInterface
+    }
+}
+
 export interface databaseOptionsBase {
     database: string
     credentials: loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken,
@@ -48,7 +53,7 @@ export interface loginOptionsClaris {
 }
 
 export interface limitPortalsInterface {
-    portal: Portal<any>,
+    portalName: string,
     offset: number,
     limit: number
 }
