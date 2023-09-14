@@ -4,19 +4,20 @@
 
 import {LayoutRecordManager} from "./layoutRecordManager.js";
 import {LayoutRecord} from "../records/layoutRecord.js";
-import {ScriptResult} from "../types.js";
+import {Script, ScriptResult} from "../types.js";
 import {LayoutInterface} from "./layoutInterface.js";
 import {Find} from "../records/getOperations/find.js";
 import {FMError} from "../FMError.js";
-import {Database} from "../connection/database.js";
+import {LayoutBase} from "./layoutBase.js"
+import {DatabaseBase} from "../connection/databaseBase";
 
-export class Layout<T extends LayoutInterface> {
-    readonly database: Database;
+export class Layout<T extends LayoutInterface> implements LayoutBase {
+    readonly database: DatabaseBase;
     readonly records = new LayoutRecordManager<T>(this)
-    protected name: string;
+    readonly name: string;
     metadata: any;
 
-    constructor(database: Database, name: string) {
+    constructor(database: DatabaseBase, name: string) {
         this.database = database
         this.name = name
     }
@@ -46,7 +47,7 @@ export class Layout<T extends LayoutInterface> {
         return this.records.find()
     }
 
-    runScript(script): Promise<ScriptResult> {
+    runScript(script: Script): Promise<ScriptResult> {
         let trace = new Error()
         return new Promise(async (resolve, reject) => {
             let url = `${this.endpoint}/script/${encodeURIComponent(script.name)}`

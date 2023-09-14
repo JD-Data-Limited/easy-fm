@@ -2,13 +2,14 @@
  * Copyright (c) 2023. See LICENSE file for more information
  */
 
-import {RecordBase} from "./recordBase.js";
+import {RecordBase, RecordTypes} from "./recordBase.js";
 import fetch, {File, FormData} from "node-fetch";
 import * as http from "http";
 import {ContainerBufferResult, DOWNLOAD_MODES, FieldMetaData} from "../types.js";
-import {PortalRecord} from "./portalRecord.js";
-import {FieldValue} from "../layouts/layoutInterface.js";
 import {FMError} from "../FMError.js";
+
+export type FieldValue = string | number | Date | Container
+export type Container = null
 
 export class Field<T extends FieldValue> {
     record: RecordBase<any>;
@@ -60,7 +61,8 @@ export class Field<T extends FieldValue> {
                 repetitionEnd: 1
             } as FieldMetaData
         }
-        if (this.record instanceof PortalRecord) {
+        if (this.record.type === RecordTypes.PORTAL) {
+            // @ts-ignore
             return this.record.layout.metadata.portalMetaData[this.record.portal.name || "portal not attached"].find(i => i.name === this.id) as FieldMetaData || {
                 name: this.id.toString(),
                 type: 'normal',
@@ -137,6 +139,7 @@ export class Field<T extends FieldValue> {
 
             let _fetch = await fetch(`${this.record.endpoint}/containers/${this.id}/1`, {
                 method: "POST",
+                // @ts-ignore
                 headers: {"Authorization": "Bearer " + this.record.layout.database.token},
                 body: form
             }).then(res => res.json())
@@ -159,6 +162,7 @@ export class Field<T extends FieldValue> {
     download(mode: DOWNLOAD_MODES.Buffer): Promise<ContainerBufferResult>
     download(mode: DOWNLOAD_MODES = DOWNLOAD_MODES.Stream): Promise<http.IncomingMessage | ContainerBufferResult> {
         return new Promise((resolve, reject) => {
+            // @ts-ignore
             this.record.layout.database.streamContainer(this, this._value)
                 .then(stream => {
                     if (mode === DOWNLOAD_MODES.Stream) {

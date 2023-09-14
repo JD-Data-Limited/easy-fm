@@ -6,11 +6,14 @@ import {extraBodyOptions, recordObject} from "../types.js";
 import {RecordBase} from "./recordBase.js";
 import {PortalRecord} from "./portalRecord.js";
 import {Portal} from "./portal.js";
-import {PortalInterface, RecordFieldsMap} from "../layouts/layoutInterface.js";
+import {PortalInterface} from "../layouts/layoutInterface.js";
 import {FMError} from "../FMError.js";
+import {RecordFieldsMap} from "../layouts/recordFieldsMap";
+import {LayoutRecordBase} from "./layoutRecordBase";
 
-export class LayoutRecord<T extends RecordFieldsMap, P extends PortalInterface> extends RecordBase<T> {
-    portals: P
+export class LayoutRecord<T extends RecordFieldsMap, P extends PortalInterface> extends RecordBase<T> implements LayoutRecordBase {
+    // @ts-ignore
+    portals: P = {}
 
     constructor(layout, recordId, modId = recordId, fieldData = {}, portalData = null) {
         super(layout, recordId, modId);

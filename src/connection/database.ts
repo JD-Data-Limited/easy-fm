@@ -12,22 +12,23 @@ import * as http from "http";
 import * as https from "https";
 import {
     databaseOptionsBase,
-    databaseOptionsWithExternalSources,
+    databaseOptionsWithExternalSources, DatabaseStructure,
     fileMakerResponse,
     loginOptionsFileMaker,
     loginOptionsToken,
     Script
 } from "../types.js";
-import FMHost from "./FMHost.js";
+import {HostBase} from "./HostBase.js"
+import {DatabaseBase} from "./databaseBase";
 
-export class Database extends EventEmitter {
+export class Database<T extends DatabaseStructure> extends EventEmitter implements DatabaseBase {
     private _token: any;
-    readonly host: FMHost;
+    readonly host: HostBase;
     private connection_details: databaseOptionsWithExternalSources
     private cookies: { [key: string]: string } = {}
     readonly name: string;
 
-    constructor(host: FMHost, conn: databaseOptionsWithExternalSources) {
+    constructor(host: HostBase, conn: databaseOptionsWithExternalSources) {
         super()
         this.host = host
         this.name = conn.database
@@ -119,7 +120,7 @@ export class Database extends EventEmitter {
         return `${this.host.hostname}/fmi/data/v2/databases/${this.name}`
     }
 
-    async apiRequest(url: string | Request, options: any = {}, autoRelogin = true): Promise<any> {
+    async apiRequest<T = any>(url: string | Request, options: any = {}, autoRelogin = true): Promise<T> {
         if (!options.headers) options.headers = {}
         options.headers["content-type"] = options.headers["content-type"] ? options.headers["content-type"] : "application/json"
         options.headers["authorization"] = "Bearer " + this._token
@@ -142,8 +143,8 @@ export class Database extends EventEmitter {
         return (data as any)
     }
 
-    getLayout<T extends LayoutInterface>(name): Layout<T> {
-        return new Layout(this, name)
+    getLayout<R extends string>(name: R): Layout<T["layouts"][R]> {
+        return new Layout<T["layouts"][R]>(this, name)
     }
 
     setGlobals(globalFields): Promise<void> {

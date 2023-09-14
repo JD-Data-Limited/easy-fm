@@ -3,7 +3,7 @@
  */
 
 import {Portal} from "../records/portal.js";
-import {Field} from "../records/field.js";
+import {RecordFieldsMap} from "./recordFieldsMap";
 
 export interface LayoutInterface {
     fields: RecordFieldsMap,
@@ -14,9 +14,3 @@ export interface PortalInterface {
     [key: string]: Portal<RecordFieldsMap>
 }
 
-export interface RecordFieldsMap {
-    [fieldName: string]: Field<FieldValue>
-}
-
-export type Container = null
-export type FieldValue = string | number | Date | Container

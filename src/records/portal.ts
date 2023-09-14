@@ -2,11 +2,13 @@
  * Copyright (c) 2023. See LICENSE file for more information
  */
 
-import {LayoutRecord} from "./layoutRecord.js";
 import {PortalRecord} from "./portalRecord.js";
-import {LayoutInterface, PortalInterface, RecordFieldsMap} from "../layouts/layoutInterface";
+import {RecordFieldsMap} from "../layouts/recordFieldsMap";
+import {PortalBase} from "./portalBase";
+import {LayoutRecordBase} from "./layoutRecordBase";
+import {LayoutRecord} from "./layoutRecord";
 
-export class Portal<T extends RecordFieldsMap> {
+export class Portal<T extends RecordFieldsMap> implements PortalBase<T> {
     readonly record: LayoutRecord<any, any>;
     readonly name: string;
     public records: PortalRecord<T>[];

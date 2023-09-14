@@ -6,8 +6,9 @@ import {generateAuthorizationHeaders} from "./generateAuthorizationHeaders.js";
 import fetch from "node-fetch";
 import {FMError} from "../FMError.js";
 import {Database} from "./database.js";
+import {HostBase} from "./HostBase.js"
 import {
-    databaseOptionsWithExternalSources,
+    databaseOptionsWithExternalSources, DatabaseStructure,
     fileMakerResponse,
     FMHostMetadata,
     loginOptionsClaris,
@@ -15,7 +16,7 @@ import {
     loginOptionsOAuth
 } from "../types.js";
 
-export default class FMHost {
+export default class FMHost implements HostBase {
     readonly hostname: string
     readonly timezoneOffset: number
     readonly verify: boolean
@@ -50,8 +51,8 @@ export default class FMHost {
         }
     }
 
-    database(data: databaseOptionsWithExternalSources) {
-        return new Database(this, data)
+    database<T extends DatabaseStructure>(data: databaseOptionsWithExternalSources) {
+        return new Database<T>(this, data)
     }
 
     async getMetadata() {

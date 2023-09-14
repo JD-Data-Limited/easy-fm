@@ -2,13 +2,15 @@
  * Copyright (c) 2023. See LICENSE file for more information
  */
 
-import {RecordBase} from "./recordBase.js";
+import {RecordBase, RecordTypes} from "./recordBase.js";
 import {extraBodyOptions, recordObject} from "../types.js";
-import {Portal} from "./portal.js";
-import {RecordFieldsMap} from "../layouts/layoutInterface.js";
+
+import {RecordFieldsMap} from "../layouts/recordFieldsMap";
+import {PortalBase} from "./portalBase";
 
 export class PortalRecord<T extends RecordFieldsMap> extends RecordBase<T> {
-    readonly portal: Portal<any>;
+    readonly portal: PortalBase<T>;
+    readonly type = RecordTypes.PORTAL
 
     constructor(record, portal, recordId, modId = recordId, fieldData = {}) {
         super(record.layout, recordId, modId);

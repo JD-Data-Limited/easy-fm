@@ -21,10 +21,10 @@ export class RecordGetRange<T extends LayoutInterface> extends RecordGetOperatio
         if (this.offset !== 0) params.push("_offset=" + this.offset)
         if (this.sort.length > 0) params.push("_sort=" + encodeURI(JSON.stringify(this.sort)))
         if (this.limitPortals.length > 0) {
-            params.push("portal=" + encodeURI(JSON.stringify(this.limitPortals.map(p => p.portal.name))))
+            params.push("portal=" + encodeURI(JSON.stringify(this.limitPortals.map(p => p.portalName))))
             for (let item of this.limitPortals) {
-                if (item.offset !== 0) params.push("_offset." + item.portal.name.replace(/[^0-9A-z]/g, "") + "=" + item.offset)
-                if (item.limit !== 100) params.push("_limit." + item.portal.name.replace(/[^0-9A-z]/g, "") + "=" + item.limit)
+                if (item.offset !== 0) params.push("_offset." + item.portalName.replace(/[^0-9A-z]/g, "") + "=" + item.offset)
+                if (item.limit !== 100) params.push("_limit." + item.portalName.replace(/[^0-9A-z]/g, "") + "=" + item.limit)
             }
         }
         if (extraBody.scripts) {

@@ -5,13 +5,13 @@
 import {RecordGetOperation} from "./recordGetOperation.js";
 import {LayoutRecord} from "../layoutRecord.js";
 import {LayoutInterface} from "../../layouts/layoutInterface";
-import {Layout} from "../../layouts/layout.js";
+import {LayoutBase} from "../../layouts/layoutBase.js";
 import {FMError} from "../../FMError.js";
 
 export class Find<T extends LayoutInterface> extends RecordGetOperation<T> {
     protected queries: object[]
 
-    constructor(layout: Layout<T>, start = 0, limit = 100) {
+    constructor(layout: LayoutBase, start = 0, limit = 100) {
         super(layout)
         this.setOffset(start)
         this.setLimit(limit)
@@ -32,10 +32,10 @@ export class Find<T extends LayoutInterface> extends RecordGetOperation<T> {
         if (this.limit !== 100) out["limit"] = this.limit
         if (this.offset !== 0) out["offset"] = this.offset
         if (this.limitPortals.length > 0) {
-            out["portal"] = this.limitPortals.map(p => p.portal.name)
+            out["portal"] = this.limitPortals.map(p => p.portalName)
             for (let item of this.limitPortals) {
-                out["offset." + item.portal.name.replace(/[^0-9A-z]/g, "")] = item.offset
-                out["limit." + item.portal.name.replace(/[^0-9A-z]/g, "")] = item.limit
+                out["offset." + item.portalName.replace(/[^0-9A-z]/g, "")] = item.offset
+                out["limit." + item.portalName.replace(/[^0-9A-z]/g, "")] = item.limit
             }
         }
 
