@@ -21,6 +21,8 @@ import {
 import {HostBase} from "./HostBase.js"
 import {DatabaseBase} from "./databaseBase";
 
+type GetLayoutReturnType<T extends DatabaseStructure, R extends LayoutInterface | string> = R extends string ? T["layouts"][R] : R
+
 export class Database<T extends DatabaseStructure> extends EventEmitter implements DatabaseBase {
     private _token: any;
     readonly host: HostBase;
@@ -143,8 +145,10 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         return (data as any)
     }
 
-    getLayout<R extends string>(name: R): Layout<T["layouts"][R]> {
-        return new Layout<T["layouts"][R]>(this, name)
+    getLayout<R extends string>(name: R): Layout<T["layouts"][R]>
+    getLayout<R extends LayoutInterface>(name: string): Layout<R>
+    getLayout(name: string): Layout<LayoutInterface> {
+        return new Layout<LayoutInterface>(this, name)
     }
 
     setGlobals(globalFields): Promise<void> {
