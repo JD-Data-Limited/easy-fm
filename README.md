@@ -7,7 +7,21 @@ a [FileMaker database](https://www.claris.com/filemaker/) stored on
 a [FileMaker server](https://www.claris.com/filemaker/server/)
 or [FileMaker Cloud](https://store.claris.com/filemaker-cloud). This module interacts with your server using the
 [FileMaker Data API](https://help.claris.com/en/data-api-guide/content/index.html).
-
+<!-- TOC -->
+* [easy-fm](#easy-fm)
+  * [FileMaker setup instructions](#filemaker-setup-instructions)
+  * [Before you begin](#before-you-begin)
+  * [Connecting to a database](#connecting-to-a-database)
+  * [Getting records](#getting-records)
+    * [Fetch a range of records](#fetch-a-range-of-records)
+    * [Searching for records](#searching-for-records)
+    * [Fetch a record using its record ID (NOT RECOMMENDED)](#fetch-a-record-using-its-record-id-not-recommended)
+    * [Create a record](#create-a-record)
+    * [Modify a record](#modify-a-record)
+* [Field names](#field-names)
+* [Portal names](#portal-names)
+* [Typescript Implementation](#typescript-implementation)
+<!-- TOC -->
 ## FileMaker setup instructions
 
 1. Enable the FileMaker Data API from the server's admin console. This setting is located
@@ -20,7 +34,7 @@ or [FileMaker Cloud](https://store.claris.com/filemaker-cloud). This module inte
 ## Before you begin
 
 - You need to know what your server's UTC time offset (in minutes) is.
-    - Running `0 - (new Date()).getTimezoneOffset()` in javascript will the UTC time offset for your current timezone.
+    - Running `0 - (new Date()).getTimezoneOffset()` in javascript will give you the UTC time offset for your current timezone.
 
 ## Connecting to a database
 
