@@ -48,7 +48,7 @@ export class RecordGetOperation<T extends LayoutInterface> {
 
     setOffset(offset: number) {
         if (offset < 0) throw "Record offset too low"
-        this.limit = offset
+        this.offset = offset
         return this
     }
 }

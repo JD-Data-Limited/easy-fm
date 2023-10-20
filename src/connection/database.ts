@@ -8,8 +8,7 @@ import {generateAuthorizationHeaders} from "./generateAuthorizationHeaders.js";
 import {FMError} from "../FMError.js";
 import {LayoutInterface} from "../layouts/layoutInterface.js";
 import {Layout} from "../layouts/layout.js";
-import * as http from "http";
-import * as https from "https";
+import HTTP_REDIRECT  from "follow-redirects"
 import {
     databaseOptionsBase,
     databaseOptionsWithExternalSources, DatabaseStructure,
@@ -181,7 +180,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         this.emit("token_expired")
     }
 
-    streamContainer(field, url): Promise<http.IncomingMessage> {
+    streamContainer(field, url): Promise<HTTP_REDIRECT.http.IncomingMessage> {
         return new Promise((resolve, reject) => {
             if (field.metadata.result !== "container") {
                 reject("Cannot stream the field " + field.id + " as it is not a container")
@@ -201,10 +200,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
                     .join("; ")
             }
 
-            // Automatically switch between the http and https modules, based on which is needed
-            (url.startsWith("https") ? https : http).get(url, {
-                headers
-            }, (res) => {
+            const check_for_cookies = (res) => {
                 // Check for the 'set-cookie' header. If it exists, remember it and strip it for better security.
                 if (res.headers['set-cookie']) {
                     for (let cookie of res.headers['set-cookie']) {
@@ -213,6 +209,14 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
                     }
                     res.headers['set-cookie'] = null
                 }
+            }
+
+            // Automatically switch between the http and https modules, based on which is needed
+            (url.startsWith("https") ? HTTP_REDIRECT.https : HTTP_REDIRECT.http).get(url, {
+                headers,
+                beforeRedirect: (options, res, req) => check_for_cookies(res)
+            }, (res) => {
+                check_for_cookies(res)
 
                 resolve(res)
             })
