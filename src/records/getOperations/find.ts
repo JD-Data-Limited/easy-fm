@@ -7,6 +7,7 @@ import {LayoutRecord} from "../layoutRecord.js";
 import {LayoutInterface} from "../../layouts/layoutInterface";
 import {LayoutBase} from "../../layouts/layoutBase.js";
 import {FMError} from "../../FMError.js";
+import {ApiRecordResponseObj} from "../../models/apiResults";
 
 export class Find<T extends LayoutInterface> extends RecordGetOperation<T> {
     protected queries: object[]
@@ -54,35 +55,23 @@ export class Find<T extends LayoutInterface> extends RecordGetOperation<T> {
         return this.fetch()
     }
 
-    fetch(): Promise<LayoutRecord<T["fields"], T["portals"]>[]> {
+    async fetch(): Promise<LayoutRecord<T["fields"], T["portals"]>[]> {
         let trace = new Error()
-        return new Promise((resolve, reject) => {
-            // console.log(this.#toObject())
-            this.layout.getLayoutMeta()
-                .then(() => {
-                    return this.layout.database.apiRequest(`${this.layout.endpoint}/_find`, {
-                        port: 443,
-                        method: "POST",
-                        body: JSON.stringify(this.toObject())
-                    })
-                })
-                .then(async res => {
-                    // // console.log(res)
-                    if (res.messages[0].code === "0") {
-                        // console.log("RESOLVING")
-                        if (!this.layout.metadata) await this.layout.getLayoutMeta()
-                        let data = res.response.data.map(item => {
-                            return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
-                        })
-                        resolve(data)
-                    }
-                    else {
-                        reject(new FMError(res.messages[0].code, res.status, res, trace))
-                    }
-                })
-                .catch(e => {
-                    reject(e)
-                })
+        await this.layout.getLayoutMeta()
+        let res = await this.layout.database.apiRequest<ApiRecordResponseObj>(`${this.layout.endpoint}/_find`, {
+            port: 443,
+            method: "POST",
+            body: JSON.stringify(this.toObject())
         })
+        if (res.messages[0].code === "0") {
+            // console.log("RESOLVING")
+            if (!this.layout.metadata) await this.layout.getLayoutMeta()
+            return res.response.data.map(item => {
+                return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
+            })
+        }
+        else {
+            throw new FMError(res.messages[0].code, res.httpStatus, res, trace)
+        }
     }
 }

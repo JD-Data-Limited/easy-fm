@@ -9,12 +9,12 @@ import {Database} from "./database.js";
 import {HostBase} from "./HostBase.js"
 import {
     databaseOptionsWithExternalSources, DatabaseStructure,
-    fileMakerResponse,
     FMHostMetadata,
     loginOptionsClaris,
     loginOptionsFileMaker,
     loginOptionsOAuth
 } from "../types.js";
+import {ApiResults} from "../models/apiResults";
 
 export default class FMHost implements HostBase {
     readonly hostname: string
@@ -39,7 +39,7 @@ export default class FMHost implements HostBase {
             method: "GET",
             headers
         })
-        let data = await _fetch.json() as fileMakerResponse
+        let data = await _fetch.json() as ApiResults<{databases: any}>
         // console.log(data.messages[0])
 
         if (data.messages[0].code === "0") {
@@ -61,7 +61,7 @@ export default class FMHost implements HostBase {
         let _fetch = await fetch(`${this.hostname}/fmi/data/v2/productInfo`, {
             method: "GET",
         })
-        let data = await _fetch.json() as fileMakerResponse
+        let data = await _fetch.json() as ApiResults<FMHostMetadata>
         // console.log(data.messages[0])
 
         if (data.messages[0].code === "0") {

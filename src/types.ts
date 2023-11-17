@@ -83,11 +83,6 @@ export interface recordObject {
     portalData?: portalDataObject
 }
 
-export interface fileMakerResponse {
-    response: any,
-    messages: any[]
-}
-
 export interface portalDataObject {
     [key: string]: recordObject
 }

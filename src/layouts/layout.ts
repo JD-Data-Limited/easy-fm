@@ -10,12 +10,13 @@ import {Find} from "../records/getOperations/find.js";
 import {FMError} from "../FMError.js";
 import {LayoutBase} from "./layoutBase.js"
 import {DatabaseBase} from "../connection/databaseBase";
+import {ApiLayoutMetadata, ApiScriptResult} from "../models/apiResults";
 
 export class Layout<T extends LayoutInterface> implements LayoutBase {
     readonly database: DatabaseBase;
     readonly records = new LayoutRecordManager<T>(this)
     readonly name: string;
-    metadata: any;
+    metadata: ApiLayoutMetadata;
 
     constructor(database: DatabaseBase, name: string) {
         this.database = database
@@ -47,47 +48,29 @@ export class Layout<T extends LayoutInterface> implements LayoutBase {
         return this.records.find()
     }
 
-    runScript(script: Script): Promise<ScriptResult> {
-        let trace = new Error()
-        return new Promise(async (resolve, reject) => {
-            let url = `${this.endpoint}/script/${encodeURIComponent(script.name)}`
-            if (script.parameter) url += "?script.param=" + encodeURIComponent(script.parameter)
-            this.database.apiRequest(url, {
-                port: 443,
-                method: "GET"
-            })
-                .then(res => {
-                    if (res.messages[0].code === "0") {
-                        let error = parseInt(res.response.scriptError)
-                        let msg: ScriptResult = {
-                            scriptError: error ? new FMError(error, 200, res, trace) : undefined,
-                            scriptResult: res.response.scriptResult
-                        }
-                        resolve(msg)
-                    }
-                    else {
-                        // console.log(res)
-                        reject(new FMError(res.messages[0].code, res.status, res, trace))
-                    }
-                })
-                .catch(e => {
-                    reject(e)
-                })
+    async runScript(script: Script): Promise<ScriptResult> {
+        let url = `${this.endpoint}/script/${encodeURIComponent(script.name)}`
+        if (script.parameter) url += "?script.param=" + encodeURIComponent(script.parameter)
+        let res = await this.database.apiRequest<ApiScriptResult>(url, {
+            port: 443,
+            method: "GET"
         })
+        if (res.messages[0].code === "0") {
+            let error = parseInt(res.response.scriptError)
+            return {
+                scriptError: error ? new FMError(error, 200, res) : undefined,
+                scriptResult: res.response.scriptResult
+            }
+        }
     }
 
-    public getLayoutMeta(): Promise<this | FMError> {
-        return new Promise((resolve, reject) => {
-            if (this.metadata) {
-                resolve(this.metadata)
-                return
-            }
+    public async getLayoutMeta(): Promise<ApiLayoutMetadata> {
+        if (this.metadata) {
+            return this.metadata
+        }
 
-            this.database.apiRequest(this.endpoint).then(res => {
-                this.metadata = res.response
-                resolve(this)
-            })
-                .catch(e => reject(e))
-        })
+        let res = await this.database.apiRequest<ApiLayoutMetadata>(this.endpoint)
+        this.metadata = res.response
+        return this.metadata
     }
 }

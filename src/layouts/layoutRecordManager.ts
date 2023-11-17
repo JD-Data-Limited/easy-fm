@@ -15,38 +15,22 @@ export class LayoutRecordManager<T extends LayoutInterface> {
         this.layout = layout
     }
 
-    create(): Promise<LayoutRecord<T["fields"], T["portals"]>> {
-        return new Promise((resolve, reject) => {
-            // Get the layout's metadata
-            this.layout.getLayoutMeta().then(layout => {
-                let fields = {}
-                for (let _field of this.layout.metadata.fieldMetaData) {
-                    fields[_field.name] = ""
-                }
-                let portals = {}
-                for (let _portal of Object.keys(this.layout.metadata.portalMetaData)) portals[_portal] = []
-                resolve(new LayoutRecord(this.layout, -1, 0, fields, portals))
-            }).catch(e => {
-                reject(e)
-            })
-        })
+    async create(): Promise<LayoutRecord<T["fields"], T["portals"]>> {
+        await this.layout.getLayoutMeta()
+        let fields = {}
+        for (let _field of this.layout.metadata.fieldMetaData) {
+            fields[_field.name] = ""
+        }
+        let portals = {}
+        for (let _portal of Object.keys(this.layout.metadata.portalMetaData)) portals[_portal] = []
+        return new LayoutRecord(this.layout, -1, 0, fields, portals)
     }
 
-    get(recordId): Promise<LayoutRecord<T["fields"], T["portals"]>> {
-        return new Promise((resolve, reject) => {
-            let record
-            this.layout.getLayoutMeta()
-                .then(layout => {
-                    record = new LayoutRecord(this.layout, recordId)
-                    return record.get()
-                })
-                .then(() => {
-                    resolve(record)
-                })
-                .catch(e => {
-                    reject(e)
-                })
-        })
+    async get(recordId: number): Promise<LayoutRecord<T["fields"], T["portals"]>> {
+        await this.layout.getLayoutMeta()
+        let record = new LayoutRecord(this.layout, recordId)
+        await record.get()
+        return record
     }
 
     range(start = 0, limit = 100) {
