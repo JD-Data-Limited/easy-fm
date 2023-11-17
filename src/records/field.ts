@@ -7,6 +7,7 @@ import fetch, {File, FormData} from "node-fetch";
 import * as http from "http";
 import {ContainerBufferResult, DOWNLOAD_MODES, FieldMetaData} from "../types.js";
 import {FMError} from "../FMError.js";
+import {ApiFieldDisplayTypes, ApiFieldMetadata, ApiFieldResultTypes, ApiFieldTypes} from "../models/apiResults.js";
 
 export type FieldValue = string | number | Date | Container
 export type Container = null
@@ -41,14 +42,14 @@ export class Field<T extends FieldValue> {
         this.edited = true
     }
 
-    get metadata(): FieldMetaData {
+    get metadata(): ApiFieldMetadata {
         if (!this.record.layout.metadata) {
             // Default to a regular text field
             return {
                 name: this.id.toString(),
-                type: 'normal',
-                displayType: 'editText',
-                result: 'text',
+                type: ApiFieldTypes.NORMAL,
+                displayType: ApiFieldDisplayTypes.EDIT_TEXT,
+                result: ApiFieldResultTypes.TEXT,
                 global: false,
                 autoEnter: true,
                 fourDigitYear: false,
@@ -57,9 +58,9 @@ export class Field<T extends FieldValue> {
                 notEmpty: false,
                 numeric: false,
                 timeOfDay: false,
-                repetitionStart: 1,
-                repetitionEnd: 1
-            } as FieldMetaData
+                repetitions: 1,
+                valueList: ""
+            }
         }
         if (this.record.type === RecordTypes.PORTAL) {
             // @ts-ignore
@@ -81,11 +82,11 @@ export class Field<T extends FieldValue> {
             } as FieldMetaData
         }
         else {
-            return this.record.layout.metadata.fieldMetaData.find(i => i.name === this.id) as FieldMetaData || {
+            return this.record.layout.metadata.fieldMetaData.find(i => i.name === this.id) || {
                 name: this.id.toString(),
-                type: 'normal',
-                displayType: 'editText',
-                result: 'text',
+                type: ApiFieldTypes.NORMAL,
+                displayType: ApiFieldDisplayTypes.EDIT_TEXT,
+                result: ApiFieldResultTypes.TEXT,
                 global: false,
                 autoEnter: true,
                 fourDigitYear: false,
@@ -94,9 +95,9 @@ export class Field<T extends FieldValue> {
                 notEmpty: false,
                 numeric: false,
                 timeOfDay: false,
-                repetitionStart: 1,
-                repetitionEnd: 1
-            } as FieldMetaData
+                repetitions: 1,
+                valueList: ""
+            }
         }
     }
 
@@ -130,64 +131,45 @@ export class Field<T extends FieldValue> {
         throw "Field value is not a number"
     }
 
-    upload(buffer: Buffer, filename: string, mime: string): Promise<void> {
+    async upload(buffer: Buffer, filename: string, mime: string): Promise<void> {
         let trace = new Error()
         if (this.metadata.result !== "container") throw "Cannot upload a file to the field; " + this.id + " (not a container field)"
-        return new Promise(async (resolve, reject) => {
-            let form = new FormData()
-            form.append("upload", new File([buffer], filename, {type: mime}))
+        let form = new FormData()
+        form.append("upload", new File([buffer], filename, {type: mime}))
 
-            let _fetch = await fetch(`${this.record.endpoint}/containers/${this.id}/1`, {
-                method: "POST",
-                // @ts-ignore
-                headers: {"Authorization": "Bearer " + this.record.layout.database.token},
-                body: form
-            }).then(res => res.json())
-                .then(data => {
-                    let _res = data as any
-                    if (_res.messages[0].code === "0") {
-                        resolve()
-                    }
-                    else {
-                        reject(new FMError(_res.messages[0].code, _res.status, data, trace))
-                    }
-                })
-                .catch(e => {
-                    reject(e)
-                })
+        await this.record.layout.database.apiRequest<null>(`${this.record.endpoint}/containers/${this.id}/1`, {
+            method: "POST",
+            // @ts-ignore
+            headers: {"Authorization": "Bearer " + this.record.layout.database.token},
+            body: form
         })
     }
 
     download(mode: DOWNLOAD_MODES.Stream): Promise<http.IncomingMessage>
     download(mode: DOWNLOAD_MODES.Buffer): Promise<ContainerBufferResult>
-    download(mode: DOWNLOAD_MODES = DOWNLOAD_MODES.Stream): Promise<http.IncomingMessage | ContainerBufferResult> {
-        return new Promise((resolve, reject) => {
-            // @ts-ignore
-            this.record.layout.database.streamContainer(this, this._value)
-                .then(stream => {
-                    if (mode === DOWNLOAD_MODES.Stream) {
-                        resolve(stream)
-                        return
-                    }
+    async download(mode: DOWNLOAD_MODES = DOWNLOAD_MODES.Stream): Promise<http.IncomingMessage | ContainerBufferResult> {
+        if (this.metadata.result !== ApiFieldResultTypes.CONTAINER) throw new Error("Cannot perform download() on a non-container field")
 
-                    let body = []
-                    stream.on("data", chunk => {
-                        body.push(chunk)
-                    })
-                    stream.on("error", (e) => {
-                        reject(e)
-                    })
-                    stream.on("end", () => {
-                        resolve({
-                            buffer: Buffer.concat(body),
-                            mime: stream.headers["content-type"],
-                            request: stream
-                        } as ContainerBufferResult)
-                    })
-                })
-                .catch(e => {
-                    reject(e)
-                })
+        let stream = await this.record.layout.database.streamURL(this.string)
+        if (mode === DOWNLOAD_MODES.Stream) {
+            return stream
+        }
+
+        let body = []
+        return new Promise((resolve, reject) => {
+            stream.on("data", chunk => {
+                body.push(chunk)
+            })
+            stream.on("error", (e) => {
+                reject(e)
+            })
+            stream.on("end", () => {
+                resolve({
+                    buffer: Buffer.concat(body),
+                    mime: stream.headers["content-type"],
+                    request: stream
+                } as ContainerBufferResult)
+            })
         })
     }
 }

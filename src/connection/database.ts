@@ -12,13 +12,13 @@ import HTTP_REDIRECT  from "follow-redirects"
 import {
     databaseOptionsBase,
     databaseOptionsWithExternalSources, DatabaseStructure,
-    fileMakerResponse,
     loginOptionsFileMaker,
     loginOptionsToken,
     Script
 } from "../types.js";
 import {HostBase} from "./HostBase.js"
 import {DatabaseBase} from "./databaseBase";
+import {ApiLayout, ApiResults} from "../models/apiResults";
 
 type GetLayoutReturnType<T extends DatabaseStructure, R extends LayoutInterface | string> = R extends string ? T["layouts"][R] : R
 
@@ -50,67 +50,55 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         }
     }
 
-    logout(): Promise<void> {
-        return new Promise(async (resolve, reject) => {
-            if (!this.token) reject(new Error("Not logged in"))
+    async logout(): Promise<void> {
+        if (!this.token) throw new Error("Not logged in")
 
-            let _fetch = await fetch(`${this.endpoint}/sessions/${this.token}`, {
-                method: "DELETE",
-                headers: {
-                    "content-type": "application/json"
-                }
-            })
-            let data = await _fetch.json()
-            // console.log(data)
-            this._token = null
-            resolve()
+        let _fetch = await fetch(`${this.endpoint}/sessions/${this.token}`, {
+            method: "DELETE",
+            headers: {
+                "content-type": "application/json"
+            }
         })
+        let data = await _fetch.json()
+        // console.log(data)
+        this._token = null
     }
 
-    login() {
-        return new Promise<string>(async (resolve, reject) => {
-            // Reset cookies
-            this.cookies = {}
+    async login() {
+        // Reset cookies
+        this.cookies = {}
 
-            try {
-                await this.host.getMetadata()
-            } catch (e) {
-                reject(e)
-                return
-            }
-            if (this.token) throw new Error("Already logged in. Run logout() first")
+        await this.host.getMetadata()
+        if (this.token) throw new Error("Already logged in. Run logout() first")
 
-            if (this.connection_details.credentials.method === "token") {
-                this._token = (<loginOptionsToken>this.connection_details.credentials).token
-                resolve(this.token)
+        if (this.connection_details.credentials.method === "token") {
+            this._token = (<loginOptionsToken>this.connection_details.credentials).token
+            return this.token
+        }
+        else {
+            console.time()
+            let res = await fetch(`${this.endpoint}/sessions`, {
+                hostname: this.host.hostname,
+                port: 443,
+                method: "POST",
+                headers: generateAuthorizationHeaders(this.connection_details.credentials) as unknown as HeadersInit,
+                body: JSON.stringify({
+                    fmDataSource: this.connection_details.externalSources.map(i => {
+                        let _i = <databaseOptionsBase>i
+                        return this.generateExternalSourceLogin(_i)
+                    })
+                })
+            })
+            console.time()
+            let _res = <any>(await res.json())
+            if (res.status === 200) {
+                this._token = res.headers.get('x-fm-data-access-token')
+                return this._token
             }
             else {
-                fetch(`${this.endpoint}/sessions`, {
-                    hostname: this.host.hostname,
-                    port: 443,
-                    method: "POST",
-                    headers: generateAuthorizationHeaders(this.connection_details.credentials) as unknown as HeadersInit,
-                    body: JSON.stringify({
-                        fmDataSource: this.connection_details.externalSources.map(i => {
-                            let _i = <databaseOptionsBase>i
-                            return this.generateExternalSourceLogin(_i)
-                        })
-                    })
-                }).then(async res => {
-                    let _res = <any>(await res.json())
-                    if (res.status === 200) {
-                        this._token = res.headers.get('x-fm-data-access-token')
-                        resolve(this._token)
-                    }
-                    else {
-                        reject(new FMError(_res.messages[0].code, _res.status, res))
-                    }
-                })
-                    .catch(e => {
-                        reject(e)
-                    })
+                throw new FMError(_res.messages[0].code, _res.status, res)
             }
-        })
+        }
     }
 
     get token() {
@@ -121,7 +109,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         return `${this.host.hostname}/fmi/data/v2/databases/${this.name}`
     }
 
-    async apiRequest<T = any>(url: string | Request, options: any = {}, autoRelogin = true): Promise<T> {
+    async apiRequest<T = any>(url: string | Request, options: any = {}, autoRelogin = true): Promise<ApiResults<T>> {
         if (!options.headers) options.headers = {}
         options.headers["content-type"] = options.headers["content-type"] ? options.headers["content-type"] : "application/json"
         options.headers["authorization"] = "Bearer " + this._token
@@ -134,14 +122,30 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
                 this.cookies[cookie_split[0]] = cookie_split[1]
             }
         }
-        let data = await _fetch.json() as fileMakerResponse
+        let data = await _fetch.json() as ApiResults<T>
+
+        // Remove response if it is empty. This makes checking for an empty response easier
+        if (Object.keys(data.response).length === 0) delete data.response
+
         // console.log(data.messages[0])
-        if (data.messages[0].code == 952 && autoRelogin) {
+        if (data.messages[0].code === "952" && autoRelogin) {
             this._token = null
             await this.login()
             return await this.apiRequest(url, options, false)
         }
-        return (data as any)
+        else if (data.messages[0].code !== "0") {
+            throw new FMError(data.messages[0].code, _fetch.status, data)
+        }
+
+        data.httpStatus = _fetch.status
+        return data
+    }
+
+    async listLayouts() {
+        let req = await this.apiRequest<{layouts: ApiLayout[]}>(`${this.endpoint}/layouts`)
+        if (!req.response) throw new FMError(req.messages[0].code, req.httpStatus, req.messages[0].message)
+
+        return req.response.layouts.filter(i => !i.isFolder).map(layout => new Layout(this, layout.name))
     }
 
     getLayout<R extends string>(name: R): Layout<T["layouts"][R]>
@@ -150,25 +154,14 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         return new Layout<LayoutInterface>(this, name)
     }
 
-    setGlobals(globalFields): Promise<void> {
+    /*
+    @deprecated
+     */
+    async setGlobals(globalFields) {
         // console.log({globalFields})
-        return new Promise((resolve, reject) => {
-            this.apiRequest(`${this.endpoint}/globals`, {
-                method: "PATCH",
-                body: JSON.stringify({globalFields})
-            }).then(res => {
-                // console.log(res)
-                if (res.messages[0].code === "0") {
-                    resolve()
-                }
-                else {
-                    reject(
-                        (res.messages[0].code, res.status, res))
-                }
-            })
-                .catch(e => {
-                    reject(e)
-                })
+        await this.apiRequest(`${this.endpoint}/globals`, {
+            method: "PATCH",
+            body: JSON.stringify({globalFields})
         })
     }
 
@@ -180,15 +173,10 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         this.emit("token_expired")
     }
 
-    streamContainer(field, url): Promise<HTTP_REDIRECT.http.IncomingMessage> {
+    streamURL(url: string): Promise<HTTP_REDIRECT.http.IncomingMessage> {
         return new Promise((resolve, reject) => {
-            if (field.metadata.result !== "container") {
-                reject("Cannot stream the field " + field.id + " as it is not a container")
-                return
-            }
             if (!url || typeof url !== "string") {
-                reject("Container is empty, or has invalid value")
-                return
+                throw new Error("URL is empty, or has invalid value")
             }
 
             let headers = {}

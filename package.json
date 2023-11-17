@@ -4,10 +4,9 @@
   "dependencies": {
     "@types/btoa": "^1.2.3",
     "@types/events": "^3.0.0",
+    "follow-redirects": "^1.15.3",
     "moment": "^2.29.4",
-    "node-fetch": "3.2.8",
-    "typescript": "^5.2.2",
-    "ytdl-core": "^4.11.4"
+    "node-fetch": "3.3.2"
   },
   "type": "module",
   "main": "src/index.js",
@@ -16,8 +15,11 @@
   "url": "https://github.com/JD-Data-Limited/easy-fm",
   "license": "SEE LICENSE IN LICENSE",
   "description": "easy-fm is a Node.js module that allows you to interact with\r a [FileMaker database stored](https://www.claris.com/filemaker/) on\r a [FileMaker server](https://www.claris.com/filemaker/server/). This module interacts with your server using the\r [FileMaker Data API](https://help.claris.com/en/data-api-guide/content/index.html).",
+  "files": [
+    "./src/**/*"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test tests/login.js",
     "build": "webpack"
   },
   "repository": {
@@ -34,7 +36,9 @@
     "url": "https://github.com/JD-Data-Limited/easy-fm/issues"
   },
   "devDependencies": {
+    "typescript": "^5.2.2",
     "webpack": "^5.81.0",
-    "webpack-cli": "^5.0.2"
+    "webpack-cli": "^5.0.2",
+    "dotenv": "^16.3.1"
   }
 }

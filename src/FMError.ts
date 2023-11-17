@@ -1021,7 +1021,7 @@ export class FMError extends Error {
     readonly message: string
     readonly messages: string
 
-    constructor(code, httpStatus, res, trace?: Error) {
+    constructor(code: string | number, httpStatus: number, res: any, trace?: Error) {
         if (typeof code === "string") code = parseInt(code)
         super(errs.find(err => err.e === code).d || "Unknown error");
         this.httpStatus = httpStatus

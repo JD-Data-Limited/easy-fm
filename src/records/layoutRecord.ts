@@ -10,6 +10,7 @@ import {PortalInterface} from "../layouts/layoutInterface.js";
 import {FMError} from "../FMError.js";
 import {RecordFieldsMap} from "../layouts/recordFieldsMap";
 import {LayoutRecordBase} from "./layoutRecordBase";
+import {ApiRecordResponseObj, ApiResultSetObj} from "../models/apiResults";
 
 export class LayoutRecord<T extends RecordFieldsMap, P extends PortalInterface> extends RecordBase<T> implements LayoutRecordBase {
     // @ts-ignore
@@ -27,77 +28,68 @@ export class LayoutRecord<T extends RecordFieldsMap, P extends PortalInterface> 
         return Object.values(this.portals)
     }
 
-    commit(extraBody: extraBodyOptions = {}): Promise<this> {
-        let trace = new Error()
-        return new Promise(async (resolve, reject) => {
-            let data = this.toObject()
-            delete data.recordId
-            delete data.modId
+    async commit(extraBody: extraBodyOptions = {}): Promise<this> {
+        let data = this.toObject()
+        delete data.recordId
+        delete data.modId
 
-            if (extraBody.scripts?.after) {
-                data["script"] = extraBody.scripts.after.name
-                if (extraBody.scripts.after.parameter) data["script.param"] = extraBody.scripts.after.parameter
-            }
-            if (extraBody.scripts?.prerequest) {
-                data["script.prerequest"] = extraBody.scripts.after.name
-                if (extraBody.scripts.prerequest.parameter) data["script.prerequest.param"] = extraBody.scripts.prerequest.parameter
-            }
-            if (extraBody.scripts?.presort) {
-                data["script.presort"] = extraBody.scripts.presort.name
-                if (extraBody.scripts.presort.parameter) data["script.presort.param"] = extraBody.scripts.presort.parameter
-            }
+        if (extraBody.scripts?.after) {
+            data["script"] = extraBody.scripts.after.name
+            if (extraBody.scripts.after.parameter) data["script.param"] = extraBody.scripts.after.parameter
+        }
+        if (extraBody.scripts?.prerequest) {
+            data["script.prerequest"] = extraBody.scripts.after.name
+            if (extraBody.scripts.prerequest.parameter) data["script.prerequest.param"] = extraBody.scripts.prerequest.parameter
+        }
+        if (extraBody.scripts?.presort) {
+            data["script.presort"] = extraBody.scripts.presort.name
+            if (extraBody.scripts.presort.parameter) data["script.presort.param"] = extraBody.scripts.presort.parameter
+        }
 
-            if (this.recordId === -1) {
-                // This is a new LayoutRecord
-
-                this.layout.database.apiRequest(`${this.layout.endpoint}/records`, {
+        if (this.recordId === -1) {
+            // This is a new LayoutRecord
+             let res = await this.layout.database.apiRequest<{ recordId: string, modId: string }>(`${this.layout.endpoint}/records`, {
                     port: 443,
                     method: "POST",
                     body: JSON.stringify(data)
                 })
-                    .then(res => {
-                        if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
-                            reject(new FMError(res.response.scriptError, res.status, res, trace))
-                        }
-                        else if (res.messages[0].code === "0") {
-                            this.recordId = parseInt(res.response.recordId)
-                            this.modId = parseInt(res.response.modId)
-                            resolve(this)
-                        }
-                        else {
-                            reject(new FMError(res.messages[0].code, res.status, res, trace))
-                        }
-                    })
-                    .catch(e => {
-                        reject(e)
-                    })
 
-                return
-            }
+                if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
+                    throw new FMError(res.response.scriptError, res.httpStatus, res)
+                }
+                else if (res.messages[0].code === "0") {
+                    this.recordId = parseInt(res.response.recordId)
+                    this.modId = parseInt(res.response.modId)
+                    return this
+                }
+                else {
+                    throw new FMError(res.messages[0].code, res.httpStatus, res)
+                }
+        }
 
-            // for (let item of Object.keys(data)) extraBody[item] = data[item]
-            this.layout.database.apiRequest(this.endpoint, {
-                port: 443,
-                method: "PATCH",
-                body: JSON.stringify(data)
-            })
-                .then(res => {
-                    if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
-                        reject(new FMError(res.response.scriptError, res.status, res, trace))
-                    }
-                    else if (res.messages[0].code === "0") {
-                        this.modId = res.response.modId
-                        this._onSave()
-                        resolve(this)
-                    }
-                    else {
-                        reject(new FMError(res.messages[0].code, res.status, res, trace))
-                    }
-                })
-                .catch(e => {
-                    reject(e)
-                })
+        // for (let item of Object.keys(data)) extraBody[item] = data[item]
+        let res = await this.layout.database.apiRequest<{
+            modId: string, newPortalRecordInfo: {
+                tableName: string,
+                recordId: string,
+                modId: string
+            }[]
+        }>(this.endpoint, {
+            port: 443,
+            method: "PATCH",
+            body: JSON.stringify(data)
         })
+        if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
+            throw new FMError(res.response.scriptError, res.httpStatus, res)
+        }
+        else if (res.messages[0].code === "0") {
+            this.modId = +res.response.modId
+            this._onSave()
+            return this
+        }
+        else {
+            throw new FMError(res.messages[0].code, res.httpStatus, res)
+        }
     }
 
     protected processPortalData(portalData): void {
@@ -115,92 +107,68 @@ export class LayoutRecord<T extends RecordFieldsMap, P extends PortalInterface> 
         }
     }
 
-    get(): Promise<this> {
+    async get(): Promise<this> {
         let trace = new Error()
         if (this.recordId === -1) {
             throw "Cannot get this RecordBase until a commit() is done."
         }
-        return new Promise(async (resolve, reject) => {
-            if (!this.layout.metadata) await this.layout.getLayoutMeta()
-
-            this.layout.database.apiRequest(this.endpoint, {
-                port: 443,
-                method: "GET"
-            })
-                .then(res => {
-                    if (res.messages[0].code === "0") {
-                        // console.log(res, res.response.data)
-                        this.modId = res.response.data[0].modId
-                        this.processFieldData(res.response.data[0].fieldData)
-                        this.portalData = []
-                        if (res.response.data[0].portalData) this.processPortalData(res.response.data[0].portalData)
-                        resolve(this)
-                    }
-                    else {
-                        reject(new FMError(res.messages[0].code, res.status, res, trace))
-                    }
-                })
-                .catch(e => {
-                    reject(e)
-                })
+        if (!this.layout.metadata) await this.layout.getLayoutMeta()
+        let res = await this.layout.database.apiRequest<ApiRecordResponseObj>(this.endpoint, {
+            port: 443,
+            method: "GET"
         })
+
+        if (res.messages[0].code === "0") {
+            // console.log(res, res.response.data)
+            this.modId = +res.response.data[0].modId
+            this.processFieldData(res.response.data[0].fieldData)
+            this.portalData = []
+            if (res.response.data[0].portalData) this.processPortalData(res.response.data[0].portalData)
+            return this
+        }
     }
 
     getPortal(portal) {
         return this.portalsArray.find(p => p.name === portal)
     }
 
-    duplicate(): Promise<LayoutRecord<T,P>> {
+    async duplicate(): Promise<LayoutRecord<T, P>> {
         let trace = new Error()
-        return new Promise(async (resolve, reject) => {
-            this.layout.database.apiRequest(this.endpoint, {
-                port: 443,
-                method: "POST"
-            })
-                .then(res => {
-                    if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
-                        reject(new FMError(res.response.scriptError, res.status, res, trace))
-                    }
-                    else if (res.messages[0].code === "0") {
-                        let data = this.toObject((a) => true, (a) => true, (a) => false, (a) => false)
-                        let _res = new LayoutRecord<T,P>(this.layout, res.response.recordId, res.response.modId, data.fieldData, data.portalData)
-
-                        this.emit("duplicated")
-                        resolve(_res)
-                    }
-                    else {
-                        reject(new FMError(res.messages[0].code, res.status, res, trace))
-                    }
-                })
-                .catch(e => {
-                    reject(e)
-                })
+        let res = await this.layout.database.apiRequest<{recordId: string, modId: string}>(this.endpoint, {
+            port: 443,
+            method: "POST"
         })
+        if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
+            throw new FMError(res.response.scriptError, res.httpStatus, res, trace)
+        }
+        else if (res.messages[0].code === "0") {
+            let data = this.toObject((a) => true, (a) => true, (a) => false, (a) => false)
+            let _res = new LayoutRecord<T, P>(this.layout, res.response.recordId, res.response.modId, data.fieldData, data.portalData)
+
+            this.emit("duplicated")
+            return _res
+        }
+        else {
+            throw new FMError(res.messages[0].code, res.httpStatus, res, trace)
+        }
     }
 
-    delete(): Promise<void> {
-        let trace = new Error()
-        return new Promise(async (resolve, reject) => {
-            this.layout.database.apiRequest(this.endpoint, {
-                port: 443,
-                method: "DELETE"
-            })
-                .then(res => {
-                    if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
-                        reject(new FMError(res.response.scriptError, res.status, res, trace))
-                    }
-                    else if (res.messages[0].code === "0") {
-                        this.emit("deleted")
-                        resolve()
-                    }
-                    else {
-                        reject(new FMError(res.messages[0].code, res.status, res, trace))
-                    }
-                })
-                .catch(e => {
-                    reject(e)
-                })
+    async delete(): Promise<void> {
+        let res = await this.layout.database.apiRequest(this.endpoint, {
+            port: 443,
+            method: "DELETE"
         })
+        console.log(res)
+        if (typeof res.response?.scriptError !== "undefined" && res.response?.scriptError !== '0') {
+            throw new FMError(res.response.scriptError, res.httpStatus, res)
+        }
+        else if (res.messages[0].code === "0") {
+            this.emit("deleted")
+            return
+        }
+        else {
+            throw new FMError(res.messages[0].code, res.httpStatus, res)
+        }
     }
 
     toObject(filter: (a) => any = (a) => a.edited, portalFilter: (a) => any = (a) => a.records.find(record => record.edited), portalRowFilter: (a) => any = (a) => a.edited, portalFieldFilter: (a) => any = (a) => a.edited): recordObject {

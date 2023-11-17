@@ -5,6 +5,8 @@
 import {HostBase} from "./HostBase.js"
 import {Request} from "node-fetch";
 import {DatabaseStructure} from "../types";
+import {ApiResults} from "../models/apiResults";
+import HTTP_REDIRECT  from "follow-redirects"
 
 export interface DatabaseBase {
     host: HostBase,
@@ -13,5 +15,6 @@ export interface DatabaseBase {
 
     // layouts: DatabaseStructure["layouts"]
 
-    apiRequest(url: string | Request, options?: any, autoRelogin?: boolean): Promise<any>
+    apiRequest<T = unknown>(url: string | Request, options?: any, autoRelogin?: boolean): Promise<ApiResults<T>>
+    streamURL(url: string): Promise<HTTP_REDIRECT.http.IncomingMessage>
 }

@@ -7,6 +7,7 @@ import {RecordGetOperation} from "./recordGetOperation.js";
 import {LayoutRecord} from "../layoutRecord.js";
 import {extraBodyOptions} from "../../types.js";
 import {FMError} from "../../FMError.js";
+import {ApiRecordResponseObj} from "../../models/apiResults";
 
 export class RecordGetRange<T extends LayoutInterface> extends RecordGetOperation<T> {
     constructor(layout, start = 0, limit = 100) {
@@ -53,32 +54,24 @@ export class RecordGetRange<T extends LayoutInterface> extends RecordGetOperatio
         return this.fetch(extraBody)
     }
 
-    fetch(extraBody: extraBodyOptions = {}): Promise<LayoutRecord<T["fields"], T["portals"]>[]> {
+    async fetch(extraBody: extraBodyOptions = {}): Promise<LayoutRecord<T["fields"], T["portals"]>[]> {
         let trace = new Error()
-        return new Promise((resolve, reject) => {
-            // console.log(this.#toObject())
-            this.layout.getLayoutMeta().then(() => {
-                return this.layout.database.apiRequest(`${this.layout.endpoint}/records${this.generateQueryParams(extraBody)}`, {
-                    method: "GET"
-                })
+        let res = await this.layout.getLayoutMeta().then(() => {
+            return this.layout.database.apiRequest<ApiRecordResponseObj>(`${this.layout.endpoint}/records${this.generateQueryParams(extraBody)}`, {
+                method: "GET"
             })
-                .then(async res => {
-                    // // console.log(res)
-                    if (res.messages[0].code === "0") {
-                        // console.log("RESOLVING")
-                        if (!this.layout.metadata) await this.layout.getLayoutMeta()
-                        let data = res.response.data.map(item => {
-                            return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
-                        })
-                        resolve(data)
-                    }
-                    else {
-                        reject(new FMError(res.messages[0].code, res.status, res, trace))
-                    }
-                })
-                .catch(e => {
-                    reject(e)
-                })
         })
+
+        if (res.messages[0].code === "0") {
+            // console.log("RESOLVING")
+            if (!this.layout.metadata) await this.layout.getLayoutMeta()
+            let data = res.response.data.map(item => {
+                return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
+            })
+            return data
+        }
+        else {
+            throw new FMError(res.messages[0].code, res.httpStatus, res, trace)
+        }
     }
 }
