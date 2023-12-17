@@ -2,12 +2,9 @@
   "name": "@jd-data-limited/easy-fm",
   "version": "3.2.7",
   "dependencies": {
-    "@types/btoa": "^1.2.3",
-    "@types/events": "^3.0.0",
     "moment": "^2.29.4",
     "node-fetch": "3.2.8",
     "typescript": "^5.2.2",
-    "ytdl-core": "^4.11.4"
   },
   "type": "module",
   "main": "src/index.js",
@@ -35,6 +32,8 @@
   },
   "devDependencies": {
     "webpack": "^5.81.0",
-    "webpack-cli": "^5.0.2"
+    "webpack-cli": "^5.0.2",
+    "@types/btoa": "^1.2.3",
+    "@types/events": "^3.0.0"
   }
 }
