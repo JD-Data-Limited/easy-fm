@@ -1,16 +1,14 @@
 /*
- * Copyright (c) 2023. See LICENSE file for more information
+ * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
 import {LayoutRecord} from "../records/layoutRecord.js";
 import {LayoutInterface} from "./layoutInterface.js";
-import {RecordGetRange} from "../records/getOperations/recordGetRange.js";
-import {Find} from "../records/getOperations/find.js";
 import {LayoutBase} from "./layoutBase.js"
+import {GetOperationOptions, RecordGetOperation} from "../records/getOperations/recordGetOperation";
 
 export class LayoutRecordManager<T extends LayoutInterface> {
-    readonly layout: LayoutBase
-
+    readonly layout: LayoutBase;
     constructor(layout: LayoutBase) {
         this.layout = layout
     }
@@ -33,11 +31,7 @@ export class LayoutRecordManager<T extends LayoutInterface> {
         return record
     }
 
-    range(start = 0, limit = 100) {
-        return new RecordGetRange<T>(this.layout, start, limit)
-    }
-
-    find(start = 0, limit = 100): Find<T> {
-        return new Find<T>(this.layout, start, limit)
+    query(options?: GetOperationOptions<T>) {
+        return new RecordGetOperation<T>(this.layout, options || {portals: []})
     }
 }

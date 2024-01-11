@@ -52,8 +52,8 @@ export interface loginOptionsClaris {
     }
 }
 
-export interface portalFetchData {
-    portalName: string,
+export interface portalFetchData<T = string> {
+    portalName: T,
     offset: number,
     limit: number
 }

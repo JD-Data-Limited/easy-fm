@@ -9,35 +9,49 @@ import {LayoutBase} from "../../layouts/layoutBase.js"
 import {LayoutRecord} from "../layoutRecord";
 import {ApiRecordResponseObj} from "../../models/apiResults";
 import {FMError} from "../../FMError";
+import fetch from "node-fetch";
 
 export type SortOrder = "ascend" | "descend"
 export type FindRequest = {
     [key: string]: string,
     omit?: "true" | "false"
 }
+export type PortalRequest = {
+    name: string,
+}
+
+export type GetOperationOptions<T extends LayoutInterface> = {
+    portals: portalFetchData<keyof T["portals"]>[],
+    limit?: number,
+    offset?: number
+}
+
 
 export class RecordGetOperation<T extends LayoutInterface> {
     protected layout: LayoutBase
-    protected _limit: number = 100
+    protected limit: number = 100
     protected scriptData: ScriptRequestData = {}
-    protected sortData: {fieldName: string, sortOrder: SortOrder}[] = []
-    protected portals: portalFetchData[] = []
-    protected _offset: number = 0
+    protected sortData: { fieldName: string, sortOrder: SortOrder }[] = []
+    protected portals: portalFetchData<keyof T["portals"]>[] = []
+    protected offset: number = 0
     protected queries: FindRequest[] = []
 
-    constructor(layout: LayoutBase) {
+    constructor(layout: LayoutBase, options: GetOperationOptions<T>) {
         this.layout = layout
         this.sortData = []
+        this.portals = options.portals
+        this.offset = options.offset || 0
+        this.limit = options.limit || Infinity
     }
 
     get isFindRequest() {
         return this.queries.length !== 0
     }
 
-    protected generateParams() {
+    protected generateParams(offset: number, limit: number) {
         const params = {
-            _limit: this._limit.toString(),
-            _offset: this._offset.toString(),
+            _limit: limit.toString(),
+            _offset: offset.toString(),
             _sort: JSON.stringify(this.sortData)
         }
         if (this.scriptData.after) params["script"] = this.scriptData.after.name
@@ -59,30 +73,8 @@ export class RecordGetOperation<T extends LayoutInterface> {
         return this
     }
 
-    /*
-    portal() will adjust the results of the get request so that if a layout has multiple portals in it,
-    only data from the specified ones will be read. This may help reduce load on your FileMaker API.
-
-    By default, easy-fm will NOT fetch any portal data
-    */
-    portal(portalName: string, offset = 0, limit = 100) {
-        if (offset < 0) throw "Portal offset cannot be less than 0"
-        this.portals.push({portalName: portalName, offset, limit})
-        return this
-    }
-
     sort(fieldName: string, sortOrder: SortOrder) {
         this.sortData.push({fieldName, sortOrder})
-        return this
-    }
-
-    offset(offset: number) {
-        this._offset = offset
-        return this
-    }
-
-    limit(limit: number) {
-        this._limit = limit
         return this
     }
 
@@ -91,7 +83,11 @@ export class RecordGetOperation<T extends LayoutInterface> {
         return this
     }
 
-    async fetch(): Promise<LayoutRecord<T["fields"], T["portals"]>[]> {
+    fetch(): Promise<LayoutRecord<T["fields"], T["portals"]>[]> {
+        return this.performFind(this.limit, this.offset)
+    }
+
+    async performFind(offset: number, limit: number): Promise<LayoutRecord<T["fields"], T["portals"]>[]> {
         let trace = new Error()
         await this.layout.getLayoutMeta()
 
@@ -100,7 +96,7 @@ export class RecordGetOperation<T extends LayoutInterface> {
         const reqData = {
             // port: 443,
             method: is_find ? "POST" : "GET",
-            body: is_find ? JSON.stringify(this.generateParams()) : undefined,
+            body: is_find ? JSON.stringify(this.generateParams(offset, limit)) : undefined,
         }
 
         let res = await this.layout.database.apiRequest<ApiRecordResponseObj>(
@@ -114,8 +110,43 @@ export class RecordGetOperation<T extends LayoutInterface> {
                 return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
             })
         }
+        else if (res.messages[0].code == "401") {
+            // No records found, so return empty set
+            return []
+        }
         else {
             throw new FMError(res.messages[0].code, res.httpStatus, res, trace)
         }
+    }
+
+    [Symbol.asyncIterator]() {
+        let nextOffset = this.offset
+        let limit = this.limit
+
+        let exit_after_last_record = false
+        let records: LayoutRecord<T["fields"], T["portals"]>[] = []
+
+        const fetch = async () => {
+            const theoretical_limit = limit - nextOffset
+            const records = await this.performFind(nextOffset, theoretical_limit < 100 ? theoretical_limit : 100);
+            nextOffset += 100;
+            if (records.length < 100) exit_after_last_record = true
+        }
+
+        return {
+            next: async () => {
+                if (records.length === 0 && !exit_after_last_record) {
+                    await fetch();
+                }
+
+                if (records.length === 0 && exit_after_last_record) {
+                    return {done: true, value: undefined};
+                }
+                else {
+                    const record = records.shift()
+                    return {done: false, value: record};
+                }
+            }
+        };
     }
 }
