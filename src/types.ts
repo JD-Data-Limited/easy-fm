@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023. See LICENSE file for more information
+ * Copyright (c) 2022-2024. See LICENSE file for more information
  */
 
 // const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
@@ -52,18 +52,20 @@ export interface loginOptionsClaris {
     }
 }
 
-export interface limitPortalsInterface {
+export interface portalFetchData {
     portalName: string,
     offset: number,
     limit: number
 }
 
+export type ScriptRequestData = {
+    prerequest?: Script,
+    presort?: Script,
+    after?: Script,
+}
+
 export interface extraBodyOptions {
-    scripts?: {
-        prerequest?: Script,
-        presort?: Script,
-        after?: Script,
-    }
+    scripts?: ScriptRequestData
 }
 
 export enum DOWNLOAD_MODES {
