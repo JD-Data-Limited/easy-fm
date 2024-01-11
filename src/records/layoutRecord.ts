@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. See LICENSE file for more information
+ * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
 import {extraBodyOptions, recordObject} from "../types.js";
@@ -16,7 +16,7 @@ export class LayoutRecord<T extends RecordFieldsMap, P extends PortalInterface> 
     // @ts-ignore
     portals: P = {}
 
-    constructor(layout, recordId, modId = recordId, fieldData = {}, portalData = null) {
+    constructor(layout, recordId, modId = recordId, fieldData: Record<string, string | number> = {}, portalData = null) {
         super(layout, recordId, modId);
         this.processFieldData(fieldData)
         if (portalData) {
