@@ -2,9 +2,6 @@
   "name": "@jd-data-limited/easy-fm",
   "version": "3.2.7",
   "dependencies": {
-    "@types/btoa": "^1.2.3",
-    "@types/events": "^3.0.0",
-    "follow-redirects": "^1.15.3",
     "moment": "^2.29.4",
     "node-fetch": "3.3.2"
   },
@@ -38,7 +35,9 @@
   "devDependencies": {
     "typescript": "^5.2.2",
     "webpack": "^5.81.0",
+    "dotenv": "^16.3.1",
     "webpack-cli": "^5.0.2",
-    "dotenv": "^16.3.1"
+    "@types/btoa": "^1.2.3",
+    "@types/events": "^3.0.0"
   }
 }
