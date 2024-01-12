@@ -83,11 +83,11 @@ export class RecordGetOperation<T extends LayoutInterface> {
         return this
     }
 
-    fetch(): Promise<LayoutRecord<T["fields"], T["portals"]>[]> {
+    fetch(): Promise<LayoutRecord<T>[]> {
         return this.performFind(this.limit, this.offset)
     }
 
-    async performFind(offset: number, limit: number): Promise<LayoutRecord<T["fields"], T["portals"]>[]> {
+    async performFind(offset: number, limit: number): Promise<LayoutRecord<T>[]> {
         let trace = new Error()
         await this.layout.getLayoutMeta()
 
@@ -124,7 +124,7 @@ export class RecordGetOperation<T extends LayoutInterface> {
         let limit = this.limit
 
         let exit_after_last_record = false
-        let records: LayoutRecord<T["fields"], T["portals"]>[] = []
+        let records: LayoutRecord<T>[] = []
 
         const fetch = async () => {
             const theoretical_limit = limit - nextOffset
