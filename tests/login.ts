@@ -8,7 +8,7 @@ import {DATABASE, HOST} from "./connectionDetails.js";
 import {Layout, LayoutRecord} from "../src";
 
 describe("Fetch host data", () => {
-    it("Able to get host metadata", async (t) => {
+    it("Able to get host metadata", async () => {
         console.log(await HOST.getMetadata())
     })
 
@@ -29,29 +29,29 @@ describe("Database interactions", () => {
         equal(typeof token, "string")
     })
 
-    it("List layouts", async (t) => {
-        let layouts = await DATABASE.listLayouts()
+    it("List layouts", async () => {
+        await DATABASE.listLayouts();
     })
 
-    it("Fetch layout metadata", async (t) => {
+    it("Fetch layout metadata", async () => {
         testLayout = DATABASE.getLayout(testLayoutName)
         await testLayout.getLayoutMeta()
     })
 
-    it("Fetch first 999 records", async (t) => {
+    it("Fetch first 999 records", async () => {
         let range = testLayout.records.query({portals: {}})
         let records = await range.fetch()
         record = records[0]
     })
 
-    it("Fetch first 999 records, with a portal", async (t) => {
+    it("Fetch first 999 records, with a portal", async () => {
         let range = testLayout.records.query({portals: {test: {limit: 10, offset: 1}}, limit: 999})
         let records = await range.fetch()
         record = records[0]
     })
 
     let randomRecord = Math.floor(Math.random() * 500) + 1
-    it (`Iterate through 500 records, starting at record ${randomRecord} (changes randomly)`, async (t) => {
+    it (`Iterate through 500 records, starting at record ${randomRecord} (changes randomly)`, async () => {
         let records = testLayout.records.query({portals: {}, limit: 500, offset: randomRecord})
         let recordCount = 0
         for await (let record of records) {recordCount += 1}
@@ -59,17 +59,17 @@ describe("Database interactions", () => {
         equal(recordCount, 500)
     })
 
-    it("Create a record", async (t) => {
+    it("Create a record", async () => {
         let record = await testLayout.records.create({portals: []})
         await record.commit()
     })
 
-    it("Modify first record", async (t) => {
+    it("Modify first record", async () => {
         record.fields[testField].set(Math.random())
         await record.commit()
     })
 
-    it("Perform a search for a single record", async (t) => {
+    it("Perform a search for a single record", async () => {
         let search = testLayout.records.query({portals: {}, limit: 1})
         search.find({
             PrimaryKey: "=" + record.fields.PrimaryKey.value
@@ -78,7 +78,7 @@ describe("Database interactions", () => {
         equal(records.length, 1)
     })
 
-    it("Perform a search for many records", async (t) => {
+    it("Perform a search for many records", async () => {
         let search = testLayout.records.query({portals: {}, limit: 10})
         search.find({
             CreationTimestamp: ">1/01/1978 *:*:*"
@@ -87,11 +87,11 @@ describe("Database interactions", () => {
         notEqual(records.length, 0)
     })
 
-    it("Duplicate first record", async (t) => {
+    it("Duplicate first record", async () => {
         await record.duplicate()
     })
 
-    it("Delete first record", async (t) => {
+    it("Delete first record", async () => {
         await record.delete()
     })
 
