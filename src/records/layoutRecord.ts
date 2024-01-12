@@ -6,19 +6,27 @@ import {extraBodyOptions, recordObject} from "../types.js";
 import {RecordBase} from "./recordBase.js";
 import {PortalRecord} from "./portalRecord.js";
 import {Portal} from "./portal.js";
-import {LayoutInterface, PortalInterface} from "../layouts/layoutInterface.js";
+import {LayoutInterface} from "../layouts/layoutInterface.js";
 import {FMError} from "../FMError.js";
-import {RecordFieldsMap} from "../layouts/recordFieldsMap";
 import {LayoutRecordBase} from "./layoutRecordBase";
-import {ApiRecordResponseObj, ApiResultSetObj} from "../models/apiResults";
+import {ApiRecordResponseObj} from "../models/apiResults";
+import {LayoutBase} from "../layouts/layoutBase"
 
-export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAYOUT["fields"]> implements LayoutRecordBase {
+export class LayoutRecord<LAYOUT extends LayoutInterface, PORTALS_TO_INCLUDE = string> extends RecordBase<LAYOUT["fields"]> implements LayoutRecordBase {
     // @ts-ignore
-    portals: LAYOUT["portals"] = {}
+    portals: Pick<LAYOUT["portals"], PORTALS_TO_INCLUDE> = {}
+    private readonly portalsToInclude: PORTALS_TO_INCLUDE[]
 
-    constructor(layout, recordId, modId = recordId, fieldData: Record<string, string | number> = {}, portalData = null) {
+    constructor(
+        layout: LayoutBase,
+        recordId: number | string,
+        modId = recordId,
+        fieldData: Record<string, string | number> = {},
+        portalData = null, portalsToInclude: PORTALS_TO_INCLUDE[] = [])
+    {
         super(layout, recordId, modId);
         this.processFieldData(fieldData)
+        this.portalsToInclude = portalsToInclude
         if (portalData) {
             this.processPortalData(portalData)
         }

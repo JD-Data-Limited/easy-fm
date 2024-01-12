@@ -150,3 +150,7 @@ export interface AuthorizationHeadersOAuth {
     "X-FM-Data-OAuth-RequestId": string,
     "X-FM-Data-OAuth-Identifier": string
 }
+
+export type RecordFetchOptions = {
+    readonly portals: readonly string[]
+}
