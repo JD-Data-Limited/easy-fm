@@ -6,15 +6,15 @@ import {extraBodyOptions, recordObject} from "../types.js";
 import {RecordBase} from "./recordBase.js";
 import {PortalRecord} from "./portalRecord.js";
 import {Portal} from "./portal.js";
-import {PortalInterface} from "../layouts/layoutInterface.js";
+import {LayoutInterface, PortalInterface} from "../layouts/layoutInterface.js";
 import {FMError} from "../FMError.js";
 import {RecordFieldsMap} from "../layouts/recordFieldsMap";
 import {LayoutRecordBase} from "./layoutRecordBase";
 import {ApiRecordResponseObj, ApiResultSetObj} from "../models/apiResults";
 
-export class LayoutRecord<T extends RecordFieldsMap, P extends PortalInterface> extends RecordBase<T> implements LayoutRecordBase {
+export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAYOUT["fields"]> implements LayoutRecordBase {
     // @ts-ignore
-    portals: P = {}
+    portals: LAYOUT["portals"] = {}
 
     constructor(layout, recordId, modId = recordId, fieldData: Record<string, string | number> = {}, portalData = null) {
         super(layout, recordId, modId);
@@ -132,7 +132,7 @@ export class LayoutRecord<T extends RecordFieldsMap, P extends PortalInterface> 
         return this.portalsArray.find(p => p.name === portal)
     }
 
-    async duplicate(): Promise<LayoutRecord<T, P>> {
+    async duplicate(): Promise<LayoutRecord<LAYOUT>> {
         let trace = new Error()
         let res = await this.layout.database.apiRequest<{recordId: string, modId: string}>(this.endpoint, {
             port: 443,
@@ -143,7 +143,7 @@ export class LayoutRecord<T extends RecordFieldsMap, P extends PortalInterface> 
         }
         else if (res.messages[0].code === "0") {
             let data = this.toObject((a) => true, (a) => true, (a) => false, (a) => false)
-            let _res = new LayoutRecord<T, P>(this.layout, res.response.recordId, res.response.modId, data.fieldData, data.portalData)
+            let _res = new LayoutRecord<LAYOUT>(this.layout, res.response.recordId, res.response.modId, data.fieldData, data.portalData)
 
             this.emit("duplicated")
             return _res

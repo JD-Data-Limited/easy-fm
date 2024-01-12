@@ -13,7 +13,7 @@ export class LayoutRecordManager<T extends LayoutInterface> {
         this.layout = layout
     }
 
-    async create(): Promise<LayoutRecord<T["fields"], T["portals"]>> {
+    async create(): Promise<LayoutRecord<T>> {
         await this.layout.getLayoutMeta()
         let fields = {}
         for (let _field of this.layout.metadata.fieldMetaData) {
@@ -24,9 +24,9 @@ export class LayoutRecordManager<T extends LayoutInterface> {
         return new LayoutRecord(this.layout, -1, 0, fields, portals)
     }
 
-    async get(recordId: number): Promise<LayoutRecord<T["fields"], T["portals"]>> {
+    async get(recordId: number): Promise<LayoutRecord<T>> {
         await this.layout.getLayoutMeta()
-        let record = new LayoutRecord(this.layout, recordId)
+        let record = new LayoutRecord<T>(this.layout, recordId)
         await record.get()
         return record
     }
