@@ -5,7 +5,8 @@
 import {LayoutRecord} from "../records/layoutRecord.js";
 import {LayoutInterface} from "./layoutInterface.js";
 import {LayoutBase} from "./layoutBase.js"
-import {GetOperationOptions, RecordGetOperation} from "../records/getOperations/recordGetOperation";
+import {GetOperationOptions, RecordGetOperation} from "../records/getOperations/recordGetOperation.js";
+import {RecordFetchOptions} from "../types.js";
 
 export class LayoutRecordManager<T extends LayoutInterface> {
     readonly layout: LayoutBase;
@@ -13,7 +14,7 @@ export class LayoutRecordManager<T extends LayoutInterface> {
         this.layout = layout
     }
 
-    async create(): Promise<LayoutRecord<T>> {
+    async create<OPTIONS extends RecordFetchOptions>(options: OPTIONS): Promise<LayoutRecord<T, OPTIONS["portals"][number]>> {
         await this.layout.getLayoutMeta()
         let fields = {}
         for (let _field of this.layout.metadata.fieldMetaData) {
@@ -31,7 +32,7 @@ export class LayoutRecordManager<T extends LayoutInterface> {
         return record
     }
 
-    query(options?: GetOperationOptions<T>) {
-        return new RecordGetOperation<T>(this.layout, options || {portals: []})
+    query<OPTIONS extends GetOperationOptions<T>>(options: OPTIONS) {
+        return new RecordGetOperation<T, OPTIONS>(this.layout, options)
     }
 }
