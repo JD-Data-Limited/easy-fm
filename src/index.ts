@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. See LICENSE file for more information
+ * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
 import FMHost from "./connection/FMHost.js";
@@ -13,9 +13,7 @@ import {LayoutInterface, PortalInterface} from "./layouts/layoutInterface.js";
 import {PortalRecord} from "./records/portalRecord.js";
 import {Portal} from "./records/portal.js";
 import {Field} from "./records/field.js";
-import {Find} from "./records/getOperations/find.js";
 import {RecordGetOperation} from "./records/getOperations/recordGetOperation.js";
-import {RecordGetRange} from "./records/getOperations/recordGetRange.js";
 import {LayoutRecordManager} from "./layouts/layoutRecordManager.js";
 import {RecordFieldsMap} from "./layouts/recordFieldsMap";
 import {Container} from "./records/field.js";
@@ -34,9 +32,7 @@ export {
     PortalRecord,
     Portal,
     Field,
-    Find,
     RecordGetOperation,
-    RecordGetRange,
     LayoutRecordManager,
     Container
 }
