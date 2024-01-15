@@ -1,12 +1,11 @@
 /*
- * Copyright (c) 2023. See LICENSE file for more information
+ * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
 import {LayoutRecordManager} from "./layoutRecordManager.js";
 import {LayoutRecord} from "../records/layoutRecord.js";
 import {Script, ScriptResult} from "../types.js";
 import {LayoutInterface} from "./layoutInterface.js";
-import {Find} from "../records/getOperations/find.js";
 import {FMError} from "../FMError.js";
 import {LayoutBase} from "./layoutBase.js"
 import {DatabaseBase} from "../connection/databaseBase";
@@ -14,8 +13,8 @@ import {ApiLayoutMetadata, ApiScriptResult} from "../models/apiResults";
 
 export class Layout<T extends LayoutInterface> implements LayoutBase {
     readonly database: DatabaseBase;
-    readonly records = new LayoutRecordManager<T>(this)
     readonly name: string;
+    readonly records = new LayoutRecordManager<T>(this)
     metadata: ApiLayoutMetadata;
 
     constructor(database: DatabaseBase, name: string) {
@@ -23,29 +22,9 @@ export class Layout<T extends LayoutInterface> implements LayoutBase {
         this.name = name
     }
 
+
     get endpoint() {
         return `${this.database.endpoint}/layouts/${this.name}`
-    }
-
-    /**
-     * @deprecated use layout.records.create() instead
-     */
-    createRecord(): Promise<LayoutRecord<T["fields"], T["portals"]>> {
-        return this.records.create()
-    }
-
-    /**
-     * @deprecated use layout.records.get() instead
-     */
-    getRecord(recordId): Promise<LayoutRecord<T["fields"], T["portals"]>> {
-        return this.records.get(recordId)
-    }
-
-    /**
-     * @deprecated use layout.records.find() instead
-     */
-    newFind(): Find<T> {
-        return this.records.find()
     }
 
     async runScript(script: Script): Promise<ScriptResult> {

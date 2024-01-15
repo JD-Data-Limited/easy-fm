@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023. See LICENSE file for more information
+ * Copyright (c) 2022-2024. See LICENSE file for more information
  */
 export var DOWNLOAD_MODES;
 (function (DOWNLOAD_MODES) {

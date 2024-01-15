@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. See LICENSE file for more information
+ * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
 // @ts-ignore
@@ -1023,7 +1023,7 @@ export class FMError extends Error {
 
     constructor(code: string | number, httpStatus: number, res: any, trace?: Error) {
         if (typeof code === "string") code = parseInt(code)
-        super(errs.find(err => err.e === code).d || "Unknown error");
+        super(errs.find(err => err.e === code)?.d || "Unknown error");
         this.httpStatus = httpStatus
         this.res = res
         this.messages = res.messages

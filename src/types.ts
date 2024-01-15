@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023. See LICENSE file for more information
+ * Copyright (c) 2022-2024. See LICENSE file for more information
  */
 
 // const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
@@ -52,18 +52,20 @@ export interface loginOptionsClaris {
     }
 }
 
-export interface limitPortalsInterface {
-    portalName: string,
+export interface portalFetchData<T = string> {
+    portalName: T,
     offset: number,
     limit: number
 }
 
+export type ScriptRequestData = {
+    prerequest?: Script,
+    presort?: Script,
+    after?: Script,
+}
+
 export interface extraBodyOptions {
-    scripts?: {
-        prerequest?: Script,
-        presort?: Script,
-        after?: Script,
-    }
+    scripts?: ScriptRequestData
 }
 
 export enum DOWNLOAD_MODES {
@@ -147,4 +149,8 @@ export interface AuthorizationHeadersOAuth {
     "Content-Type": "application/json"
     "X-FM-Data-OAuth-RequestId": string,
     "X-FM-Data-OAuth-Identifier": string
+}
+
+export type RecordFetchOptions = {
+    readonly portals: readonly string[]
 }
