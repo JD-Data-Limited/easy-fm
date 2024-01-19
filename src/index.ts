@@ -12,11 +12,10 @@ import {LayoutRecord} from "./records/layoutRecord.js";
 import {LayoutInterface, PortalInterface} from "./layouts/layoutInterface.js";
 import {PortalRecord} from "./records/portalRecord.js";
 import {Portal} from "./records/portal.js";
-import {Field} from "./records/field.js";
+import {Container, FieldBase} from "./records/fieldBase.js";
 import {RecordGetOperation} from "./records/getOperations/recordGetOperation.js";
 import {LayoutRecordManager} from "./layouts/layoutRecordManager.js";
-import {RecordFieldsMap} from "./layouts/recordFieldsMap";
-import {Container} from "./records/field.js";
+import {RecordFieldsMap} from "./layouts/recordFieldsMap.js";
 
 export default FMHost
 export {
@@ -31,7 +30,7 @@ export {
     PortalInterface,
     PortalRecord,
     Portal,
-    Field,
+    FieldBase,
     RecordGetOperation,
     LayoutRecordManager,
     Container

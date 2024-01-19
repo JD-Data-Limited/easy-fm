@@ -5,7 +5,7 @@
 import {after, before, describe, it} from "node:test"
 import {equal, notEqual} from "node:assert"
 import {DATABASE, HOST} from "./connectionDetails.js";
-import {Layout, LayoutRecord} from "../src";
+import {Layout, LayoutRecord} from "../src/index.js";
 
 describe("Fetch host data", () => {
     it("Able to get host metadata", async () => {
@@ -35,7 +35,7 @@ describe("Database interactions", () => {
 
     it("Fetch layout metadata", async () => {
         testLayout = DATABASE.getLayout(testLayoutName)
-        await testLayout.getLayoutMeta()
+        console.log(await testLayout.getLayoutMeta())
     })
 
     it("Fetch first 999 records", async () => {
@@ -71,7 +71,7 @@ describe("Database interactions", () => {
 
     it("Perform a search for a single record", async () => {
         let search = testLayout.records.query({portals: {}, limit: 1})
-        search.find({
+        search.addRequest({
             PrimaryKey: "=" + record.fields.PrimaryKey.value
         })
         let records = await search.fetch()
@@ -80,7 +80,7 @@ describe("Database interactions", () => {
 
     it("Perform a search for many records", async () => {
         let search = testLayout.records.query({portals: {}, limit: 10})
-        search.find({
+        search.addRequest({
             CreationTimestamp: ">1/01/1978 *:*:*"
         })
         let records = await search.fetch()
@@ -93,6 +93,10 @@ describe("Database interactions", () => {
 
     it("Delete first record", async () => {
         await record.delete()
+    })
+
+    it("Get table data", async () => {
+        console.log(await DATABASE.apiRequest(`${DATABASE.endpoint}/tables/EasyFMBenchmark/records`))
     })
 
     after(async () => {

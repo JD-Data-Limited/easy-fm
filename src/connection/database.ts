@@ -3,22 +3,23 @@
  */
 
 import {EventEmitter} from "events";
-import fetch, {HeadersInit, Request} from "node-fetch";
 import {generateAuthorizationHeaders} from "./generateAuthorizationHeaders.js";
 import {FMError} from "../FMError.js";
 import {LayoutInterface} from "../layouts/layoutInterface.js";
 import {Layout} from "../layouts/layout.js";
-import HTTP_REDIRECT  from "follow-redirects"
+import * as HTTP_REDIRECT from "follow-redirects"
 import {
     databaseOptionsBase,
-    databaseOptionsWithExternalSources, DatabaseStructure,
+    databaseOptionsWithExternalSources,
     loginOptionsFileMaker,
     loginOptionsToken,
     Script
 } from "../types.js";
 import {HostBase} from "./HostBase.js"
-import {DatabaseBase} from "./databaseBase";
-import {ApiLayout, ApiResults} from "../models/apiResults";
+import {DatabaseBase} from "./databaseBase.js";
+import {ApiLayout, ApiResults} from "../models/apiResults.js";
+import {DatabaseStructure} from "../databaseStructure.js";
+import {IncomingMessage} from "http";
 
 type GetLayoutReturnType<T extends DatabaseStructure, R extends LayoutInterface | string> = R extends string ? T["layouts"][R] : R
 
@@ -77,9 +78,9 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         }
         else {
             console.time()
-            let res = await fetch(`${this.endpoint}/sessions`, {
-                hostname: this.host.hostname,
-                port: 443,
+            let url = new URL(`${this.endpoint}/sessions`)
+            url.hostname = this.host.hostname
+            let res = await fetch(url, {
                 method: "POST",
                 headers: generateAuthorizationHeaders(this.connection_details.credentials) as unknown as HeadersInit,
                 body: JSON.stringify({
@@ -173,7 +174,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         this.emit("token_expired")
     }
 
-    streamURL(url: string): Promise<HTTP_REDIRECT.http.IncomingMessage> {
+    streamURL(url: string): Promise<IncomingMessage> {
         return new Promise((resolve, reject) => {
             if (!url || typeof url !== "string") {
                 throw new Error("URL is empty, or has invalid value")
@@ -202,7 +203,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
             // Automatically switch between the http and https modules, based on which is needed
             (url.startsWith("https") ? HTTP_REDIRECT.https : HTTP_REDIRECT.http).get(url, {
                 headers,
-                beforeRedirect: (options, res, req) => check_for_cookies(res)
+                beforeRedirect: (options, res) => check_for_cookies(res)
             }, (res) => {
                 check_for_cookies(res)
 

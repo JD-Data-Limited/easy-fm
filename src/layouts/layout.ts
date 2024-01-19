@@ -3,13 +3,12 @@
  */
 
 import {LayoutRecordManager} from "./layoutRecordManager.js";
-import {LayoutRecord} from "../records/layoutRecord.js";
 import {Script, ScriptResult} from "../types.js";
 import {LayoutInterface} from "./layoutInterface.js";
 import {FMError} from "../FMError.js";
 import {LayoutBase} from "./layoutBase.js"
-import {DatabaseBase} from "../connection/databaseBase";
-import {ApiLayoutMetadata, ApiScriptResult} from "../models/apiResults";
+import {DatabaseBase} from "../connection/databaseBase.js";
+import {ApiLayoutMetadata, ApiScriptResult} from "../models/apiResults.js";
 
 export class Layout<T extends LayoutInterface> implements LayoutBase {
     readonly database: DatabaseBase;

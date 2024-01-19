@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2023. See LICENSE file for more information
+ * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import {RecordBase, RecordTypes} from "./recordBase.js";
-import {extraBodyOptions, recordObject} from "../types.js";
+import {RecordBase} from "./recordBase.js";
+import {extraBodyOptions, recordObject, RecordTypes} from "../types.js";
 
-import {RecordFieldsMap} from "../layouts/recordFieldsMap";
-import {PortalBase} from "./portalBase";
+import {RecordFieldsMap} from "../layouts/recordFieldsMap.js";
+import {PortalBase} from "./portalBase.js";
 
 export class PortalRecord<T extends RecordFieldsMap> extends RecordBase<T> {
     readonly portal: PortalBase<T>;
