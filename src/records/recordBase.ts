@@ -1,22 +1,16 @@
 /*
- * Copyright (c) 2023. See LICENSE file for more information
+ * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
 import {EventEmitter} from "events";
 import * as moment from "moment";
-import {Field} from "./field.js";
-import {Layout} from "../layouts/layout.js";
-import {recordObject} from "../types.js";
-import {RecordFieldsMap} from "../layouts/recordFieldsMap";
-
-export enum RecordTypes {
-    UNKNOWN,
-    LAYOUT,
-    PORTAL
-}
+import {FieldBase, FieldValue} from "./fieldBase.js";
+import {recordObject, RecordTypes} from "../types.js";
+import {RecordFieldsMap} from "../layouts/recordFieldsMap.js";
+import {LayoutBase} from "../layouts/layoutBase.js";
 
 export class RecordBase<T extends RecordFieldsMap> extends EventEmitter {
-    readonly layout: Layout<any>;
+    readonly layout: LayoutBase;
     readonly type: RecordTypes = RecordTypes.UNKNOWN;
     public recordId: number;
     modId: number;
@@ -38,7 +32,7 @@ export class RecordBase<T extends RecordFieldsMap> extends EventEmitter {
         return !!this.fieldsArray.find(i => i.edited)
     }
 
-    get fieldsArray() {
+    get fieldsArray(): FieldBase<FieldValue>[] {
         return Object.values(this.fields)
     }
 
@@ -46,7 +40,7 @@ export class RecordBase<T extends RecordFieldsMap> extends EventEmitter {
         let fields: RecordFieldsMap = {}
 
         for (let key of Object.keys(fieldData)) {
-            let _field = new Field(this, key, fieldData[key])
+            let _field = new FieldBase(this, key, fieldData[key])
             if (!!fieldData[key]) {
                 if (_field.metadata.result === "timeStamp") {
                     // @ts-ignore
@@ -91,7 +85,8 @@ export class RecordBase<T extends RecordFieldsMap> extends EventEmitter {
              portalFieldFilter = (a) => a.edited
     ): recordObject {
         let fields_processed = {}
-        for (let field of this.fieldsArray.filter(field => filter(field))) {
+        let field: FieldBase<FieldValue>
+        for (field of this.fieldsArray.filter(field => filter(field))) {
             let value = field.value
             if (value instanceof Date) {
                 // @ts-ignore

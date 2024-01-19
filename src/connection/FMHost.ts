@@ -1,20 +1,20 @@
 /*
- * Copyright (c) 2023. See LICENSE file for more information
+ * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
 import {generateAuthorizationHeaders} from "./generateAuthorizationHeaders.js";
-import fetch from "node-fetch";
 import {FMError} from "../FMError.js";
 import {Database} from "./database.js";
 import {HostBase} from "./HostBase.js"
 import {
-    databaseOptionsWithExternalSources, DatabaseStructure,
+    databaseOptionsWithExternalSources,
     FMHostMetadata,
     loginOptionsClaris,
     loginOptionsFileMaker,
     loginOptionsOAuth
 } from "../types.js";
-import {ApiResults} from "../models/apiResults";
+import {ApiResults} from "../models/apiResults.js";
+import {DatabaseStructure} from "../databaseStructure.js";
 
 export default class FMHost implements HostBase {
     readonly hostname: string

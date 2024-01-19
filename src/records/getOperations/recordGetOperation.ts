@@ -25,7 +25,7 @@ type PortalData<T extends LayoutInterface> = {
     }
 }
 export type GetOperationOptions<T extends LayoutInterface> = {
-    portals: PortalData<T>,
+    portals: Partial<PortalData<T>>,
     limit?: number,
     offset?: number
 }
@@ -35,7 +35,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
     protected limit: number = 100
     protected scriptData: ScriptRequestData = {}
     protected sortData: { fieldName: string, sortOrder: SortOrder }[] = []
-    protected portals: PortalData<T>
+    protected portals: Partial<PortalData<T>>
     protected offset: number = 1
     protected queries: FindRequest[] = []
 
@@ -115,7 +115,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         return this
     }
 
-    find(query: FindRequest) {
+    addRequest(query: FindRequest) {
         this.queries.push(query)
         return this
     }

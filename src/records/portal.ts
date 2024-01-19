@@ -3,10 +3,10 @@
  */
 
 import {PortalRecord} from "./portalRecord.js";
-import {RecordFieldsMap} from "../layouts/recordFieldsMap";
-import {PortalBase} from "./portalBase";
-import {LayoutRecord} from "./layoutRecord";
-import {LayoutInterface} from "../layouts/layoutInterface";
+import {RecordFieldsMap} from "../layouts/recordFieldsMap.js";
+import {PortalBase} from "./portalBase.js";
+import {LayoutRecord} from "./layoutRecord.js";
+import {LayoutInterface} from "../layouts/layoutInterface.js";
 
 export class Portal<T extends RecordFieldsMap> implements PortalBase<T> {
     readonly record: LayoutRecord<LayoutInterface>;

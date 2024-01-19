@@ -8,9 +8,9 @@ import {PortalRecord} from "./portalRecord.js";
 import {Portal} from "./portal.js";
 import {LayoutInterface} from "../layouts/layoutInterface.js";
 import {FMError} from "../FMError.js";
-import {LayoutRecordBase} from "./layoutRecordBase";
-import {ApiRecordResponseObj} from "../models/apiResults";
-import {LayoutBase} from "../layouts/layoutBase"
+import {LayoutRecordBase} from "./layoutRecordBase.js";
+import {ApiRecordResponseObj} from "../models/apiResults.js";
+import {LayoutBase} from "../layouts/layoutBase.js"
 
 export class LayoutRecord<LAYOUT extends LayoutInterface, PORTALS_TO_INCLUDE = string> extends RecordBase<LAYOUT["fields"]> implements LayoutRecordBase {
     // @ts-ignore

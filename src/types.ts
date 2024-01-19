@@ -6,14 +6,6 @@
 // @ts-ignore
 import * as http from "http";
 import {FMError} from "./FMError.js";
-import {LayoutInterface} from "./layouts/layoutInterface";
-
-// import * as btoa from "btoa";
-export interface DatabaseStructure {
-    layouts: {
-        [key: string]: LayoutInterface
-    }
-}
 
 export interface databaseOptionsBase {
     database: string
@@ -153,4 +145,10 @@ export interface AuthorizationHeadersOAuth {
 
 export type RecordFetchOptions = {
     readonly portals: readonly string[]
+}
+
+export enum RecordTypes {
+    UNKNOWN,
+    LAYOUT,
+    PORTAL
 }
