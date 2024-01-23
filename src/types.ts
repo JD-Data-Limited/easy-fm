@@ -9,7 +9,9 @@ import {FMError} from "./FMError.js";
 import {LayoutInterface} from "./layouts/layoutInterface.js";
 
 export type PickPortals<LAYOUT extends LayoutInterface, PORTALS extends string | number | symbol | null = null> =
-    Omit<LAYOUT, "portals"> & { portals: Pick<LAYOUT["portals"], PORTALS> }
+    PORTALS extends null ?
+        Omit<LAYOUT, "portals"> & { portals: {} } :
+        Omit<LAYOUT, "portals"> & { portals: Pick<LAYOUT["portals"], PORTALS> }
 
 export interface databaseOptionsBase {
     database: string
