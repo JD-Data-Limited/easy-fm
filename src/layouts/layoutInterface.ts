@@ -11,6 +11,6 @@ export interface LayoutInterface {
 }
 
 export interface PortalInterface {
-    [key: string]: Portal<RecordFieldsMap>
+    [key: string | number | symbol]: Portal<RecordFieldsMap>
 }
 

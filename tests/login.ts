@@ -5,7 +5,8 @@
 import {after, before, describe, it} from "node:test"
 import {equal, notEqual} from "node:assert"
 import {DATABASE, HOST} from "./connectionDetails.js";
-import {Layout, LayoutRecord} from "../src/index.js";
+import {Layout, LayoutRecord, Portal} from "../src/index.js";
+import {Field} from "../src/records/field.js";
 
 describe("Fetch host data", () => {
     it("Able to get host metadata", async () => {
@@ -19,9 +20,18 @@ describe("Fetch host data", () => {
 
 describe("Database interactions", () => {
     let testLayoutName = "EasyFMBenchmark"
-    let testLayout: Layout<any>
+    let testLayout: Layout<{
+        fields: {
+
+        },
+        portals: {
+            test: Portal<{
+                field1: Field<string>
+            }>
+        }
+    }>
     let testField = "OneVeryLongField"
-    let record: LayoutRecord<any, any>
+    let record: LayoutRecord<any>
 
     before(async () => {
         let token = await DATABASE.login()
@@ -52,9 +62,12 @@ describe("Database interactions", () => {
 
     let randomRecord = Math.floor(Math.random() * 500) + 1
     it (`Iterate through 500 records, starting at record ${randomRecord} (changes randomly)`, async () => {
-        let records = testLayout.records.list({portals: {}, limit: 500, offset: randomRecord})
+        let records = testLayout.records.list({portals: {test: {limit: 100, offset: 1}}, limit: 500, offset: randomRecord})
         let recordCount = 0
-        for await (let record of records) {recordCount += 1}
+        for await (let record of records) {
+            recordCount += 1
+            record.portals.test.records[0].fields.field1
+        }
 
         equal(recordCount, 500)
     })

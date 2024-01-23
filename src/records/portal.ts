@@ -6,14 +6,13 @@ import {PortalRecord} from "./portalRecord.js";
 import {RecordFieldsMap} from "../layouts/recordFieldsMap.js";
 import {PortalBase} from "./portalBase.js";
 import {LayoutRecord} from "./layoutRecord.js";
-import {LayoutInterface} from "../layouts/layoutInterface.js";
 
 export class Portal<T extends RecordFieldsMap> implements PortalBase<T> {
-    readonly record: LayoutRecord<LayoutInterface>;
+    readonly record: LayoutRecord<any>;
     readonly name: string;
     public records: PortalRecord<T>[];
 
-    constructor(record: LayoutRecord<LayoutInterface, any>, name: string) {
+    constructor(record: LayoutRecord<any>, name: string) {
         this.record = record
         this.name = name
     }
