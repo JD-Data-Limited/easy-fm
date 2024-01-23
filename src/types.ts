@@ -8,7 +8,7 @@ import * as http from "http";
 import {FMError} from "./FMError.js";
 import {LayoutInterface} from "./layouts/layoutInterface.js";
 
-export type LayoutPickPortals<LAYOUT extends LayoutInterface, PORTALS extends string | number | symbol> =
+export type PickPortals<LAYOUT extends LayoutInterface, PORTALS extends string | number | symbol | null = null> =
     Omit<LAYOUT, "portals"> & { portals: Pick<LAYOUT["portals"], PORTALS> }
 
 export interface databaseOptionsBase {

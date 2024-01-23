@@ -5,7 +5,7 @@
 import FMHost from "./connection/FMHost.js";
 import {FMError} from "./FMError.js";
 import * as TYPES from "./types.js"
-import {LayoutPickPortals} from "./types.js"
+import {PickPortals} from "./types.js"
 import {Database} from "./connection/database.js";
 import {Layout} from "./layouts/layout.js";
 import {RecordBase} from "./records/recordBase.js";
@@ -35,5 +35,5 @@ export {
     RecordGetOperation,
     LayoutRecordManager,
     Container,
-    LayoutPickPortals
+    PickPortals
 }
