@@ -80,7 +80,7 @@ One of (if not the) most common interactions you'll need to use is fetching reco
 
 ```javascript
 let layout = database.getLayout("Your layout name")
-let query = layout.records.query({
+let query = layout.records.list({
     portals: {
         test: {limit: 10, offset: 1} // Include results from the 'test' portal
     },
@@ -97,7 +97,7 @@ Searching for records uses the same syntax as above, but with additional steps t
 
 ```javascript
 let layout = database.getLayout("Your layout name")
-let query = layout.records.query({
+let query = layout.records.list({
     portals: {
         test: {limit: 10, offset: 1} // Include results from the 'test' portal
     },
