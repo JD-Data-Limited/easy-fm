@@ -155,18 +155,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         return new Layout<LayoutInterface>(this, name)
     }
 
-    /*
-    @deprecated
-     */
-    async setGlobals(globalFields) {
-        // console.log({globalFields})
-        await this.apiRequest(`${this.endpoint}/globals`, {
-            method: "PATCH",
-            body: JSON.stringify({globalFields})
-        })
-    }
-
-    script(name, parameter = ""): Script {
+    script(name: string, parameter = ""): Script {
         return ({name, parameter} as Script)
     }
 
@@ -180,7 +169,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
                 throw new Error("URL is empty, or has invalid value")
             }
 
-            let headers = {}
+            let headers: {[key: string]: string} = {}
             if (Object.keys(this.cookies).length !== 0) {
                 headers["Cookie"] = Object.keys(this.cookies)
                     .map(key => {
@@ -189,7 +178,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
                     .join("; ")
             }
 
-            const check_for_cookies = (res) => {
+            const check_for_cookies = (res: HTTP_REDIRECT.ResponseDetails) => {
                 // Check for the 'set-cookie' header. If it exists, remember it and strip it for better security.
                 if (res.headers['set-cookie']) {
                     for (let cookie of res.headers['set-cookie']) {

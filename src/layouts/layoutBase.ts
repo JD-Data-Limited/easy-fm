@@ -8,7 +8,7 @@ import {ApiLayoutMetadata} from "../models/apiResults.js";
 
 export interface LayoutBase {
     readonly name: string
-    metadata: any
+    metadata: ApiLayoutMetadata | null
     endpoint: string
     runScript(script: Script): Promise<ScriptResult>
     getLayoutMeta(): Promise<ApiLayoutMetadata>

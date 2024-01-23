@@ -2,29 +2,30 @@
  * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import {extraBodyOptions, recordObject} from "../types.js";
+import {extraBodyOptions} from "../types.js";
 import {RecordBase} from "./recordBase.js";
 import {PortalRecord} from "./portalRecord.js";
 import {Portal} from "./portal.js";
 import {LayoutInterface} from "../layouts/layoutInterface.js";
 import {FMError} from "../FMError.js";
 import {LayoutRecordBase} from "./layoutRecordBase.js";
-import {ApiRecordResponseObj} from "../models/apiResults.js";
+import {ApiPortalData, ApiRecordResponseObj} from "../models/apiResults.js";
 import {LayoutBase} from "../layouts/layoutBase.js"
+import {FieldBase, FieldValue} from "./fieldBase.js";
 
-export class LayoutRecord<LAYOUT extends LayoutInterface, PORTALS_TO_INCLUDE = string> extends RecordBase<LAYOUT["fields"]> implements LayoutRecordBase {
+export class LayoutRecord<LAYOUT extends LayoutInterface, PORTALS extends Partial<LAYOUT["portals"]>> extends RecordBase<LAYOUT["fields"]> implements LayoutRecordBase {
     // @ts-ignore
-    portals: Pick<LAYOUT["portals"], PORTALS_TO_INCLUDE> = {}
-    private readonly portalsToInclude: PORTALS_TO_INCLUDE[]
+    portals: PORTALS = {}
+    private readonly portalsToInclude: (keyof PORTALS)[]
 
     constructor(
         layout: LayoutBase,
         recordId: number | string,
         modId = recordId,
         fieldData: Record<string, string | number> = {},
-        portalData = null, portalsToInclude: PORTALS_TO_INCLUDE[] = [])
+        portalData: ApiPortalData | null = null, portalsToInclude: (keyof PORTALS)[] = [])
     {
-        super(layout, recordId, modId);
+        super(layout, parseInt(recordId as string), parseInt(modId as string));
         this.processFieldData(fieldData)
         this.portalsToInclude = portalsToInclude
         if (portalData) {
@@ -37,7 +38,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface, PORTALS_TO_INCLUDE = s
     }
 
     async commit(extraBody: extraBodyOptions = {}): Promise<this> {
-        let data = this.toObject()
+        let data: any = this.toObject()
         delete data.recordId
         delete data.modId
 
@@ -100,14 +101,14 @@ export class LayoutRecord<LAYOUT extends LayoutInterface, PORTALS_TO_INCLUDE = s
         }
     }
 
-    protected processPortalData(portalData): void {
+    protected processPortalData(portalData: ApiPortalData): void {
         for (let portalName of Object.keys(portalData)) {
             let _portal = new Portal(this, portalName)
             _portal.records = portalData[portalName].map(item => {
                 let fieldData = item;
                 delete fieldData.recordId;
                 delete fieldData.modId;
-                return new PortalRecord(this, _portal, item.recordId, item.modId, fieldData);
+                return new PortalRecord(this, _portal, parseInt(item.recordId as string), parseInt(item.modId as string), fieldData);
             })
 
             // @ts-ignore
@@ -134,10 +135,6 @@ export class LayoutRecord<LAYOUT extends LayoutInterface, PORTALS_TO_INCLUDE = s
             if (res.response.data[0].portalData) this.processPortalData(res.response.data[0].portalData)
             return this
         }
-    }
-
-    getPortal(portal) {
-        return this.portalsArray.find(p => p.name === portal)
     }
 
     async duplicate(): Promise<LayoutRecord<LAYOUT>> {
@@ -179,8 +176,13 @@ export class LayoutRecord<LAYOUT extends LayoutInterface, PORTALS_TO_INCLUDE = s
         }
     }
 
-    toObject(filter: (a) => any = (a) => a.edited, portalFilter: (a) => any = (a) => a.records.find(record => record.edited), portalRowFilter: (a) => any = (a) => a.edited, portalFieldFilter: (a) => any = (a) => a.edited): recordObject {
-        let obj = super.toObject(filter, portalFilter, portalRowFilter, portalFieldFilter);
+    toObject(
+        filter: (a: FieldBase<FieldValue>) => any = (a) => a.edited,
+        portalFilter: (a: Portal<any>) => any = (a) => a.records.find(record => record.edited),
+        portalRowFilter: (a: PortalRecord<never>) => any = (a) => a.edited,
+        portalFieldFilter: (a: FieldBase<FieldValue>) => any = (a) => a.edited
+    ) {
+        let obj = super.toObject(filter);
 
         // Check if there's been any edited portal information
         let portals = this.portalsArray.filter(a => portalFilter(a))

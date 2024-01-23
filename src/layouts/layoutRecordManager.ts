@@ -7,6 +7,7 @@ import {LayoutInterface} from "./layoutInterface.js";
 import {LayoutBase} from "./layoutBase.js"
 import {GetOperationOptions, RecordGetOperation} from "../records/getOperations/recordGetOperation.js";
 import {RecordFetchOptions} from "../types.js";
+import {ApiFieldData} from "../models/apiResults.js";
 
 export class LayoutRecordManager<T extends LayoutInterface> {
     readonly layout: LayoutBase;
@@ -14,13 +15,15 @@ export class LayoutRecordManager<T extends LayoutInterface> {
         this.layout = layout
     }
 
-    async create<OPTIONS extends RecordFetchOptions>(options: OPTIONS): Promise<LayoutRecord<T, OPTIONS["portals"][number]>> {
+    async create<OPTIONS extends RecordFetchOptions>(options: OPTIONS): Promise<LayoutRecord<
+        T, Pick<T["portals"], OPTIONS["portals"][number]>
+    >> {
         await this.layout.getLayoutMeta()
-        let fields = {}
+        let fields: ApiFieldData = {}
         for (let _field of this.layout.metadata.fieldMetaData) {
             fields[_field.name] = ""
         }
-        let portals = {}
+        let portals: {[key: string]: []} = {}
         for (let _portal of Object.keys(this.layout.metadata.portalMetaData)) portals[_portal] = []
         return new LayoutRecord(this.layout, -1, 0, fields, portals)
     }

@@ -5,6 +5,7 @@
     "lib": ["es2021.intl", "es2022", "dom"],
     "moduleResolution": "NodeNext",
     "declaration": true,
+    "noImplicitAny": true
 //    "outDir": "./dist"
   },
   "exclude": [
