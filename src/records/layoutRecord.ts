@@ -16,7 +16,7 @@ import {FieldBase, FieldValue} from "./fieldBase.js";
 export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAYOUT["fields"]> implements LayoutRecordBase {
     // @ts-ignore
     portals: LAYOUT["portals"] = {}
-    private readonly portalsToInclude: (keyof LAYOUT["portals"])[]
+    private readonly portalsToInclude: (string | number | symbol)[]
 
     constructor(
         layout: LayoutBase,
