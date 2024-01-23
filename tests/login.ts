@@ -39,20 +39,20 @@ describe("Database interactions", () => {
     })
 
     it("Fetch first 999 records", async () => {
-        let range = testLayout.records.query({portals: {}})
+        let range = testLayout.records.list({portals: {}})
         let records = await range.fetch()
         record = records[0]
     })
 
     it("Fetch first 999 records, with a portal", async () => {
-        let range = testLayout.records.query({portals: {test: {limit: 10, offset: 1}}, limit: 999})
+        let range = testLayout.records.list({portals: {test: {limit: 10, offset: 1}}, limit: 999})
         let records = await range.fetch()
         record = records[0]
     })
 
     let randomRecord = Math.floor(Math.random() * 500) + 1
     it (`Iterate through 500 records, starting at record ${randomRecord} (changes randomly)`, async () => {
-        let records = testLayout.records.query({portals: {}, limit: 500, offset: randomRecord})
+        let records = testLayout.records.list({portals: {}, limit: 500, offset: randomRecord})
         let recordCount = 0
         for await (let record of records) {recordCount += 1}
 
@@ -70,7 +70,7 @@ describe("Database interactions", () => {
     })
 
     it("Perform a search for a single record", async () => {
-        let search = testLayout.records.query({portals: {}, limit: 1})
+        let search = testLayout.records.list({portals: {}, limit: 1})
         search.addRequest({
             PrimaryKey: "=" + record.fields.PrimaryKey.value
         })
@@ -79,7 +79,7 @@ describe("Database interactions", () => {
     })
 
     it("Perform a search for many records", async () => {
-        let search = testLayout.records.query({portals: {}, limit: 10})
+        let search = testLayout.records.list({portals: {}, limit: 10})
         search.addRequest({
             CreationTimestamp: ">1/01/1978 *:*:*"
         })
@@ -93,10 +93,6 @@ describe("Database interactions", () => {
 
     it("Delete first record", async () => {
         await record.delete()
-    })
-
-    it("Get table data", async () => {
-        console.log(await DATABASE.apiRequest(`${DATABASE.endpoint}/tables/EasyFMBenchmark/records`))
     })
 
     after(async () => {

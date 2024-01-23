@@ -32,7 +32,7 @@ export class LayoutRecordManager<T extends LayoutInterface> {
         return record
     }
 
-    query<OPTIONS extends GetOperationOptions<T>>(options: OPTIONS) {
+    list<OPTIONS extends GetOperationOptions<T>>(options: OPTIONS) {
         return new RecordGetOperation<T, OPTIONS>(this.layout, options)
     }
 }
