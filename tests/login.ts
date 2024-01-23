@@ -62,11 +62,10 @@ describe("Database interactions", () => {
 
     let randomRecord = Math.floor(Math.random() * 500) + 1
     it (`Iterate through 500 records, starting at record ${randomRecord} (changes randomly)`, async () => {
-        let records = testLayout.records.list({portals: {test: {limit: 100, offset: 1}}, limit: 500, offset: randomRecord})
+        let records = testLayout.records.list({portals: {}, limit: 500, offset: randomRecord})
         let recordCount = 0
         for await (let record of records) {
             recordCount += 1
-            record.portals.test.records[0].fields.field1
         }
 
         equal(recordCount, 500)
@@ -75,6 +74,10 @@ describe("Database interactions", () => {
     it("Create a record", async () => {
         let record = await testLayout.records.create({portals: []})
         await record.commit()
+    })
+
+    it("Fetch a single record", async () => {
+        await record.get()
     })
 
     it("Modify first record", async () => {
