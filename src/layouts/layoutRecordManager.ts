@@ -6,7 +6,7 @@ import {LayoutRecord} from "../records/layoutRecord.js";
 import {LayoutInterface} from "./layoutInterface.js";
 import {LayoutBase} from "./layoutBase.js"
 import {GetOperationOptions, RecordGetOperation} from "../records/getOperations/recordGetOperation.js";
-import {LayoutPickPortals, RecordFetchOptions} from "../types.js";
+import {PickPortals, RecordFetchOptions} from "../types.js";
 import {ApiFieldData} from "../models/apiResults.js";
 
 export class LayoutRecordManager<T extends LayoutInterface> {
@@ -16,7 +16,7 @@ export class LayoutRecordManager<T extends LayoutInterface> {
     }
 
     async create<OPTIONS extends RecordFetchOptions>(options: OPTIONS): Promise<LayoutRecord<
-        LayoutPickPortals<T, OPTIONS["portals"][number]>
+        PickPortals<T, OPTIONS["portals"][number]>
     >> {
         await this.layout.getLayoutMeta()
         let fields: ApiFieldData = {}
@@ -29,10 +29,10 @@ export class LayoutRecordManager<T extends LayoutInterface> {
     }
 
     async get(recordId: number): Promise<LayoutRecord<
-        LayoutPickPortals<T, never>
+        PickPortals<T, never>
     >> {
         await this.layout.getLayoutMeta()
-        let record = new LayoutRecord<LayoutPickPortals<T, never>>(this.layout, recordId)
+        let record = new LayoutRecord<PickPortals<T, never>>(this.layout, recordId)
         await record.get()
         return record
     }

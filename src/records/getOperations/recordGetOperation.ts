@@ -3,7 +3,7 @@
  */
 
 import {LayoutInterface} from "../../layouts/layoutInterface.js";
-import {LayoutPickPortals, ScriptRequestData} from "../../types.js";
+import {PickPortals, ScriptRequestData} from "../../types.js";
 import {LayoutBase} from "../../layouts/layoutBase.js"
 import {LayoutRecord} from "../layoutRecord.js";
 import {ApiRecordResponseObj} from "../../models/apiResults.js";
@@ -125,7 +125,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
     }
 
     private async performFind(offset: number, limit: number): Promise<LayoutRecord<
-        LayoutPickPortals<T, keyof OPTIONS["portals"]>
+        PickPortals<T, keyof OPTIONS["portals"]>
     >[]> {
         let trace = new Error()
         await this.layout.getLayoutMeta()
@@ -165,7 +165,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         let limit = this.limit
 
         let exit_after_last_record = false
-        let records: LayoutRecord<LayoutPickPortals<T, keyof OPTIONS["portals"]>>[] = []
+        let records: LayoutRecord<PickPortals<T, keyof OPTIONS["portals"]>>[] = []
 
         const fetch = async () => {
             const theoretical_limit = (limit - nextOffset) + startOffset
