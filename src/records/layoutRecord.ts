@@ -13,17 +13,17 @@ import {ApiPortalData, ApiRecordResponseObj} from "../models/apiResults.js";
 import {LayoutBase} from "../layouts/layoutBase.js"
 import {FieldBase, FieldValue} from "./fieldBase.js";
 
-export class LayoutRecord<LAYOUT extends LayoutInterface, PORTALS extends Partial<LAYOUT["portals"]>> extends RecordBase<LAYOUT["fields"]> implements LayoutRecordBase {
+export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAYOUT["fields"]> implements LayoutRecordBase {
     // @ts-ignore
-    portals: PORTALS = {}
-    private readonly portalsToInclude: (keyof PORTALS)[]
+    portals: LAYOUT["portals"] = {}
+    private readonly portalsToInclude: (keyof LAYOUT["portals"])[]
 
     constructor(
         layout: LayoutBase,
         recordId: number | string,
         modId = recordId,
         fieldData: Record<string, string | number> = {},
-        portalData: ApiPortalData | null = null, portalsToInclude: (keyof PORTALS)[] = [])
+        portalData: ApiPortalData | null = null, portalsToInclude: (keyof LAYOUT["portals"])[] = [])
     {
         super(layout, parseInt(recordId as string), parseInt(modId as string));
         this.processFieldData(fieldData)
