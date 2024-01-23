@@ -19,7 +19,9 @@ export class Portal<T extends RecordFieldsMap> implements PortalBase<T> {
     }
 
     create() {
-        let fields = {}
+        let fields: {
+            [key: string]: string
+        } = {}
         for (let _field of this.record.layout.metadata.portalMetaData[this.name]) {
             fields[_field.name] = ""
         }

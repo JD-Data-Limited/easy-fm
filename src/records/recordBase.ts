@@ -5,9 +5,10 @@
 import {EventEmitter} from "events";
 import * as moment from "moment";
 import {FieldBase, FieldValue} from "./fieldBase.js";
-import {recordObject, RecordTypes} from "../types.js";
+import {RecordTypes} from "../types.js";
 import {RecordFieldsMap} from "../layouts/recordFieldsMap.js";
 import {LayoutBase} from "../layouts/layoutBase.js";
+import {ApiFieldData, ApiRowDataDef} from "../models/apiResults.js";
 
 export class RecordBase<T extends RecordFieldsMap> extends EventEmitter {
     readonly layout: LayoutBase;
@@ -17,7 +18,7 @@ export class RecordBase<T extends RecordFieldsMap> extends EventEmitter {
     fields: T;
     protected portalData: any[];
 
-    constructor(layout, recordId, modId = recordId) {
+    constructor(layout: LayoutBase, recordId: number, modId = recordId) {
         super();
         this.layout = layout
         this.recordId = recordId
@@ -36,7 +37,7 @@ export class RecordBase<T extends RecordFieldsMap> extends EventEmitter {
         return Object.values(this.fields)
     }
 
-    protected processFieldData(fieldData) {
+    protected processFieldData(fieldData: ApiFieldData) {
         let fields: RecordFieldsMap = {}
 
         for (let key of Object.keys(fieldData)) {
@@ -79,12 +80,8 @@ export class RecordBase<T extends RecordFieldsMap> extends EventEmitter {
         for (let field of this.fieldsArray) field.edited = false
     }
 
-    toObject(filter = (a) => a.edited,
-             portalFilter = (a) => a.records.find(record => record.edited),
-             portalRowFilter = (a) => a.edited,
-             portalFieldFilter = (a) => a.edited
-    ): recordObject {
-        let fields_processed = {}
+    toObject(filter = (a: FieldBase<FieldValue>) => a.edited): Partial<Omit<ApiRowDataDef, "portalDataInfo">> {
+        let fields_processed: ApiFieldData = {}
         let field: FieldBase<FieldValue>
         for (field of this.fieldsArray.filter(field => filter(field))) {
             let value = field.value
@@ -109,8 +106,8 @@ export class RecordBase<T extends RecordFieldsMap> extends EventEmitter {
             fields_processed[field.id] = value
         }
         let obj = {
-            "recordId": this.recordId,
-            "modId": this.modId,
+            "recordId": this.recordId.toString(),
+            "modId": this.modId.toString(),
             "fieldData": fields_processed
         }
         return obj

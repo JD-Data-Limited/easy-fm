@@ -1,8 +1,6 @@
 /*
- * Copyright (c) 2023. See LICENSE file for more information
+ * Copyright (c) 2023-2024. See LICENSE file for more information
  */
-
-import * as stream from "stream";
 
 export enum ApiFieldTypes {
     NORMAL = "normal",
@@ -85,7 +83,7 @@ export interface ApiRecordResponseObj {
     dataInfo: ApiResultSetObj
 }
 
-export interface ApiFieldData {[key: string]: string}
+export type ApiFieldData = {[key: string]: string | number}
 
 export interface ApiPortalData {[key: string]: ApiFieldData[]}
 

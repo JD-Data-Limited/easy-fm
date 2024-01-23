@@ -3,16 +3,17 @@
  */
 
 import {RecordBase} from "./recordBase.js";
-import {extraBodyOptions, recordObject, RecordTypes} from "../types.js";
+import {extraBodyOptions, RecordTypes} from "../types.js";
 
 import {RecordFieldsMap} from "../layouts/recordFieldsMap.js";
 import {PortalBase} from "./portalBase.js";
+import {FieldBase, FieldValue} from "./fieldBase.js";
 
 export class PortalRecord<T extends RecordFieldsMap> extends RecordBase<T> {
     readonly portal: PortalBase<T>;
     readonly type = RecordTypes.PORTAL
 
-    constructor(record, portal, recordId, modId = recordId, fieldData = {}) {
+    constructor(record: RecordBase<any>, portal: PortalBase<any>, recordId: number, modId = recordId, fieldData = {}) {
         super(record.layout, recordId, modId);
 
         this.portal = portal
@@ -28,18 +29,18 @@ export class PortalRecord<T extends RecordFieldsMap> extends RecordBase<T> {
         return this.portal.record.commit(extraBody)
     }
 
-    toObject(fieldFilter): any {
+    toObject(fieldFilter: (a: FieldBase<FieldValue>) => boolean) {
         super.toObject()
-        let res = {
-            recordId: this.recordId === -1 ? undefined : this.recordId,
-            modId: this.modId === -1 ? undefined : this.modId
-        } as recordObject
-        for (let field of this.fieldsArray.filter(a => fieldFilter(a))) res[field.id] = field.value
+        let res: {
+            "modId": string,
+            "recordId": string
+            [key: string]: string
+        } = {
+            recordId: this.recordId === -1 ? undefined : this.recordId.toString(),
+            modId: this.modId === -1 ? undefined : this.modId.toString()
+        }
+        for (let field of this.fieldsArray.filter(a => fieldFilter(a))) res[field.id] = field.value.toString()
         // console.log(res)
         return res
-    }
-
-    getField(field) {
-        return this.fieldsArray.find(_field => _field.id === field) || this.fieldsArray.find(_field => _field.id === this.portal.name + "::" + field)
     }
 }

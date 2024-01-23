@@ -154,7 +154,7 @@ export class FieldBase<T extends FieldValue> {
             return stream
         }
 
-        let body = []
+        let body: Uint8Array[] = []
         return new Promise((resolve, reject) => {
             stream.on("data", chunk => {
                 body.push(chunk)
