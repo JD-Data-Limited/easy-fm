@@ -56,7 +56,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
             limit: limit.toString(),
             offset: offset.toString(),
         }
-        if (this.sortData.length !== 0) params.sort = JSON.stringify(this.sortData)
+        if (this.sortData.length !== 0) params.sort = this.sortData
 
 
         if (this.scriptData.after) params["script"] = this.scriptData.after.name
