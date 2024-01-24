@@ -40,8 +40,8 @@ export interface ApiResults<T = unknown> {
 
 export interface ApiLayout {
     name: string,
-    isFolder: boolean,
-    folderLayoutNames: string[]
+    isFolder?: boolean,
+    folderLayoutNames?: ApiLayout[]
 }
 
 export interface ApiLayoutMetadata {

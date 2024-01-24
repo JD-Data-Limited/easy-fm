@@ -143,10 +143,20 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
     }
 
     async listLayouts() {
-        let req = await this.apiRequest<{layouts: ApiLayout[]}>(`${this.endpoint}/layouts`)
+        let req = await this.apiRequest<{layouts: ApiLayout[]}>(`${this.endpoint}/layouts?page=2`)
         if (!req.response) throw new FMError(req.messages[0].code, req.httpStatus, req.messages[0].message)
 
-        return req.response.layouts.filter(i => !i.isFolder).map(layout => new Layout(this, layout.name))
+        const cycleLayoutNames = (layouts: ApiLayout[]) => {
+            let names: string[] =  []
+            for (let layout of layouts) {
+                if (layout.folderLayoutNames) names = names.concat(cycleLayoutNames(layout.folderLayoutNames))
+                else names.push(layout.name)
+            }
+            return names
+        }
+        let layoutNames
+
+        return cycleLayoutNames(req.response.layouts).map(layout => new Layout(this, layout))
     }
 
     getLayout<R extends keyof T["layouts"]>(name: R): Layout<T["layouts"][R]>
