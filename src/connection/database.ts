@@ -7,7 +7,7 @@ import {generateAuthorizationHeaders} from "./generateAuthorizationHeaders.js";
 import {FMError} from "../FMError.js";
 import {LayoutInterface} from "../layouts/layoutInterface.js";
 import {Layout} from "../layouts/layout.js";
-import * as HTTP_REDIRECT from "follow-redirects"
+import HTTP_REDIRECT from "follow-redirects"
 import {
     databaseOptionsBase,
     databaseOptionsWithExternalSources,
