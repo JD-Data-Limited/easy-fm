@@ -1,8 +1,7 @@
+#!/usr/bin/env node
 /*
  * Copyright (c) 2024. See LICENSE file for more information
  */
-
-#!/usr/bin/env node
 
 import {Command} from "commander"
 import {generateTypesCLI} from "./generateTypes.js";
