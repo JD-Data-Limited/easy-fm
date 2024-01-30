@@ -36,7 +36,9 @@
     "@types/btoa": "^1.2.3",
     "@types/events": "^3.0.0",
     "@types/follow-redirects": "^1.14.4",
+    "@types/inquirer": "^9.0.7",
     "dotenv": "^16.3.1",
+    "inquirer": "^9.2.13",
     "ts-morph": "^21.0.1",
     "typescript": "^5.3.3",
     "webpack": "^5.81.0",
@@ -44,5 +46,8 @@
   },
   "engines": {
     "node": ">=20.9.0"
+  },
+  "bin": {
+    "easyfm": "src/bin/cli.js"
   }
 }
