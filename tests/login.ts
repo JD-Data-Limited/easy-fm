@@ -5,17 +5,13 @@
 import {after, before, describe, it} from "node:test"
 import {equal, notEqual} from "node:assert"
 import {DATABASE, HOST} from "./connectionDetails.js";
-import {Layout, LayoutRecord, Portal} from "../src/index.js";
+import {Layout, LayoutRecord, Portal, query} from "../src/index.js";
 import {Field} from "../src/records/field.js";
 
 describe("Fetch host data", () => {
     it("Able to get host metadata", async () => {
-        console.log(await HOST.getMetadata())
+        await HOST.getMetadata()
     })
-
-    // it("Able to login to list databases", async (t) => {
-    //     console.log(await HOST.listDatabases())
-    // })
 })
 
 describe("Database interactions", () => {
@@ -35,7 +31,6 @@ describe("Database interactions", () => {
 
     before(async () => {
         let token = await DATABASE.login()
-        console.log(token)
         equal(typeof token, "string")
     })
 
@@ -45,7 +40,7 @@ describe("Database interactions", () => {
 
     it("Fetch layout metadata", async () => {
         testLayout = DATABASE.getLayout(testLayoutName)
-        console.log(await testLayout.getLayoutMeta())
+        await testLayout.getLayoutMeta()
     })
 
     it("Fetch first 999 records", async () => {
@@ -109,6 +104,27 @@ describe("Database interactions", () => {
 
     it("Delete first record", async () => {
         await record.delete()
+    })
+
+    it("Check query escaping", async () => {
+        let records = await testLayout.records.list({portals: {}, limit: 10})
+            .addRequest({
+                "OneVeryLongField": query`=${"*"}`
+            })
+            .fetch()
+        equal(records.length, 0, "Query escaping/sanitization failed. Generated query that failed: " + query`=${"*"}`)
+    })
+
+    it("Check query escaping using iterable search", async () => {
+        let records = testLayout.records.list({portals: {}, limit: 10})
+            .addRequest({
+                "OneVeryLongField": query`=${"*"}`
+            })
+        let foundCount = 0
+        for await (let record of records) {
+            foundCount += 1
+        }
+        equal(foundCount, 0, "Query escaping/sanitization failed. Generated query that failed: " + query`=${"*"}`)
     })
 
     after(async () => {

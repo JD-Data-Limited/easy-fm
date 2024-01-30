@@ -17,6 +17,7 @@ import {Container, FieldBase} from "./records/fieldBase.js";
 import {RecordGetOperation} from "./records/getOperations/recordGetOperation.js";
 import {LayoutRecordManager} from "./layouts/layoutRecordManager.js";
 import {RecordFieldsMap} from "./layouts/recordFieldsMap.js";
+import {query, queryEscape} from "./utils/query.js";
 
 export default FMHost
 export {
@@ -35,5 +36,7 @@ export {
     RecordGetOperation,
     LayoutRecordManager,
     Container,
-    PickPortals
+    PickPortals,
+    query,
+    queryEscape
 }

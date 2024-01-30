@@ -139,23 +139,29 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
             body: is_find ? JSON.stringify(this.generateParamsBody(offset, limit)) : undefined,
         }
 
-        let res = await this.layout.database.apiRequest<ApiRecordResponseObj>(
-            endpoint,
-            reqData
-        )
-        if (res.messages[0].code === "0") {
-            // console.log("RESOLVING")
-            if (!this.layout.metadata) await this.layout.getLayoutMeta()
-            return res.response.data.map(item => {
-                return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
-            })
-        }
-        else if (res.messages[0].code == "401") {
-            // No records found, so return empty set
-            return []
-        }
-        else {
-            throw new FMError(res.messages[0].code, res.httpStatus, res, trace)
+        try {
+            let res = await this.layout.database.apiRequest<ApiRecordResponseObj>(
+                endpoint,
+                reqData
+            )
+            if (res.messages[0].code === "0") {
+                // console.log("RESOLVING")
+                if (!this.layout.metadata) await this.layout.getLayoutMeta()
+                return res.response.data.map(item => {
+                    return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
+                })
+            }
+            else {
+                throw new FMError(res.messages[0].code, res.httpStatus, res, trace)
+            }
+        } catch(e) {
+            if (e instanceof FMError) {
+                if (e.code === 401) {
+                    // No records found, so return empty set
+                    return []
+                }
+            }
+            throw e
         }
     }
 
