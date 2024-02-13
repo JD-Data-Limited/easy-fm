@@ -110,7 +110,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         return `${this.host.hostname}/fmi/data/v2/databases/${this.name}`
     }
 
-    async apiRequest<T = any>(url: string | Request, options: any = {}, autoRelogin = true): Promise<ApiResults<T>> {
+    async apiRequestRaw(url: string | Request, options: any = {}) {
         if (!options.headers) options.headers = {}
         options.headers["content-type"] = options.headers["content-type"] ? options.headers["content-type"] : "application/json"
         options.headers["authorization"] = "Bearer " + this._token
@@ -118,21 +118,25 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
 
         let _fetch = await fetch(url, options)
         if (_fetch.headers.get('set-cookie')) {
-            for (let cookie of _fetch.headers.get('set-cookie')) {
+            for (let cookie of _fetch.headers.get('set-cookie') || []) {
                 let cookie_split = cookie.split("=")
                 this.cookies[cookie_split[0]] = cookie_split[1]
             }
         }
+        return _fetch
+    }
+    async apiRequestJSON<T = any>(url: string | Request, options: any = {}, autoRelogin = true): Promise<ApiResults<T>> {
+        let _fetch = await this.apiRequestRaw(url, options)
         let data = await _fetch.json() as ApiResults<T>
 
         // Remove response if it is empty. This makes checking for an empty response easier
-        if (Object.keys(data.response).length === 0) delete data.response
+        if (data.response && Object.keys(data.response).length === 0) delete data.response
 
         // console.log(data.messages[0])
         if (data.messages[0].code === "952" && autoRelogin) {
             this._token = null
             await this.login()
-            return await this.apiRequest(url, options, false)
+            return await this.apiRequestJSON(url, options, false)
         }
         else if (data.messages[0].code !== "0") {
             throw new FMError(data.messages[0].code, _fetch.status, data)
@@ -143,7 +147,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
     }
 
     async listLayouts() {
-        let req = await this.apiRequest<{layouts: ApiLayout[]}>(`${this.endpoint}/layouts?page=2`)
+        let req = await this.apiRequestJSON<{layouts: ApiLayout[]}>(`${this.endpoint}/layouts?page=2`)
         if (!req.response) throw new FMError(req.messages[0].code, req.httpStatus, req.messages[0].message)
 
         const cycleLayoutNames = (layouts: ApiLayout[]) => {
@@ -195,14 +199,14 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
                         let cookie_split = cookie.split("=")
                         this.cookies[cookie_split[0]] = cookie_split[1]
                     }
-                    res.headers['set-cookie'] = null
+                    res.headers['set-cookie'] = undefined
                 }
             }
 
             // Automatically switch between the http and https modules, based on which is needed
             (url.startsWith("https") ? HTTP_REDIRECT.https : HTTP_REDIRECT.http).get(url, {
                 headers,
-                beforeRedirect: (options, res) => check_for_cookies(res)
+                beforeRedirect: (options: any, res: any) => check_for_cookies(res)
             }, (res) => {
                 check_for_cookies(res)
 

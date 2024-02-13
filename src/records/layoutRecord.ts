@@ -9,9 +9,10 @@ import {Portal} from "./portal.js";
 import {LayoutInterface} from "../layouts/layoutInterface.js";
 import {FMError} from "../FMError.js";
 import {LayoutRecordBase} from "./layoutRecordBase.js";
-import {ApiPortalData, ApiRecordResponseObj} from "../models/apiResults.js";
+import {ApiFieldData, ApiPortalData, ApiRecordResponseObj, ApiRowDataDef} from "../models/apiResults.js";
 import {LayoutBase} from "../layouts/layoutBase.js"
 import {FieldBase, FieldValue} from "./fieldBase.js";
+import * as moment from "moment/moment.js";
 
 export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAYOUT["fields"]> implements LayoutRecordBase {
     // @ts-ignore
@@ -25,8 +26,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
         fieldData: Record<string, string | number> = {},
         portalData: ApiPortalData | null = null, portalsToInclude: (keyof LAYOUT["portals"])[] = [])
     {
-        super(layout, parseInt(recordId as string), parseInt(modId as string));
-        this.processFieldData(fieldData)
+        super(layout, parseInt(recordId as string), parseInt(modId as string), fieldData);
         this.portalsToInclude = portalsToInclude
         if (portalData) {
             this.processPortalData(portalData)
@@ -47,7 +47,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
             if (extraBody.scripts.after.parameter) data["script.param"] = extraBody.scripts.after.parameter
         }
         if (extraBody.scripts?.prerequest) {
-            data["script.prerequest"] = extraBody.scripts.after.name
+            data["script.prerequest"] = extraBody.scripts.prerequest.name
             if (extraBody.scripts.prerequest.parameter) data["script.prerequest.param"] = extraBody.scripts.prerequest.parameter
         }
         if (extraBody.scripts?.presort) {
@@ -57,13 +57,15 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
 
         if (this.recordId === -1) {
             // This is a new LayoutRecord
-             let res = await this.layout.database.apiRequest<{ recordId: string, modId: string }>(`${this.layout.endpoint}/records`, {
-                    port: 443,
+             let res = await this.layout.database.apiRequestJSON<{ recordId: string, modId: string }>(`${this.layout.endpoint}/records`, {
                     method: "POST",
                     body: JSON.stringify(data)
                 })
 
-                if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
+                if (!res.response) {
+                    throw new FMError(res.messages[0].code, res.httpStatus, res)
+                }
+                else if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
                     throw new FMError(res.response.scriptError, res.httpStatus, res)
                 }
                 else if (res.messages[0].code === "0") {
@@ -77,18 +79,20 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
         }
 
         // for (let item of Object.keys(data)) extraBody[item] = data[item]
-        let res = await this.layout.database.apiRequest<{
+        let res = await this.layout.database.apiRequestJSON<{
             modId: string, newPortalRecordInfo: {
                 tableName: string,
                 recordId: string,
                 modId: string
             }[]
         }>(this.endpoint, {
-            port: 443,
             method: "PATCH",
             body: JSON.stringify(data)
         })
-        if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
+        if (!res.response) {
+            throw new FMError(res.messages[0].code, res.httpStatus, res)
+        }
+        else if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
             throw new FMError(res.response.scriptError, res.httpStatus, res)
         }
         else if (res.messages[0].code === "0") {
@@ -122,28 +126,31 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
             throw "Cannot get this RecordBase until a commit() is done."
         }
         if (!this.layout.metadata) await this.layout.getLayoutMeta()
-        let res = await this.layout.database.apiRequest<ApiRecordResponseObj>(this.endpoint, {
-            port: 443,
+        let res = await this.layout.database.apiRequestJSON<ApiRecordResponseObj>(this.endpoint, {
             method: "GET"
         })
 
-        if (res.messages[0].code === "0") {
+        if (res.response && res.messages[0].code === "0") {
             // console.log(res, res.response.data)
             this.modId = +res.response.data[0].modId
             this.processFieldData(res.response.data[0].fieldData)
             this.portalData = []
             if (res.response.data[0].portalData) this.processPortalData(res.response.data[0].portalData)
             return this
+        } else {
+            throw new FMError(res.messages[0].code, res.httpStatus, res)
         }
     }
 
     async duplicate(): Promise<LayoutRecord<LAYOUT>> {
         let trace = new Error()
-        let res = await this.layout.database.apiRequest<{recordId: string, modId: string}>(this.endpoint, {
-            port: 443,
+        let res = await this.layout.database.apiRequestJSON<{recordId: string, modId: string}>(this.endpoint, {
             method: "POST"
         })
-        if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
+        if (!res.response) {
+            throw new FMError(res.messages[0].code, res.httpStatus, res, trace)
+        }
+        else if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
             throw new FMError(res.response.scriptError, res.httpStatus, res, trace)
         }
         else if (res.messages[0].code === "0") {
@@ -159,8 +166,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
     }
 
     async delete(): Promise<void> {
-        let res = await this.layout.database.apiRequest(this.endpoint, {
-            port: 443,
+        let res = await this.layout.database.apiRequestJSON(this.endpoint, {
             method: "DELETE"
         })
         console.log(res)
@@ -176,13 +182,49 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
         }
     }
 
+    fieldsToObject(filter = (a: FieldBase<FieldValue>) => a.edited): Omit<ApiRowDataDef, "portalData"> {
+        let fields_processed: ApiFieldData = {}
+        let field: FieldBase<FieldValue>
+        for (field of this.fieldsArray.filter(field => filter(field))) {
+            let value = field.value as string | number | Date
+            if (value instanceof Date) {
+                // @ts-ignore
+                let _value = moment.default(value)
+                    .utcOffset(this.layout.database.host.timezoneOffset)
+
+                // @ts-ignore
+
+                switch (field.metadata.result) {
+                    case "time":
+                        value = _value.format(this.layout.database.host.metadata.productInfo.timeFormat.replace("dd", "DD"))
+                        break
+                    case "date":
+                        value = _value.format(this.layout.database.host.metadata.productInfo.dateFormat.replace("dd", "DD"))
+                        break
+                    default:
+                        value = _value.format(this.layout.database.host.metadata.productInfo.timeStampFormat.replace("dd", "DD"))
+                }
+            }
+            fields_processed[field.id] = value
+        }
+        let obj = {
+            "recordId": this.recordId.toString(),
+            "modId": this.modId.toString(),
+            "fieldData": fields_processed
+        }
+        return obj
+    }
+
     toObject(
         filter: (a: FieldBase<FieldValue>) => any = (a) => a.edited,
         portalFilter: (a: Portal<any>) => any = (a) => a.records.find(record => record.edited),
         portalRowFilter: (a: PortalRecord<never>) => any = (a) => a.edited,
         portalFieldFilter: (a: FieldBase<FieldValue>) => any = (a) => a.edited
     ) {
-        let obj = super.toObject(filter);
+        let obj: ApiRowDataDef = {
+            ...this.fieldsToObject(filter),
+            portalData: {}
+        };
 
         // Check if there's been any edited portal information
         let portals = this.portalsArray.filter(a => portalFilter(a))

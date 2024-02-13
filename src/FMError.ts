@@ -1018,7 +1018,6 @@ export class FMError extends Error {
     readonly httpStatus: number
     readonly res: any
     readonly code: number
-    readonly message: string
     readonly messages: string
 
     constructor(code: string | number, httpStatus: number, res: any, trace?: Error) {

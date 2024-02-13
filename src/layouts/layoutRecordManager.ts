@@ -18,13 +18,13 @@ export class LayoutRecordManager<T extends LayoutInterface> {
     async create<OPTIONS extends RecordFetchOptions>(options: OPTIONS): Promise<LayoutRecord<
         PickPortals<T, OPTIONS["portals"][number]>
     >> {
-        await this.layout.getLayoutMeta()
+        let metadata = await this.layout.getLayoutMeta()
         let fields: ApiFieldData = {}
-        for (let _field of this.layout.metadata.fieldMetaData) {
+        for (let _field of metadata.fieldMetaData) {
             fields[_field.name] = ""
         }
         let portals: {[key: string]: []} = {}
-        for (let _portal of Object.keys(this.layout.metadata.portalMetaData)) portals[_portal] = []
+        for (let _portal of Object.keys(metadata.portalMetaData)) portals[_portal] = []
         return new LayoutRecord(this.layout, -1, 0, fields, portals)
     }
 

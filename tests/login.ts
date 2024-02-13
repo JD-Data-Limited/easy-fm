@@ -6,7 +6,7 @@ import {after, before, describe, it} from "node:test"
 import {equal, notEqual} from "node:assert"
 import {DATABASE, HOST} from "./connectionDetails.js";
 import {Layout, LayoutRecord, Portal, query} from "../src/index.js";
-import {Field} from "../src/records/field.js";
+import {FieldBase} from "../src/records/fieldBase.js";
 
 describe("Fetch host data", () => {
     it("Able to get host metadata", async () => {
@@ -22,7 +22,7 @@ describe("Database interactions", () => {
         },
         portals: {
             test: Portal<{
-                field1: Field<string>
+                field1: FieldBase<string>
             }>
         }
     }>

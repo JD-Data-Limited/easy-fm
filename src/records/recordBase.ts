@@ -8,21 +8,22 @@ import {FieldBase, FieldValue} from "./fieldBase.js";
 import {RecordTypes} from "../types.js";
 import {RecordFieldsMap} from "../layouts/recordFieldsMap.js";
 import {LayoutBase} from "../layouts/layoutBase.js";
-import {ApiFieldData, ApiRowDataDef} from "../models/apiResults.js";
+import {ApiFieldData} from "../models/apiResults.js";
 
-export class RecordBase<T extends RecordFieldsMap> extends EventEmitter {
+export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter {
     readonly layout: LayoutBase;
     readonly type: RecordTypes = RecordTypes.UNKNOWN;
     public recordId: number;
     modId: number;
     fields: T;
-    protected portalData: any[];
+    protected portalData: any[] = [];
 
-    constructor(layout: LayoutBase, recordId: number, modId = recordId) {
+    protected constructor(layout: LayoutBase, recordId: number, modId = recordId, fieldData: ApiFieldData) {
         super();
         this.layout = layout
         this.recordId = recordId
         this.modId = modId
+        this.fields = this.processFieldData(fieldData)
     }
 
     get endpoint(): string {
@@ -78,38 +79,5 @@ export class RecordBase<T extends RecordFieldsMap> extends EventEmitter {
     _onSave() {
         this.emit("saved")
         for (let field of this.fieldsArray) field.edited = false
-    }
-
-    toObject(filter = (a: FieldBase<FieldValue>) => a.edited): Partial<Omit<ApiRowDataDef, "portalDataInfo">> {
-        let fields_processed: ApiFieldData = {}
-        let field: FieldBase<FieldValue>
-        for (field of this.fieldsArray.filter(field => filter(field))) {
-            let value = field.value
-            if (value instanceof Date) {
-                // @ts-ignore
-                let _value = moment.default(value)
-                    .utcOffset(this.layout.database.host.timezoneOffset)
-
-                // @ts-ignore
-
-                switch (field.metadata.result) {
-                    case "time":
-                        value = _value.format(this.layout.database.host.metadata.productInfo.timeFormat.replace("dd", "DD"))
-                        break
-                    case "date":
-                        value = _value.format(this.layout.database.host.metadata.productInfo.dateFormat.replace("dd", "DD"))
-                        break
-                    default:
-                        value = _value.format(this.layout.database.host.metadata.productInfo.timeStampFormat.replace("dd", "DD"))
-                }
-            }
-            fields_processed[field.id] = value
-        }
-        let obj = {
-            "recordId": this.recordId.toString(),
-            "modId": this.modId.toString(),
-            "fieldData": fields_processed
-        }
-        return obj
     }
 }

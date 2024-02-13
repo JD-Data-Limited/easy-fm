@@ -14,7 +14,7 @@ export class Layout<T extends LayoutInterface> implements LayoutBase {
     readonly database: DatabaseBase;
     readonly name: string;
     readonly records = new LayoutRecordManager<T>(this)
-    metadata: ApiLayoutMetadata;
+    metadata: ApiLayoutMetadata | null = null;
 
     constructor(database: DatabaseBase, name: string) {
         this.database = database
@@ -29,16 +29,17 @@ export class Layout<T extends LayoutInterface> implements LayoutBase {
     async runScript(script: Script): Promise<ScriptResult> {
         let url = `${this.endpoint}/script/${encodeURIComponent(script.name)}`
         if (script.parameter) url += "?script.param=" + encodeURIComponent(script.parameter)
-        let res = await this.database.apiRequest<ApiScriptResult>(url, {
-            port: 443,
+        let res = await this.database.apiRequestJSON<ApiScriptResult>(url, {
             method: "GET"
         })
-        if (res.messages[0].code === "0") {
+        if (res.response && res.messages[0].code === "0") {
             let error = parseInt(res.response.scriptError)
             return {
                 scriptError: error ? new FMError(error, 200, res) : undefined,
                 scriptResult: res.response.scriptResult
             }
+        } else {
+            throw new FMError(res.messages[0].code, res.httpStatus, res);
         }
     }
 
@@ -47,7 +48,8 @@ export class Layout<T extends LayoutInterface> implements LayoutBase {
             return this.metadata
         }
 
-        let res = await this.database.apiRequest<ApiLayoutMetadata>(this.endpoint)
+        let res = await this.database.apiRequestJSON<ApiLayoutMetadata>(this.endpoint)
+        if (!res.response) throw new FMError(res.messages[0].code, res.httpStatus, res)
         this.metadata = res.response
         return this.metadata
     }

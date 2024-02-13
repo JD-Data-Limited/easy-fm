@@ -13,6 +13,7 @@ export interface DatabaseBase {
 
     // layouts: DatabaseStructure["layouts"]
 
-    apiRequest<T = unknown>(url: string | Request, options?: any, autoRelogin?: boolean): Promise<ApiResults<T>>
+    apiRequestJSON<T = unknown>(url: string | Request, options?: RequestInit | undefined, autoRelogin?: boolean): Promise<ApiResults<T>>
+    apiRequestRaw(url: string | Request, options?: RequestInit | undefined): Promise<Response>
     streamURL(url: string): Promise<IncomingMessage>
 }
