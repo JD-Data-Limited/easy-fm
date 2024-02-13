@@ -101,7 +101,7 @@ export interface ApiRowDataDef {
     portalData: ApiPortalData,
     modId: string,
     recordId: string,
-    portalDataInfo: {
+    portalDataInfo?: {
         database: string,
         table: string,
         foundCount: number,

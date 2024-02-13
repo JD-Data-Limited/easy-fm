@@ -20,7 +20,16 @@ export default class FMHost implements HostBase {
     readonly hostname: string
     readonly timezoneOffset: number
     readonly verify: boolean
-    metadata: FMHostMetadata
+    metadata: FMHostMetadata = {
+        productInfo: {
+            buildDate: new Date(),
+            name: "",
+            version: "",
+            dateFormat: "",
+            timeFormat: "",
+            timeStampFormat: ""
+        }
+    }
 
     constructor(_hostname: string, timezoneOffset = 0 - (new Date()).getTimezoneOffset(), verify = true) {
         if (!(/^https?:\/\//).test(_hostname)) throw "hostname MUST begin with either http:// or https://"
@@ -42,7 +51,7 @@ export default class FMHost implements HostBase {
         let data = await _fetch.json() as ApiResults<{databases: any}>
         // console.log(data.messages[0])
 
-        if (data.messages[0].code === "0") {
+        if (data.messages[0].code === "0" && data.response) {
             return data.response.databases
         }
         else {
@@ -64,7 +73,7 @@ export default class FMHost implements HostBase {
         let data = await _fetch.json() as ApiResults<FMHostMetadata>
         // console.log(data.messages[0])
 
-        if (data.messages[0].code === "0") {
+        if (data.messages[0].code === "0" && data.response) {
             this.metadata = data.response
             return data.response
         }

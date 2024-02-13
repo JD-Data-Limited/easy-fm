@@ -136,12 +136,13 @@ export class FieldBase<T extends FieldValue> {
         let form = new FormData()
         form.append("upload", new File([buffer], filename, {type: mime}))
 
-        await this.parent.layout.database.apiRequest<null>(`${this.parent.endpoint}/containers/${this.id}/1`, {
+        let res = await this.parent.layout.database.apiRequestRaw(`${this.parent.endpoint}/containers/${this.id}/1`, {
             method: "POST",
             // @ts-ignore
             headers: {"Authorization": "Bearer " + this.parent.layout.database.token},
             body: form
         })
+        if (!res.ok) throw new Error(`Upload failed with HTTP error: ${res.status} (${res.statusText})`)
     }
 
     download(mode: DOWNLOAD_MODES.Stream): Promise<http.IncomingMessage>

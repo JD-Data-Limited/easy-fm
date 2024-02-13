@@ -12,8 +12,8 @@ import {FMError} from "../../FMError.js";
 export type SortOrder = "ascend" | "descend"
 export type FindRequest = {
     [key: string]: string,
-    omit?: "true" | "false"
-}
+} & {omit?: "true" | "false"}
+
 export type PortalRequest = {
     name: string,
 }
@@ -62,19 +62,19 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         if (this.scriptData.after) params["script"] = this.scriptData.after.name
         if (this.scriptData.after?.parameter) params["script.param"] = this.scriptData.after.parameter
 
-        if (this.scriptData.presort) params["script.presort"] = this.scriptData.after.name
-        if (this.scriptData.presort?.parameter) params["script.presort.param"] = this.scriptData.after.parameter
+        if (this.scriptData.presort) params["script.presort"] = this.scriptData.presort.name
+        if (this.scriptData.presort?.parameter) params["script.presort.param"] = this.scriptData.presort.parameter
 
-        if (this.scriptData.prerequest) params["script.prerequest"] = this.scriptData.after.name
-        if (this.scriptData.prerequest?.parameter) params["script.prerequest.param"] = this.scriptData.after.parameter
+        if (this.scriptData.prerequest) params["script.prerequest"] = this.scriptData.prerequest.name
+        if (this.scriptData.prerequest?.parameter) params["script.prerequest.param"] = this.scriptData.prerequest.parameter
 
         if (this.queries.length !== 0) params["query"] = this.queries
 
-        let portals = Object.keys(this.portals)
+        let portals: (keyof typeof this.portals)[] = Object.keys(this.portals)
         params["portal"] = portals
         for (let portal of portals) {
-            params[`offset.${portal}`] = this.portals[portal].offset
-            params[`limit.${portal}`] = this.portals[portal].limit
+            params[`offset.${portal.toString()}`] = this.portals[portal]?.offset
+            params[`limit.${portal.toString()}`] = this.portals[portal]?.limit
         }
 
         return params
@@ -89,16 +89,16 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         if (this.scriptData.after) params.set("script", this.scriptData.after.name)
         if (this.scriptData.after?.parameter) params.set("script.param", this.scriptData.after.parameter)
 
-        if (this.scriptData.presort) params.set("script.presort", this.scriptData.after.name)
-        if (this.scriptData.presort?.parameter) params.set("script.presort.param", this.scriptData.after.parameter)
+        if (this.scriptData.presort) params.set("script.presort", this.scriptData.presort.name)
+        if (this.scriptData.presort?.parameter) params.set("script.presort.param", this.scriptData.presort.parameter)
 
-        if (this.scriptData.prerequest) params.set("script.prerequest", this.scriptData.after.name)
-        if (this.scriptData.prerequest?.parameter) params.set("script.prerequest.param", this.scriptData.after.parameter)
+        if (this.scriptData.prerequest) params.set("script.prerequest", this.scriptData.prerequest.name)
+        if (this.scriptData.prerequest?.parameter) params.set("script.prerequest.param", this.scriptData.prerequest.parameter)
 
-        let portals = Object.keys(this.portals)
+        let portals: (keyof typeof this.portals)[] = Object.keys(this.portals)
         for (let portal of portals) {
-            params.set(`_offset.${portal}`, this.portals[portal].limit.toString())
-            params.set(`_offset.${portal}`, this.portals[portal].offset.toString())
+            params.set(`_offset.${portal.toString()}`, (this.portals[portal]?.limit || "").toString())
+            params.set(`_offset.${portal.toString()}`, (this.portals[portal]?.offset || "").toString())
         }
         params.set('portal', JSON.stringify(portals))
 
@@ -140,11 +140,11 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         }
 
         try {
-            let res = await this.layout.database.apiRequest<ApiRecordResponseObj>(
+            let res = await this.layout.database.apiRequestJSON<ApiRecordResponseObj>(
                 endpoint,
                 reqData
             )
-            if (res.messages[0].code === "0") {
+            if (res.messages[0].code === "0" && res.response) {
                 // console.log("RESOLVING")
                 if (!this.layout.metadata) await this.layout.getLayoutMeta()
                 return res.response.data.map(item => {
