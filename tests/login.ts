@@ -83,7 +83,7 @@ describe("Database interactions", () => {
     it("Perform a search for a single record", async () => {
         let search = testLayout.records.list({portals: {}, limit: 1})
         search.addRequest({
-            PrimaryKey: "=" + record.fields.PrimaryKey.value
+            PrimaryKey: query`=${record.fields.PrimaryKey.value}`
         })
         let records = await search.fetch()
         equal(records.length, 1)
@@ -92,7 +92,7 @@ describe("Database interactions", () => {
     it("Perform a search for many records", async () => {
         let search = testLayout.records.list({portals: {}, limit: 10})
         search.addRequest({
-            CreationTimestamp: ">1/01/1978 *:*:*"
+            CreationTimestamp: query`>1/01/1978 *:*:*`
         })
         let records = await search.fetch()
         notEqual(records.length, 0)

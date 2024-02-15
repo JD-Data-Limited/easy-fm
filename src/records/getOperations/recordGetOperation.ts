@@ -8,10 +8,11 @@ import {LayoutBase} from "../../layouts/layoutBase.js"
 import {LayoutRecord} from "../layoutRecord.js";
 import {ApiRecordResponseObj} from "../../models/apiResults.js";
 import {FMError} from "../../FMError.js";
+import {FindRequestSymbol, Query} from "../../utils/query.js";
 
 export type SortOrder = "ascend" | "descend"
 export type FindRequest = {
-    [key: string]: string,
+    [key: string]: Query
 } & {omit?: "true" | "false"}
 
 export type PortalRequest = {
@@ -51,6 +52,17 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         return this.queries.length !== 0
     }
 
+    private formatQueries() {
+        return this.queries.map(query => {
+            let out: any = {}
+            for (let key of Object.keys(query)) {
+                if (query[key][FindRequestSymbol]) out[key] = query[key][FindRequestSymbol]
+                else {out[key] = query[key]}
+            }
+            return out
+        })
+    }
+
     protected generateParamsBody(offset: number, limit: number) {
         const params: {[key: string]: any} = {
             limit: limit.toString(),
@@ -68,7 +80,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         if (this.scriptData.prerequest) params["script.prerequest"] = this.scriptData.prerequest.name
         if (this.scriptData.prerequest?.parameter) params["script.prerequest.param"] = this.scriptData.prerequest.parameter
 
-        if (this.queries.length !== 0) params["query"] = this.queries
+        if (this.queries.length !== 0) params["query"] = this.formatQueries()
 
         let portals: (keyof typeof this.portals)[] = Object.keys(this.portals)
         params["portal"] = portals
