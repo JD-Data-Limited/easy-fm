@@ -65,12 +65,12 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         this._token = null
     }
 
-    async login() {
+    async login(forceLogin = false) {
         // Reset cookies
         this.cookies = {}
 
         await this.host.getMetadata()
-        if (this.token) throw new Error("Already logged in. Run logout() first")
+        if (this.token && !forceLogin) throw new Error("Already logged in. Run logout() first")
 
         if (this.connection_details.credentials.method === "token") {
             this._token = (<loginOptionsToken>this.connection_details.credentials).token
@@ -110,9 +110,10 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         return `${this.host.hostname}/fmi/data/v2/databases/${this.name}`
     }
 
-    async apiRequestRaw(url: string | Request, options: any = {}) {
+    async apiRequestRaw(url: string | Request, options: any = {}, autoRelogin = true): Promise<Response> {
+        if (!this.token) await this.login(true)
+
         if (!options.headers) options.headers = {}
-        options.headers["content-type"] = options.headers["content-type"] ? options.headers["content-type"] : "application/json"
         options.headers["authorization"] = "Bearer " + this._token
         options.rejectUnauthorized = this.host.verify
 
@@ -123,9 +124,16 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
                 this.cookies[cookie_split[0]] = cookie_split[1]
             }
         }
+
+        if (_fetch.status === 401 && autoRelogin) {
+            await this.login(true)
+            return await this.apiRequestRaw(url, options, false)
+        }
         return _fetch
     }
-    async apiRequestJSON<T = any>(url: string | Request, options: any = {}, autoRelogin = true): Promise<ApiResults<T>> {
+    async apiRequestJSON<T = any>(url: string | Request, options: any = {}): Promise<ApiResults<T>> {
+        if (!options.headers) options.headers = {}
+        options.headers["content-type"] = options.headers["content-type"] ? options.headers["content-type"] : "application/json"
         let _fetch = await this.apiRequestRaw(url, options)
         let data = await _fetch.json() as ApiResults<T>
 
@@ -133,12 +141,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         if (data.response && Object.keys(data.response).length === 0) delete data.response
 
         // console.log(data.messages[0])
-        if (data.messages[0].code === "952" && autoRelogin) {
-            this._token = null
-            await this.login()
-            return await this.apiRequestJSON(url, options, false)
-        }
-        else if (data.messages[0].code !== "0") {
+        if (data.messages[0].code !== "0") {
             throw new FMError(data.messages[0].code, _fetch.status, data)
         }
 

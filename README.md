@@ -1,30 +1,38 @@
-# easy-fm
+# Introduction
 
-A [FileMaker Data API](https://help.claris.com/en/data-api-guide/content/index.html) client for NodeJS
+A FileMaker Data API client for NodeJS
 
 easy-fm is a Node.js module that allows you to interact with
-a [FileMaker database](https://www.claris.com/filemaker/) stored on a [FileMaker server](https://www.claris.com/filemaker/server/)
-or [FileMaker Cloud](https://store.claris.com/filemaker-cloud). This module interacts with your server using the
-[FileMaker Data API](https://help.claris.com/en/data-api-guide/content/index.html).
-<!-- TOC -->
+a FileMaker database stored on a FileMaker server
+or FileMaker Cloud. This module interacts with your server using the
+FileMaker Data API.
 
-* [easy-fm](#easy-fm)
-    * [FileMaker setup instructions](#filemaker-setup-instructions)
-    * [Before you begin](#before-you-begin)
-    * [Connecting to a database](#connecting-to-a-database)
-    * [Getting records](#getting-records)
-        * [Fetch a range of records](#fetch-a-range-of-records)
-        * [Searching for records](#searching-for-records)
-        * [Fetch a record using its record ID (NOT RECOMMENDED)](#fetch-a-record-using-its-record-id-not-recommended)
-        * [Create a record](#create-a-record)
-        * [Modify a record](#modify-a-record)
+# Contents
+
+<!-- TOC -->
+* [Introduction](#introduction)
+* [Contents](#contents)
+* [Installation](#installation)
+* [Usage](#usage)
+  * [Connecting to a database](#connecting-to-a-database)
+  * [Getting records](#getting-records)
+    * [Fetch a range of records](#fetch-a-range-of-records)
+    * [Searching for records](#searching-for-records)
+    * [Fetch a record using its record ID (NOT RECOMMENDED)](#fetch-a-record-using-its-record-id-not-recommended)
+    * [Create a record](#create-a-record)
+    * [Modify a record](#modify-a-record)
 * [Field names](#field-names)
 * [Portal names](#portal-names)
 * [Typescript Implementation](#typescript-implementation)
-
 <!-- TOC -->
 
-## FileMaker setup instructions
+# Installation
+
+```npm
+npm install @jd-data-limited/easy-fm --save
+```
+
+easy-fm also requires the following to be configured within your FileMaker enviroment:
 
 1. Enable the FileMaker Data API from the server's admin console. This setting is located
    in `Connectors > FileMaker Data API`.
@@ -33,7 +41,7 @@ or [FileMaker Cloud](https://store.claris.com/filemaker-cloud). This module inte
 
 ---
 
-## Before you begin
+# Usage
 
 - You need to know what your server's UTC time offset (in minutes) is.
     - Running `0 - (new Date()).getTimezoneOffset()` in javascript will give you the UTC time offset for your current
