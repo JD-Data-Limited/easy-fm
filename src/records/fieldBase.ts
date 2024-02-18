@@ -3,7 +3,7 @@
  */
 
 import * as http from "http";
-import {ContainerBufferResult, DOWNLOAD_MODES, FieldMetaData, RecordTypes} from "../types.js";
+import {ContainerBufferResult, DownloadModes, FieldMetaData, RecordTypes} from "../types.js";
 import {ApiFieldDisplayTypes, ApiFieldMetadata, ApiFieldResultTypes, ApiFieldTypes} from "../models/apiResults.js";
 import {LayoutBase} from "../layouts/layoutBase.js";
 
@@ -144,13 +144,13 @@ export class FieldBase<T extends FieldValue> {
         if (!res.ok) throw new Error(`Upload failed with HTTP error: ${res.status} (${res.statusText})`)
     }
 
-    download(mode: DOWNLOAD_MODES.Stream): Promise<http.IncomingMessage>
-    download(mode: DOWNLOAD_MODES.Buffer): Promise<ContainerBufferResult>
-    async download(mode: DOWNLOAD_MODES = DOWNLOAD_MODES.Stream): Promise<http.IncomingMessage | ContainerBufferResult> {
+    download(mode: DownloadModes.Stream): Promise<http.IncomingMessage>
+    download(mode: DownloadModes.Buffer): Promise<ContainerBufferResult>
+    async download(mode: DownloadModes = DownloadModes.Stream): Promise<http.IncomingMessage | ContainerBufferResult> {
         if (this.metadata.result !== ApiFieldResultTypes.CONTAINER) throw new Error("Cannot perform download() on a non-container field")
 
         let stream = await this.parent.layout.database.streamURL(this.string)
-        if (mode === DOWNLOAD_MODES.Stream) {
+        if (mode === DownloadModes.Stream) {
             return stream
         }
 

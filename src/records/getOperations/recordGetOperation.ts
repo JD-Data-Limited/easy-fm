@@ -13,7 +13,7 @@ import {FindRequestSymbol, Query} from "../../utils/query.js";
 export type SortOrder = "ascend" | "descend"
 export type FindRequest = {
     [key: string]: Query
-} & {omit?: "true" | "false"}
+}
 
 export type PortalRequest = {
     name: string,
@@ -38,7 +38,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
     protected sortData: { fieldName: string, sortOrder: SortOrder }[] = []
     protected portals: Partial<PortalData<T>>
     protected offset: number = 1
-    protected queries: FindRequest[] = []
+    protected queries: {req: FindRequest, omit: boolean}[] = []
 
     constructor(layout: LayoutBase, options: OPTIONS) {
         this.layout = layout
@@ -55,10 +55,11 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
     private formatQueries() {
         return this.queries.map(query => {
             let out: any = {}
-            for (let key of Object.keys(query)) {
-                if (query[key][FindRequestSymbol]) out[key] = query[key][FindRequestSymbol]
-                else {out[key] = query[key]}
+            for (let key of Object.keys(query.req)) {
+                if (query.req[key][FindRequestSymbol]) out[key] = query.req[key][FindRequestSymbol]
+                else {out[key] = query.req[key]}
             }
+            if (query.omit) out.omit = "true"
             return out
         })
     }
@@ -127,8 +128,8 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         return this
     }
 
-    addRequest(query: FindRequest) {
-        this.queries.push(query)
+    addRequest(query: FindRequest, omit = false) {
+        this.queries.push({req: query, omit})
         return this
     }
 
