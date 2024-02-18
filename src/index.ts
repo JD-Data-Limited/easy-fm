@@ -14,7 +14,7 @@ import {LayoutInterface, PortalInterface} from "./layouts/layoutInterface.js";
 import {PortalRecord} from "./records/portalRecord.js";
 import {Portal} from "./records/portal.js";
 import {Container, FieldBase} from "./records/fieldBase.js";
-import {RecordGetOperation} from "./records/getOperations/recordGetOperation.js";
+import {FindRequest, RecordGetOperation} from "./records/getOperations/recordGetOperation.js";
 import {LayoutRecordManager} from "./layouts/layoutRecordManager.js";
 import {RecordFieldsMap} from "./layouts/recordFieldsMap.js";
 import {query, queryEscape} from "./utils/query.js";
@@ -37,6 +37,7 @@ export {
     LayoutRecordManager,
     Container,
     PickPortals,
+    FindRequest,
     query,
     queryEscape
 }
