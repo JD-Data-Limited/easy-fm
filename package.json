@@ -1,6 +1,6 @@
 {
   "name": "@jd-data-limited/easy-fm",
-  "version": "3.2.7",
+  "version": "3.2.8",
   "dependencies": {
     "moment": "^2.29.4",
     "node-fetch": "3.3.2"
