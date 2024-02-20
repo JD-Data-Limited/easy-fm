@@ -3,10 +3,9 @@
  */
 
 import {RecordBase, RecordTypes} from "./recordBase.js";
-import fetch, {File, FormData} from "node-fetch";
+import {File, FormData} from "node-fetch";
 import * as http from "http";
 import {ContainerBufferResult, DOWNLOAD_MODES, FieldMetaData} from "../types.js";
-import {FMError} from "../FMError.js";
 import {ApiFieldDisplayTypes, ApiFieldMetadata, ApiFieldResultTypes, ApiFieldTypes} from "../models/apiResults.js";
 
 export type FieldValue = string | number | Date | Container
@@ -140,7 +139,7 @@ export class Field<T extends FieldValue> {
         await this.record.layout.database.apiRequest<null>(`${this.record.endpoint}/containers/${this.id}/1`, {
             method: "POST",
             // @ts-ignore
-            headers: {"Authorization": "Bearer " + this.record.layout.database.token},
+            headers: {"Authorization": "Bearer " + this.record.layout.database.token, "Content-Type": "multipart/form-data"},
             body: form
         })
     }
