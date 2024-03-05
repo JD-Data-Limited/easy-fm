@@ -11,6 +11,9 @@ import {FMError} from "../../FMError.js";
 import {FindRequestSymbol, Query} from "../../utils/query.js";
 
 export type SortOrder = "ascend" | "descend"
+export type FindRequestRaw = {
+    [key: string]: string
+}
 export type FindRequest = {
     [key: string]: Query
 }
@@ -38,7 +41,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
     protected sortData: { fieldName: string, sortOrder: SortOrder }[] = []
     protected portals: Partial<PortalData<T>>
     protected offset: number = 1
-    protected queries: {req: FindRequest, omit: boolean}[] = []
+    protected queries: {req: FindRequestRaw, omit: boolean}[] = []
 
     constructor(layout: LayoutBase, options: OPTIONS) {
         this.layout = layout
@@ -53,21 +56,23 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
     }
 
     private formatQueries() {
-        return this.queries.map(query => {
+        let test = this.queries.map(query => {
             let out: any = {}
             for (let key of Object.keys(query.req)) {
-                if (query.req[key][FindRequestSymbol]) out[key] = query.req[key][FindRequestSymbol]
+                if (query.req[key]) out[key] = query.req[key]
                 else {out[key] = query.req[key]}
             }
             if (query.omit) out.omit = "true"
             return out
         })
+        return test
     }
 
     protected generateParamsBody(offset: number, limit: number) {
         const params: {[key: string]: any} = {
             limit: limit.toString(),
             offset: offset.toString(),
+            dateformats: 2 // Ensure dates are received in ISO8601 format
         }
         if (this.sortData.length !== 0) params.sort = this.sortData
 
@@ -96,6 +101,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         const params = new URLSearchParams({
             _limit: limit.toString(),
             _offset: offset.toString(),
+            dateformats: "2" // Ensure dates are received in ISO8601 format
         })
         if (this.sortData.length !== 0) params.set("_sort", JSON.stringify(this.sortData))
 
@@ -128,8 +134,24 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         return this
     }
 
+    private parseFindRequest<I extends FindRequest>(query: I): {[key in keyof I]: string} {
+        let out: any = {}
+        for (let key of Object.keys(query)) {
+            out[key] = query[key][FindRequestSymbol].map(item => {
+                if (typeof item === "string") return item
+
+                // Re-write date into correct format
+                return item
+                    .clone()
+                    .utcOffset(this.layout.database.host.timezoneOffset)
+                    .format("MM/DD/YYYY HH:mm:ss")
+            }).join("")
+        }
+        return out
+    }
+
     addRequest(query: FindRequest, omit = false) {
-        this.queries.push({req: query, omit})
+        this.queries.push({req: this.parseFindRequest(query), omit})
         return this
     }
 

@@ -6,12 +6,13 @@ import * as http from "http";
 import {ContainerBufferResult, DownloadModes, FieldMetaData, RecordTypes} from "../types.js";
 import {ApiFieldDisplayTypes, ApiFieldMetadata, ApiFieldResultTypes, ApiFieldTypes} from "../models/apiResults.js";
 import {LayoutBase} from "../layouts/layoutBase.js";
+import {Moment} from "moment";
 
-export type FieldValue = string | number | Date | Container
+export type FieldValue = string | number | Moment | Container
 export type Container = null
 
 export type Parentable = {layout: LayoutBase, type: RecordTypes, endpoint: string}
-export class FieldBase<T extends FieldValue> {
+export class Field<T extends FieldValue> {
     parent: Parentable;
     id: string;
     protected _value: T;
@@ -24,16 +25,8 @@ export class FieldBase<T extends FieldValue> {
         this.edited = false
     }
 
-    set(content: string | number | Date | undefined | null) {
+    set(content: T) {
         if (this.metadata.result === "container") throw "Cannot set container value using set(). Use upload() instead."
-        if (
-            (this.metadata.result === "timeStamp" ||
-                this.metadata.result === "date" ||
-                this.metadata.result === "time")
-            && !(content instanceof Date) && !!content
-        ) {
-            throw "Value was not an instance of Date: " + content
-        }
         // @ts-ignore
         if (!content) this._value = ""
         // @ts-ignore
