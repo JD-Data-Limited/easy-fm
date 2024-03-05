@@ -7,7 +7,7 @@ import {extraBodyOptions, RecordTypes} from "../types.js";
 
 import {RecordFieldsMap} from "../layouts/recordFieldsMap.js";
 import {PortalBase} from "./portalBase.js";
-import {FieldBase, FieldValue} from "./fieldBase.js";
+import {Field, FieldValue} from "./field.js";
 
 export class PortalRecord<T extends RecordFieldsMap> extends RecordBase<T> {
     readonly portal: PortalBase<T>;
@@ -27,7 +27,7 @@ export class PortalRecord<T extends RecordFieldsMap> extends RecordBase<T> {
         return this.portal.record.commit(extraBody)
     }
 
-    toObject(fieldFilter: (a: FieldBase<FieldValue>) => boolean): {
+    toObject(fieldFilter: (a: Field<FieldValue>) => boolean): {
         modId?: string,
         recordId?: string,
     } & {[key: string]: string} {

@@ -5,8 +5,8 @@
 import {after, before, describe, it} from "node:test"
 import {equal, notEqual} from "node:assert"
 import {DATABASE, HOST} from "./connectionDetails.js";
-import {Layout, LayoutRecord, Portal, query} from "../src/index.js";
-import {FieldBase} from "../src/records/fieldBase.js";
+import {Field, Layout, LayoutRecord, Portal, query} from "../src/index.js";
+import * as moment from "moment";
 
 describe("Fetch host data", () => {
     it("Able to get host metadata", async () => {
@@ -22,7 +22,7 @@ describe("Database interactions", () => {
         },
         portals: {
             test: Portal<{
-                field1: FieldBase<string>
+                field1: Field<string>
             }>
         }
     }>
@@ -99,6 +99,7 @@ describe("Database interactions", () => {
     })
 
     it("Duplicate first record", async () => {
+        console.log("HERE!")
         await record.duplicate()
     })
 
@@ -119,6 +120,18 @@ describe("Database interactions", () => {
         let records = testLayout.records.list({portals: {}, limit: 10})
             .addRequest({
                 "OneVeryLongField": query`=${"*"}`
+            })
+        let foundCount = 0
+        for await (let record of records) {
+            foundCount += 1
+        }
+        equal(foundCount, 0, "Query escaping/sanitization failed. Generated query that failed: " + query`=${"*"}`)
+    })
+
+    it("Test searching based on timestamps", async () => {
+        let records = testLayout.records.list({portals: {}, limit: 10})
+            .addRequest({
+                "CreationTimestamp": query`=${moment.default()}`
             })
         let foundCount = 0
         for await (let record of records) {

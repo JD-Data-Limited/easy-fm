@@ -12,7 +12,8 @@ export type PickPortals<LAYOUT extends LayoutInterface, PORTALS extends string |
     Omit<LAYOUT, "portals"> & { portals: Pick<LAYOUT["portals"], PORTALS> }
 
 export interface databaseOptionsBase {
-    database: string
+    database: string,
+    debug?: boolean,
     credentials: loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken,
 }
 

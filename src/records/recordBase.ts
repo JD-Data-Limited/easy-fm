@@ -4,11 +4,12 @@
 
 import {EventEmitter} from "events";
 import * as moment from "moment";
-import {FieldBase, FieldValue} from "./fieldBase.js";
+import {Moment} from "moment";
 import {RecordTypes} from "../types.js";
 import {RecordFieldsMap} from "../layouts/recordFieldsMap.js";
 import {LayoutBase} from "../layouts/layoutBase.js";
 import {ApiFieldData} from "../models/apiResults.js";
+import {Field, FieldValue} from "./field.js";
 
 export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter {
     readonly layout: LayoutBase;
@@ -34,7 +35,7 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
         return !!this.fieldsArray.find(i => i.edited)
     }
 
-    get fieldsArray(): FieldBase<FieldValue>[] {
+    get fieldsArray(): Field<FieldValue>[] {
         return Object.values(this.fields)
     }
 
@@ -42,14 +43,14 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
         let fields: RecordFieldsMap = {}
 
         for (let key of Object.keys(fieldData)) {
-            let _field = new FieldBase(this, key, fieldData[key])
+            let _field = new Field<number | string | Moment>(this, key, fieldData[key])
             if (!!fieldData[key]) {
                 if (_field.metadata.result === "timeStamp") {
                     // @ts-ignore
                     let date = moment.default(fieldData[key], this.layout.database.host.metadata.productInfo.timeStampFormat.replace("dd", "DD"))
                         .utcOffset(this.layout.database.host.timezoneOffset, true)
                         .local()
-                    _field.set(date.toDate())
+                    _field.set(date)
                     _field.edited = false
 
                 }
@@ -58,7 +59,7 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
                     let date = moment.default(fieldData[key], this.layout.database.host.metadata.productInfo.timeFormat.replace("dd", "DD"))
                         .utcOffset(this.layout.database.host.timezoneOffset, true)
                         .local()
-                    _field.set(date.toDate())
+                    _field.set(date)
                     _field.edited = false
                 }
                 else if (_field.metadata.result === "date") {
@@ -66,7 +67,7 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
                     let date = moment.default(fieldData[key], this.layout.database.host.metadata.productInfo.dateFormat.replace("dd", "DD"))
                         .utcOffset(this.layout.database.host.timezoneOffset, true)
                         .local()
-                    _field.set(date.toDate())
+                    _field.set(date)
                     _field.edited = false
                 }
             }

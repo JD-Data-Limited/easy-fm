@@ -16,17 +16,17 @@ function sub(str: string) {
 function generateFieldType(field: ApiFieldMetadata) {
     switch (field.result) {
         case ApiFieldResultTypes.TEXT:
-            return "FieldBase<string>"
+            return "Field<string>"
         case ApiFieldResultTypes.CONTAINER:
-            return "FieldBase<Container>"
+            return "Field<Container>"
         case ApiFieldResultTypes.DATE:
-            return "FieldBase<Date>"
+            return "Field<Date>"
         case ApiFieldResultTypes.NUMBER:
-            return "FieldBase<number>"
+            return "Field<number>"
         case ApiFieldResultTypes.TIME:
-            return "FieldBase<Date>"
+            return "Field<Date>"
         case ApiFieldResultTypes.TIMESTAMP:
-            return "FieldBase<Date>"
+            return "Field<Date>"
     }
 }
 
@@ -131,6 +131,9 @@ export async function generateTypesCLI() {
         interface: string
     }>()
     for (let layout of layouts) {
+        let substituteName = sub(layout.name)
+        if (!substituteName) continue
+        console.log(substituteName)
         let metadata = await layout.getLayoutMeta()
         let fields = processFieldsChunk(metadata.fieldMetaData)
 
@@ -141,7 +144,7 @@ export async function generateTypesCLI() {
             )}}>`
         })
 
-        let interfaceName = sub(layout.name) + "LayoutInterface"
+        let interfaceName = substituteName + "LayoutInterface"
         layoutInterfaces.set(layout.name, {
             interfaceName,
             interface: `export interface ${interfaceName} extends LayoutInterface {

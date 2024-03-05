@@ -29,12 +29,14 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
     private connection_details: databaseOptionsWithExternalSources
     private cookies: { [key: string]: string } = {}
     readonly name: string;
+    readonly debug: boolean
 
     constructor(host: HostBase, conn: databaseOptionsWithExternalSources) {
         super()
         this.host = host
         this.name = conn.database
         this.connection_details = conn
+        this.debug = !!conn.debug
     }
 
     private generateExternalSourceLogin(data: databaseOptionsBase) {
@@ -111,6 +113,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
     }
 
     async apiRequestRaw(url: string | Request, options: any = {}, autoRelogin = true): Promise<Response> {
+        if (this.debug) console.log(`EASYFM DEBUG: ${options.method?.toString().toUpperCase() || "GET"} ${url instanceof Request ? url.url : url}`)
         if (!this.token) await this.login(true)
 
         if (!options.headers) options.headers = {}

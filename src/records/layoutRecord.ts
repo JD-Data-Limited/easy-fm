@@ -11,8 +11,8 @@ import {FMError} from "../FMError.js";
 import {LayoutRecordBase} from "./layoutRecordBase.js";
 import {ApiFieldData, ApiPortalData, ApiRecordResponseObj, ApiRowDataDef} from "../models/apiResults.js";
 import {LayoutBase} from "../layouts/layoutBase.js"
-import {FieldBase, FieldValue} from "./fieldBase.js";
 import * as moment from "moment/moment.js";
+import {Field, FieldValue} from "./field.js";
 
 export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAYOUT["fields"]> implements LayoutRecordBase {
     // @ts-ignore
@@ -182,9 +182,9 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
         }
     }
 
-    fieldsToObject(filter = (a: FieldBase<FieldValue>) => a.edited): Omit<ApiRowDataDef, "portalData"> {
+    fieldsToObject(filter = (a: Field<FieldValue>) => a.edited): Omit<ApiRowDataDef, "portalData"> {
         let fields_processed: ApiFieldData = {}
-        let field: FieldBase<FieldValue>
+        let field: Field<FieldValue>
         for (field of this.fieldsArray.filter(field => filter(field))) {
             let value = field.value as string | number | Date
             if (value instanceof Date) {
@@ -216,14 +216,14 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
     }
 
     toObject(
-        filter: (a: FieldBase<FieldValue>) => any = (a) => a.edited,
+        filter: (a: Field<FieldValue>) => any = (a) => a.edited,
         portalFilter: (a: Portal<any>) => any = (a) => a.records.find(record => record.edited),
         portalRowFilter: (a: PortalRecord<never>) => any = (a) => a.edited,
-        portalFieldFilter: (a: FieldBase<FieldValue>) => any = (a) => a.edited
+        portalFieldFilter: (a: Field<FieldValue>) => any = (a) => a.edited
     ) {
         let obj: ApiRowDataDef = {
             ...this.fieldsToObject(filter),
-            portalData: {}
+            portalData: {},
         };
 
         // Check if there's been any edited portal information
