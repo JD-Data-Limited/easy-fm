@@ -13,7 +13,7 @@ import {LayoutRecord} from "./records/layoutRecord.js";
 import {LayoutInterface, PortalInterface} from "./layouts/layoutInterface.js";
 import {PortalRecord} from "./records/portalRecord.js";
 import {Portal} from "./records/portal.js";
-import {FindRequestRaw, RecordGetOperation} from "./records/getOperations/recordGetOperation.js";
+import {FindRequest, FindRequestRaw, RecordGetOperation} from "./records/getOperations/recordGetOperation.js";
 import {LayoutRecordManager} from "./layouts/layoutRecordManager.js";
 import {RecordFieldsMap} from "./layouts/recordFieldsMap.js";
 import {query, queryEscape} from "./utils/query.js";
@@ -38,6 +38,7 @@ export {
     Container,
     PickPortals,
     FindRequestRaw,
+    FindRequest,
     query,
     queryEscape
 }
