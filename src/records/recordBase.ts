@@ -47,8 +47,9 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
             if (!!fieldData[key]) {
                 if (_field.metadata.result === "timeStamp") {
                     // @ts-ignore
-                    let date = moment.default(fieldData[key], this.layout.database.host.metadata.productInfo.timeStampFormat.replace("dd", "DD"))
-                        .utcOffset(this.layout.database.host.timezoneOffset, true)
+                    let date = moment.default(fieldData[key])
+                    date = date
+                        .utcOffset(this.layout.database.host.timezoneOffsetFunc(date), true)
                         .local()
                     _field.set(date)
                     _field.edited = false
@@ -56,16 +57,18 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
                 }
                 else if (_field.metadata.result === "time") {
                     // @ts-ignore
-                    let date = moment.default(fieldData[key], this.layout.database.host.metadata.productInfo.timeFormat.replace("dd", "DD"))
-                        .utcOffset(this.layout.database.host.timezoneOffset, true)
+                    let date = moment.default(fieldData[key])
+                    date = date
+                        .utcOffset(this.layout.database.host.timezoneOffsetFunc(date), true)
                         .local()
                     _field.set(date)
                     _field.edited = false
                 }
                 else if (_field.metadata.result === "date") {
                     // @ts-ignore
-                    let date = moment.default(fieldData[key], this.layout.database.host.metadata.productInfo.dateFormat.replace("dd", "DD"))
-                        .utcOffset(this.layout.database.host.timezoneOffset, true)
+                    let date = moment.default(fieldData[key])
+                    date = date
+                        .utcOffset(this.layout.database.host.timezoneOffsetFunc(date), true)
                         .local()
                     _field.set(date)
                     _field.edited = false

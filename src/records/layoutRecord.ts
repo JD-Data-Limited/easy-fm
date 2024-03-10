@@ -190,19 +190,20 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
             if (value instanceof Date) {
                 // @ts-ignore
                 let _value = moment.default(value)
-                    .utcOffset(this.layout.database.host.timezoneOffset)
+                _value = _value
+                    .utcOffset(this.layout.database.host.timezoneOffsetFunc(_value))
 
                 // @ts-ignore
 
                 switch (field.metadata.result) {
                     case "time":
-                        value = _value.format(this.layout.database.host.metadata.productInfo.timeFormat.replace("dd", "DD"))
+                        value = _value.format(this.layout.database.host.timeFormat)
                         break
                     case "date":
-                        value = _value.format(this.layout.database.host.metadata.productInfo.dateFormat.replace("dd", "DD"))
+                        value = _value.format(this.layout.database.host.dateFormat)
                         break
                     default:
-                        value = _value.format(this.layout.database.host.metadata.productInfo.timeStampFormat.replace("dd", "DD"))
+                        value = _value.format(this.layout.database.host.timeStampFormat)
                 }
             }
             fields_processed[field.id] = value
