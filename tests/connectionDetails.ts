@@ -13,7 +13,7 @@ export const DATABASE_ACCOUNT = process.env["FM_DB_ACCOUNT"] || "username"
 export const DATABASE_PASSWORD = process.env["FM_DB_PASSWORD"] || "password"
 
 
-export const HOST = new FMHost(DATABASE_HOST, 720, false)
+export const HOST = new FMHost(DATABASE_HOST, (moment) => 0 - moment.toDate().getTimezoneOffset(), false)
 export const DATABASE = HOST.database({
     database: DATABASE_NAME,
     credentials: {

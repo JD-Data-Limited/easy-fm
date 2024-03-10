@@ -5,7 +5,7 @@
 import {after, before, describe, it} from "node:test"
 import {equal, notEqual} from "node:assert"
 import {DATABASE, HOST} from "./connectionDetails.js";
-import {Field, Layout, LayoutRecord, Portal, query} from "../src/index.js";
+import {asTime, Field, Layout, LayoutRecord, Portal, query} from "../src/index.js";
 import * as moment from "moment";
 
 describe("Fetch host data", () => {
@@ -131,7 +131,7 @@ describe("Database interactions", () => {
     it("Test searching based on timestamps", async () => {
         let records = testLayout.records.list({portals: {}, limit: 10})
             .addRequest({
-                "CreationTimestamp": query`=${moment.default()}`
+                "CreationTimestamp": query`=${asTime(moment.default())}`
             })
         let foundCount = 0
         for await (let record of records) {

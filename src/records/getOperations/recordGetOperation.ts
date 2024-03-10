@@ -41,7 +41,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
     protected sortData: { fieldName: string, sortOrder: SortOrder }[] = []
     protected portals: Partial<PortalData<T>>
     protected offset: number = 1
-    protected queries: {req: FindRequestRaw, omit: boolean}[] = []
+    protected queries: { req: FindRequestRaw, omit: boolean }[] = []
 
     constructor(layout: LayoutBase, options: OPTIONS) {
         this.layout = layout
@@ -60,7 +60,9 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
             let out: any = {}
             for (let key of Object.keys(query.req)) {
                 if (query.req[key]) out[key] = query.req[key]
-                else {out[key] = query.req[key]}
+                else {
+                    out[key] = query.req[key]
+                }
             }
             if (query.omit) out.omit = "true"
             return out
@@ -69,7 +71,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
     }
 
     protected generateParamsBody(offset: number, limit: number) {
-        const params: {[key: string]: any} = {
+        const params: { [key: string]: any } = {
             limit: limit.toString(),
             offset: offset.toString(),
             dateformats: 2 // Ensure dates are received in ISO8601 format
@@ -97,6 +99,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
 
         return params
     }
+
     protected generateParamsURL(offset: number, limit: number) {
         const params = new URLSearchParams({
             _limit: limit.toString(),
@@ -134,7 +137,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         return this
     }
 
-    private parseFindRequest<I extends FindRequest>(query: I): {[key in keyof I]: string} {
+    private parseFindRequest<I extends FindRequest>(query: I): { [key in keyof I]: string } {
         let out: any = {}
         for (let key of Object.keys(query)) {
             out[key] = query[key][FindRequestSymbol].map(item => {
@@ -142,9 +145,16 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
 
                 // Re-write date into correct format
                 return item
+                    .moment
                     .clone()
-                    .utcOffset(this.layout.database.host.timezoneOffset)
-                    .format("MM/DD/YYYY HH:mm:ss")
+                    .utcOffset(this.layout.database.host.timezoneOffsetFunc(item.moment))
+                    .format(
+                        item.type === "date" ?
+                            this.layout.database.host.dateFormat :
+                            item.type == "time" ?
+                                this.layout.database.host.timeFormat :
+                                this.layout.database.host.timeStampFormat
+                    )
             }).join("")
         }
         return out
@@ -189,7 +199,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
             else {
                 throw new FMError(res.messages[0].code, res.httpStatus, res, trace)
             }
-        } catch(e) {
+        } catch (e) {
             if (e instanceof FMError) {
                 if (e.code === 401) {
                     // No records found, so return empty set

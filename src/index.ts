@@ -16,7 +16,7 @@ import {Portal} from "./records/portal.js";
 import {FindRequest, FindRequestRaw, RecordGetOperation} from "./records/getOperations/recordGetOperation.js";
 import {LayoutRecordManager} from "./layouts/layoutRecordManager.js";
 import {RecordFieldsMap} from "./layouts/recordFieldsMap.js";
-import {query, queryEscape} from "./utils/query.js";
+import {asDate, asTime, asTimestamp, query, queryEscape} from "./utils/query.js";
 import {Container, Field} from "./records/field.js";
 
 export default FMHost
@@ -40,5 +40,8 @@ export {
     FindRequestRaw,
     FindRequest,
     query,
-    queryEscape
+    queryEscape,
+    asDate,
+    asTime,
+    asTimestamp
 }
