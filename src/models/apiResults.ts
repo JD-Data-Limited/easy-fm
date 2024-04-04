@@ -1,8 +1,6 @@
 /*
- * Copyright (c) 2023. See LICENSE file for more information
+ * Copyright (c) 2023-2024. See LICENSE file for more information
  */
-
-import * as stream from "stream";
 
 export enum ApiFieldTypes {
     NORMAL = "normal",
@@ -42,8 +40,8 @@ export interface ApiResults<T = unknown> {
 
 export interface ApiLayout {
     name: string,
-    isFolder: boolean,
-    folderLayoutNames: string[]
+    isFolder?: boolean,
+    folderLayoutNames?: ApiLayout[]
 }
 
 export interface ApiLayoutMetadata {
@@ -85,7 +83,7 @@ export interface ApiRecordResponseObj {
     dataInfo: ApiResultSetObj
 }
 
-export interface ApiFieldData {[key: string]: string}
+export type ApiFieldData = {[key: string]: string | number}
 
 export interface ApiPortalData {[key: string]: ApiFieldData[]}
 
@@ -103,7 +101,7 @@ export interface ApiRowDataDef {
     portalData: ApiPortalData,
     modId: string,
     recordId: string,
-    portalDataInfo: {
+    portalDataInfo?: {
         database: string,
         table: string,
         foundCount: number,

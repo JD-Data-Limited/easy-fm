@@ -1,22 +1,19 @@
 /*
- * Copyright (c) 2022-2023. See LICENSE file for more information
+ * Copyright (c) 2022-2024. See LICENSE file for more information
  */
 
 // const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 // @ts-ignore
 import * as http from "http";
 import {FMError} from "./FMError.js";
-import {LayoutInterface} from "./layouts/layoutInterface";
+import {LayoutInterface} from "./layouts/layoutInterface.js";
 
-// import * as btoa from "btoa";
-export interface DatabaseStructure {
-    layouts: {
-        [key: string]: LayoutInterface
-    }
-}
+export type PickPortals<LAYOUT extends LayoutInterface, PORTALS extends string | number | symbol = ""> =
+    Omit<LAYOUT, "portals"> & { portals: Pick<LAYOUT["portals"], PORTALS> }
 
 export interface databaseOptionsBase {
-    database: string
+    database: string,
+    debug?: boolean,
     credentials: loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken,
 }
 
@@ -52,21 +49,23 @@ export interface loginOptionsClaris {
     }
 }
 
-export interface limitPortalsInterface {
-    portalName: string,
+export interface portalFetchData<T = string> {
+    portalName: T,
     offset: number,
     limit: number
 }
 
-export interface extraBodyOptions {
-    scripts?: {
-        prerequest?: Script,
-        presort?: Script,
-        after?: Script,
-    }
+export type ScriptRequestData = {
+    prerequest?: Script,
+    presort?: Script,
+    after?: Script,
 }
 
-export enum DOWNLOAD_MODES {
+export interface extraBodyOptions {
+    scripts?: ScriptRequestData
+}
+
+export enum DownloadModes {
     Stream,
     Buffer
 }
@@ -147,4 +146,14 @@ export interface AuthorizationHeadersOAuth {
     "Content-Type": "application/json"
     "X-FM-Data-OAuth-RequestId": string,
     "X-FM-Data-OAuth-Identifier": string
+}
+
+export type RecordFetchOptions = {
+    readonly portals: readonly string[]
+}
+
+export enum RecordTypes {
+    UNKNOWN,
+    LAYOUT,
+    PORTAL
 }

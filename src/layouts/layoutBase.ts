@@ -1,15 +1,14 @@
 /*
- * Copyright (c) 2023. See LICENSE file for more information
+ * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import {Script, ScriptResult} from "../types";
-import {FMError} from "../FMError";
-import {DatabaseBase} from "../connection/databaseBase";
-import {ApiLayoutMetadata} from "../models/apiResults";
+import {Script, ScriptResult} from "../types.js";
+import {DatabaseBase} from "../connection/databaseBase.js";
+import {ApiLayoutMetadata} from "../models/apiResults.js";
 
 export interface LayoutBase {
     readonly name: string
-    metadata: any
+    metadata: ApiLayoutMetadata | null
     endpoint: string
     runScript(script: Script): Promise<ScriptResult>
     getLayoutMeta(): Promise<ApiLayoutMetadata>

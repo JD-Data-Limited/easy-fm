@@ -1,32 +1,63 @@
 /*
- * Copyright (c) 2023. See LICENSE file for more information
+ * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
 import {generateAuthorizationHeaders} from "./generateAuthorizationHeaders.js";
-import fetch from "node-fetch";
 import {FMError} from "../FMError.js";
 import {Database} from "./database.js";
 import {HostBase} from "./HostBase.js"
 import {
-    databaseOptionsWithExternalSources, DatabaseStructure,
+    databaseOptionsWithExternalSources,
     FMHostMetadata,
     loginOptionsClaris,
     loginOptionsFileMaker,
     loginOptionsOAuth
 } from "../types.js";
-import {ApiResults} from "../models/apiResults";
+import {ApiResults} from "../models/apiResults.js";
+import {DatabaseStructure} from "../databaseStructure.js";
+import {Moment} from "moment";
 
 export default class FMHost implements HostBase {
     readonly hostname: string
-    readonly timezoneOffset: number
+    readonly timezoneOffsetFunc: (moment: Moment) => number
     readonly verify: boolean
-    metadata: FMHostMetadata
+    _metadata: FMHostMetadata | null = null
 
-    constructor(_hostname: string, timezoneOffset = 0 - (new Date()).getTimezoneOffset(), verify = true) {
+    constructor(
+        _hostname: string,
+        timezoneOffset = (moment: Moment) => 0 - (new Date()).getTimezoneOffset(),
+        verify = true
+    ) {
         if (!(/^https?:\/\//).test(_hostname)) throw "hostname MUST begin with either http:// or https://"
         this.hostname = _hostname
-        this.timezoneOffset = timezoneOffset
+        this.timezoneOffsetFunc = timezoneOffset
         this.verify = verify
+    }
+
+    get metadata(): FMHostMetadata {
+        return this._metadata || {
+            productInfo: {
+                buildDate: new Date(),
+                name: "",
+                version: "",
+                dateFormat: "MM/dd/yyyy",
+                timeFormat: "HH:mm:ss",
+                timeStampFormat: "MM/dd/yyyy HH:mm:ss"
+            }
+        };
+    }
+
+    get dateFormat() {
+        return this.metadata.productInfo.dateFormat
+            .replace("dd", "DD")
+            .replace("yyyy", "YYYY")
+    }
+
+    get timeFormat() {return this.metadata.productInfo.timeFormat}
+    get timeStampFormat() {
+        return this.metadata.productInfo.timeStampFormat
+            .replace("dd", "DD")
+            .replace("yyyy", "YYYY")
     }
 
     async listDatabases(credentials?: loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris) {
@@ -42,7 +73,7 @@ export default class FMHost implements HostBase {
         let data = await _fetch.json() as ApiResults<{databases: any}>
         // console.log(data.messages[0])
 
-        if (data.messages[0].code === "0") {
+        if (data.messages[0].code === "0" && data.response) {
             return data.response.databases
         }
         else {
@@ -56,7 +87,7 @@ export default class FMHost implements HostBase {
     }
 
     async getMetadata() {
-        if (this.metadata) return this.metadata
+        if (this._metadata) return this._metadata
 
         let _fetch = await fetch(`${this.hostname}/fmi/data/v2/productInfo`, {
             method: "GET",
@@ -64,8 +95,8 @@ export default class FMHost implements HostBase {
         let data = await _fetch.json() as ApiResults<FMHostMetadata>
         // console.log(data.messages[0])
 
-        if (data.messages[0].code === "0") {
-            this.metadata = data.response
+        if (data.messages[0].code === "0" && data.response) {
+            this._metadata = data.response
             return data.response
         }
         else {

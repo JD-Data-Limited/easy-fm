@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2023. See LICENSE file for more information
+ * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
 import {Portal} from "../records/portal.js";
-import {RecordFieldsMap} from "./recordFieldsMap";
+import {RecordFieldsMap} from "./recordFieldsMap.js";
 
 export interface LayoutInterface {
     fields: RecordFieldsMap,
@@ -11,6 +11,5 @@ export interface LayoutInterface {
 }
 
 export interface PortalInterface {
-    [key: string]: Portal<RecordFieldsMap>
+    [key: string | number | symbol]: Portal<RecordFieldsMap>
 }
-

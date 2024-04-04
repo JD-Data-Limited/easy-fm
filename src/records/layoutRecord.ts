@@ -1,24 +1,33 @@
 /*
- * Copyright (c) 2023. See LICENSE file for more information
+ * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import {extraBodyOptions, recordObject} from "../types.js";
+import {extraBodyOptions} from "../types.js";
 import {RecordBase} from "./recordBase.js";
 import {PortalRecord} from "./portalRecord.js";
 import {Portal} from "./portal.js";
-import {PortalInterface} from "../layouts/layoutInterface.js";
+import {LayoutInterface} from "../layouts/layoutInterface.js";
 import {FMError} from "../FMError.js";
-import {RecordFieldsMap} from "../layouts/recordFieldsMap";
-import {LayoutRecordBase} from "./layoutRecordBase";
-import {ApiRecordResponseObj, ApiResultSetObj} from "../models/apiResults";
+import {LayoutRecordBase} from "./layoutRecordBase.js";
+import {ApiFieldData, ApiPortalData, ApiRecordResponseObj, ApiRowDataDef} from "../models/apiResults.js";
+import {LayoutBase} from "../layouts/layoutBase.js"
+import * as moment from "moment/moment.js";
+import {Field, FieldValue} from "./field.js";
 
-export class LayoutRecord<T extends RecordFieldsMap, P extends PortalInterface> extends RecordBase<T> implements LayoutRecordBase {
+export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAYOUT["fields"]> implements LayoutRecordBase {
     // @ts-ignore
-    portals: P = {}
+    portals: LAYOUT["portals"] = {}
+    private readonly portalsToInclude: (string | number | symbol)[]
 
-    constructor(layout, recordId, modId = recordId, fieldData = {}, portalData = null) {
-        super(layout, recordId, modId);
-        this.processFieldData(fieldData)
+    constructor(
+        layout: LayoutBase,
+        recordId: number | string,
+        modId = recordId,
+        fieldData: Record<string, string | number> = {},
+        portalData: ApiPortalData | null = null, portalsToInclude: (keyof LAYOUT["portals"])[] = [])
+    {
+        super(layout, parseInt(recordId as string), parseInt(modId as string), fieldData);
+        this.portalsToInclude = portalsToInclude
         if (portalData) {
             this.processPortalData(portalData)
         }
@@ -29,7 +38,7 @@ export class LayoutRecord<T extends RecordFieldsMap, P extends PortalInterface> 
     }
 
     async commit(extraBody: extraBodyOptions = {}): Promise<this> {
-        let data = this.toObject()
+        let data: any = this.toObject()
         delete data.recordId
         delete data.modId
 
@@ -38,7 +47,7 @@ export class LayoutRecord<T extends RecordFieldsMap, P extends PortalInterface> 
             if (extraBody.scripts.after.parameter) data["script.param"] = extraBody.scripts.after.parameter
         }
         if (extraBody.scripts?.prerequest) {
-            data["script.prerequest"] = extraBody.scripts.after.name
+            data["script.prerequest"] = extraBody.scripts.prerequest.name
             if (extraBody.scripts.prerequest.parameter) data["script.prerequest.param"] = extraBody.scripts.prerequest.parameter
         }
         if (extraBody.scripts?.presort) {
@@ -48,13 +57,15 @@ export class LayoutRecord<T extends RecordFieldsMap, P extends PortalInterface> 
 
         if (this.recordId === -1) {
             // This is a new LayoutRecord
-             let res = await this.layout.database.apiRequest<{ recordId: string, modId: string }>(`${this.layout.endpoint}/records`, {
-                    port: 443,
+             let res = await this.layout.database.apiRequestJSON<{ recordId: string, modId: string }>(`${this.layout.endpoint}/records`, {
                     method: "POST",
                     body: JSON.stringify(data)
                 })
 
-                if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
+                if (!res.response) {
+                    throw new FMError(res.messages[0].code, res.httpStatus, res)
+                }
+                else if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
                     throw new FMError(res.response.scriptError, res.httpStatus, res)
                 }
                 else if (res.messages[0].code === "0") {
@@ -68,18 +79,20 @@ export class LayoutRecord<T extends RecordFieldsMap, P extends PortalInterface> 
         }
 
         // for (let item of Object.keys(data)) extraBody[item] = data[item]
-        let res = await this.layout.database.apiRequest<{
+        let res = await this.layout.database.apiRequestJSON<{
             modId: string, newPortalRecordInfo: {
                 tableName: string,
                 recordId: string,
                 modId: string
             }[]
         }>(this.endpoint, {
-            port: 443,
             method: "PATCH",
             body: JSON.stringify(data)
         })
-        if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
+        if (!res.response) {
+            throw new FMError(res.messages[0].code, res.httpStatus, res)
+        }
+        else if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
             throw new FMError(res.response.scriptError, res.httpStatus, res)
         }
         else if (res.messages[0].code === "0") {
@@ -92,14 +105,14 @@ export class LayoutRecord<T extends RecordFieldsMap, P extends PortalInterface> 
         }
     }
 
-    protected processPortalData(portalData): void {
+    protected processPortalData(portalData: ApiPortalData): void {
         for (let portalName of Object.keys(portalData)) {
             let _portal = new Portal(this, portalName)
             _portal.records = portalData[portalName].map(item => {
                 let fieldData = item;
                 delete fieldData.recordId;
                 delete fieldData.modId;
-                return new PortalRecord(this, _portal, item.recordId, item.modId, fieldData);
+                return new PortalRecord(this, _portal, parseInt(item.recordId as string), parseInt(item.modId as string), fieldData);
             })
 
             // @ts-ignore
@@ -113,37 +126,36 @@ export class LayoutRecord<T extends RecordFieldsMap, P extends PortalInterface> 
             throw "Cannot get this RecordBase until a commit() is done."
         }
         if (!this.layout.metadata) await this.layout.getLayoutMeta()
-        let res = await this.layout.database.apiRequest<ApiRecordResponseObj>(this.endpoint, {
-            port: 443,
+        let res = await this.layout.database.apiRequestJSON<ApiRecordResponseObj>(this.endpoint, {
             method: "GET"
         })
 
-        if (res.messages[0].code === "0") {
+        if (res.response && res.messages[0].code === "0") {
             // console.log(res, res.response.data)
             this.modId = +res.response.data[0].modId
             this.processFieldData(res.response.data[0].fieldData)
             this.portalData = []
             if (res.response.data[0].portalData) this.processPortalData(res.response.data[0].portalData)
             return this
+        } else {
+            throw new FMError(res.messages[0].code, res.httpStatus, res)
         }
     }
 
-    getPortal(portal) {
-        return this.portalsArray.find(p => p.name === portal)
-    }
-
-    async duplicate(): Promise<LayoutRecord<T, P>> {
+    async duplicate(): Promise<LayoutRecord<LAYOUT>> {
         let trace = new Error()
-        let res = await this.layout.database.apiRequest<{recordId: string, modId: string}>(this.endpoint, {
-            port: 443,
+        let res = await this.layout.database.apiRequestJSON<{recordId: string, modId: string}>(this.endpoint, {
             method: "POST"
         })
-        if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
+        if (!res.response) {
+            throw new FMError(res.messages[0].code, res.httpStatus, res, trace)
+        }
+        else if (typeof res.response.scriptError !== "undefined" && res.response.scriptError !== '0') {
             throw new FMError(res.response.scriptError, res.httpStatus, res, trace)
         }
         else if (res.messages[0].code === "0") {
             let data = this.toObject((a) => true, (a) => true, (a) => false, (a) => false)
-            let _res = new LayoutRecord<T, P>(this.layout, res.response.recordId, res.response.modId, data.fieldData, data.portalData)
+            let _res = new LayoutRecord<LAYOUT>(this.layout, res.response.recordId, res.response.modId, data.fieldData, data.portalData)
 
             this.emit("duplicated")
             return _res
@@ -154,8 +166,7 @@ export class LayoutRecord<T extends RecordFieldsMap, P extends PortalInterface> 
     }
 
     async delete(): Promise<void> {
-        let res = await this.layout.database.apiRequest(this.endpoint, {
-            port: 443,
+        let res = await this.layout.database.apiRequestJSON(this.endpoint, {
             method: "DELETE"
         })
         console.log(res)
@@ -171,8 +182,50 @@ export class LayoutRecord<T extends RecordFieldsMap, P extends PortalInterface> 
         }
     }
 
-    toObject(filter: (a) => any = (a) => a.edited, portalFilter: (a) => any = (a) => a.records.find(record => record.edited), portalRowFilter: (a) => any = (a) => a.edited, portalFieldFilter: (a) => any = (a) => a.edited): recordObject {
-        let obj = super.toObject(filter, portalFilter, portalRowFilter, portalFieldFilter);
+    fieldsToObject(filter = (a: Field<FieldValue>) => a.edited): Omit<ApiRowDataDef, "portalData"> {
+        let fields_processed: ApiFieldData = {}
+        let field: Field<FieldValue>
+        for (field of this.fieldsArray.filter(field => filter(field))) {
+            let value = field.value as string | number | Date
+            if (value instanceof Date) {
+                // @ts-ignore
+                let _value = moment.default(value)
+                _value = _value
+                    .utcOffset(this.layout.database.host.timezoneOffsetFunc(_value))
+
+                // @ts-ignore
+
+                switch (field.metadata.result) {
+                    case "time":
+                        value = _value.format(this.layout.database.host.timeFormat)
+                        break
+                    case "date":
+                        value = _value.format(this.layout.database.host.dateFormat)
+                        break
+                    default:
+                        value = _value.format(this.layout.database.host.timeStampFormat)
+                }
+            }
+            fields_processed[field.id] = value
+        }
+        let obj = {
+            "recordId": this.recordId.toString(),
+            "modId": this.modId.toString(),
+            "fieldData": fields_processed
+        }
+        return obj
+    }
+
+    toObject(
+        filter: (a: Field<FieldValue>) => any = (a) => a.edited,
+        portalFilter: (a: Portal<any>) => any = (a) => a.records.find(record => record.edited),
+        portalRowFilter: (a: PortalRecord<never>) => any = (a) => a.edited,
+        portalFieldFilter: (a: Field<FieldValue>) => any = (a) => a.edited
+    ) {
+        let obj: ApiRowDataDef = {
+            ...this.fieldsToObject(filter),
+            portalData: {},
+        };
 
         // Check if there's been any edited portal information
         let portals = this.portalsArray.filter(a => portalFilter(a))

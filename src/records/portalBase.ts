@@ -1,14 +1,14 @@
 /*
- * Copyright (c) 2023. See LICENSE file for more information
+ * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import {RecordFieldsMap} from "../layouts/recordFieldsMap";
-import {LayoutRecordBase} from "./layoutRecordBase";
-import {RecordBase} from "./recordBase";
-import {LayoutRecord} from "./layoutRecord";
+import {RecordFieldsMap} from "../layouts/recordFieldsMap.js";
+import {RecordBase} from "./recordBase.js";
+import {LayoutRecord} from "./layoutRecord.js";
+import {LayoutInterface} from "../layouts/layoutInterface.js";
 
 export interface PortalBase<T extends RecordFieldsMap> {
-    readonly record: LayoutRecord<any, any>
+    readonly record: LayoutRecord<LayoutInterface>
     readonly name: string
     records: RecordBase<T>[]
 }
