@@ -46,7 +46,6 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
             const _field = new Field<number | string | Moment>(this, key, fieldData[key])
             if (fieldData[key]) {
                 if (_field.metadata.result === 'timeStamp') {
-                    // @ts-expect-error
                     let date = moment.default(fieldData[key])
                     date = date
                         .utcOffset(this.layout.database.host.timezoneOffsetFunc(date), true)
@@ -54,7 +53,6 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
                     _field.set(date)
                     _field.edited = false
                 } else if (_field.metadata.result === 'time') {
-                    // @ts-expect-error
                     let date = moment.default(fieldData[key])
                     date = date
                         .utcOffset(this.layout.database.host.timezoneOffsetFunc(date), true)
@@ -62,7 +60,6 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
                     _field.set(date)
                     _field.edited = false
                 } else if (_field.metadata.result === 'date') {
-                    // @ts-expect-error
                     let date = moment.default(fieldData[key])
                     date = date
                         .utcOffset(this.layout.database.host.timezoneOffsetFunc(date), true)

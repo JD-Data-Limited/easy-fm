@@ -124,7 +124,7 @@ export interface ScriptResult {
 
 export interface ContainerBufferResult {
     buffer: Buffer
-    mime: string
+    mime?: string
     request: http.IncomingMessage
 }
 

@@ -80,7 +80,8 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
 
         // for (let item of Object.keys(data)) extraBody[item] = data[item]
         const res = await this.layout.database.apiRequestJSON<{
-            modId: string, newPortalRecordInfo: Array<{
+            modId: string,
+            newPortalRecordInfo: Array<{
                 tableName: string
                 recordId: string
                 modId: string
@@ -112,7 +113,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
                 return new PortalRecord(this, _portal, parseInt(item.recordId as string), parseInt(item.modId as string), fieldData)
             })
 
-            // @ts-expect-error
+            // @ts-expect-error - This code is actually correct, but throws a typescript error
             this.portals[portalName] = _portal
         }
     }
