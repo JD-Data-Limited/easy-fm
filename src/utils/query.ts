@@ -2,30 +2,29 @@
  * Copyright (c) 2024. See LICENSE file for more information
  */
 
-import moment, {Moment} from "moment";
+import moment, {type Moment} from 'moment'
 
-export const FindRequestSymbol = Symbol("easyfm-findrequest");
-const SPECIAL_CHARACTERS = ["\\", "=", "<", "≤", "≥", ">", "…", "...", "//", "@", "#", "*", "\"", "~"]
-export type TimestampType = {
-    type: "date" | "time" | "timestamp",
+export const FindRequestSymbol = Symbol('easyfm-findrequest')
+const SPECIAL_CHARACTERS = ['\\', '=', '<', '≤', '≥', '>', '…', '...', '//', '@', '#', '*', '"', '~']
+export interface TimestampType {
+    type: 'date' | 'time' | 'timestamp'
     moment: Moment
 }
 type QueryParameter = string | number | TimestampType
-export type Query = {[FindRequestSymbol]: (string | TimestampType)[]}
+export interface Query { [FindRequestSymbol]: Array<string | TimestampType> }
 
-export function queryEscape(str: string) {
-    for (let char of SPECIAL_CHARACTERS) {
+export function queryEscape (str: string) {
+    for (const char of SPECIAL_CHARACTERS) {
         str = str.replace(char, `\\${char}`)
     }
     return str
 }
 
-export function query(strings: TemplateStringsArray, ...args: QueryParameter[]): Query {
-    let argStrings = args.map(item => {
-        if (typeof item === "number") {
+export function query (strings: TemplateStringsArray, ...args: QueryParameter[]): Query {
+    const argStrings = args.map(item => {
+        if (typeof item === 'number') {
             return queryEscape(item.toString())
-        }
-        else if (typeof item === "string") return queryEscape(item)
+        } else if (typeof item === 'string') return queryEscape(item)
         else return item
     })
 
@@ -36,23 +35,23 @@ export function query(strings: TemplateStringsArray, ...args: QueryParameter[]):
     return {[FindRequestSymbol]: query}
 }
 
-export function asDate(date: Date | Moment): TimestampType {
+export function asDate (date: Date | Moment): TimestampType {
     return {
-        type: "date",
+        type: 'date',
         moment: moment(date)
     }
 }
 
-export function asTime(date: Date | Moment): TimestampType {
+export function asTime (date: Date | Moment): TimestampType {
     return {
-        type: "time",
+        type: 'time',
         moment: moment(date)
     }
 }
 
-export function asTimestamp(date: Date | Moment): TimestampType {
+export function asTimestamp (date: Date | Moment): TimestampType {
     return {
-        type: "timestamp",
+        type: 'timestamp',
         moment: moment(date)
     }
 }
