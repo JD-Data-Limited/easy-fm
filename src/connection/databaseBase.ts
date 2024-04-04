@@ -10,6 +10,7 @@ export interface DatabaseBase {
     host: HostBase
     readonly name: string
     endpoint: string
+    token: string
 
     // layouts: DatabaseStructure["layouts"]
 
