@@ -17,9 +17,7 @@ describe('Fetch host data', () => {
 describe('Database interactions', () => {
     const testLayoutName = 'EasyFMBenchmark'
     let testLayout: Layout<{
-        fields: {
-
-        }
+        fields: never
         portals: {
             test: Portal<{
                 field1: Field<string>
@@ -31,6 +29,7 @@ describe('Database interactions', () => {
 
     before(async () => {
         const token = await DATABASE.login()
+        console.log('TOKEN:', token)
         equal(typeof token, 'string')
     })
 
@@ -59,6 +58,7 @@ describe('Database interactions', () => {
     it(`Iterate through 500 records, starting at record ${randomRecord} (changes randomly)`, async () => {
         const records = testLayout.records.list({portals: {}, limit: 500, offset: randomRecord})
         let recordCount = 0
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         for await (const record of records) {
             recordCount += 1
         }
@@ -113,7 +113,11 @@ describe('Database interactions', () => {
                 OneVeryLongField: query`=${'*'}`
             })
             .fetch()
-        equal(records.length, 0, 'Query escaping/sanitization failed. Generated query that failed: ' + query`=${'*'}`)
+        equal(
+            records.length,
+            0,
+            'Query escaping/sanitization failed. Generated query that failed: ' + JSON.stringify(query`=${'*'}`)
+        )
     })
 
     it('Check query escaping using iterable search', async () => {
@@ -122,10 +126,15 @@ describe('Database interactions', () => {
                 OneVeryLongField: query`=${'*'}`
             })
         let foundCount = 0
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         for await (const record of records) {
             foundCount += 1
         }
-        equal(foundCount, 0, 'Query escaping/sanitization failed. Generated query that failed: ' + query`=${'*'}`)
+        equal(
+            foundCount,
+            0,
+            'Query escaping/sanitization failed. Generated query that failed: ' + JSON.stringify(query`=${'*'}`)
+        )
     })
 
     it('Test searching based on timestamps', async () => {
@@ -134,10 +143,15 @@ describe('Database interactions', () => {
                 CreationTimestamp: query`=${asTime(moment.default())}`
             })
         let foundCount = 0
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         for await (const record of records) {
             foundCount += 1
         }
-        equal(foundCount, 0, 'Query escaping/sanitization failed. Generated query that failed: ' + query`=${'*'}`)
+        equal(
+            foundCount,
+            0,
+            'Query escaping/sanitization failed. Generated query that failed: ' + JSON.stringify(query`=${'*'}`)
+        )
     })
 
     after(async () => {

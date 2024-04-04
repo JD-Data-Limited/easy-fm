@@ -2,7 +2,7 @@
  * Copyright (c) 2023. See LICENSE file for more information
  */
 
-import FMHost from '../src/index.js'
+import FMHost, {type Field, type Portal} from '../src/index.js'
 import {config} from 'dotenv'
 
 config()
@@ -13,7 +13,18 @@ export const DATABASE_ACCOUNT = process.env.FM_DB_ACCOUNT ?? 'username'
 export const DATABASE_PASSWORD = process.env.FM_DB_PASSWORD ?? 'password'
 
 export const HOST = new FMHost(DATABASE_HOST, (moment) => 0 - moment.toDate().getTimezoneOffset(), false)
-export const DATABASE = HOST.database({
+export const DATABASE = HOST.database<{
+    layouts: {
+        EasyFMBenchmark: {
+            fields: never
+            portals: {
+                test: Portal<{
+                    field1: Field<string>
+                }>
+            }
+        }
+    }
+}>({
     database: DATABASE_NAME,
     credentials: {
         method: 'filemaker',
