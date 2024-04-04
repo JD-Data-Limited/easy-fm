@@ -18,6 +18,11 @@ export interface Parentable {
     portal?: { name: string }
 }
 
+/**
+ * A class representing a field in a record.
+ *
+ * @template T - The type of the field value.
+ */
 export class Field<T extends FieldValue> {
     parent: Parentable
     id: string
@@ -31,6 +36,12 @@ export class Field<T extends FieldValue> {
         this.edited = false
     }
 
+    /**
+     * Sets the value of the field.
+     *
+     * @param {T | null} content - The new content value to be set. Can be either the type T or null.
+     * @throws {Error} Cannot set container value using set(). Use upload() instead, if the result is a 'container'.
+     */
     set (content: T | null) {
         if (this.metadata.result === 'container') throw new Error('Cannot set container value using set(). Use upload() instead.')
         else this._value = content
@@ -111,20 +122,18 @@ export class Field<T extends FieldValue> {
         throw new Error('Field value is not a string')
     }
 
-    get date (): Date {
-        if (this._value instanceof Date) {
-            return this._value
-        }
-        throw new Error('Field value is not a date')
-    }
-
-    get number (): number {
-        if (typeof this._value === 'number') {
-            return this._value
-        }
-        throw new Error('Field value is not a number')
-    }
-
+    /**
+     * Uploads a file to the container field.
+     *
+     * @param {Buffer} buffer - The file content as a buffer.
+     * @param {string} filename - The filename of the file.
+     * @param {string} mime - The MIME type of the file.
+     *
+     * @throws {Error} - Cannot upload a file to the field if it's not a container field.
+     * @throws {Error} - Upload failed with HTTP error.
+     *
+     * @returns {Promise<void>} - A promise that resolves when the file is successfully uploaded.
+     */
     async upload (buffer: Buffer, filename: string, mime: string): Promise<void> {
         if (this.metadata.result !== 'container') {
             throw new Error('Cannot upload a file to the field; ' + this.id + ' (not a container field)')
@@ -132,7 +141,7 @@ export class Field<T extends FieldValue> {
         const form = new FormData()
         form.append('upload', new File([buffer], filename, {type: mime}))
 
-        const res = await this.parent.layout.database.apiRequestRaw(`${this.parent.endpoint}/containers/${this.id}/1`, {
+        const res = await this.parent.layout.database._apiRequestRaw(`${this.parent.endpoint}/containers/${this.id}/1`, {
             method: 'POST',
             headers: {
                 Authorization: 'Bearer ' + this.parent.layout.database.token,
@@ -143,6 +152,12 @@ export class Field<T extends FieldValue> {
         if (!res.ok) throw new Error(`Upload failed with HTTP error: ${res.status} (${res.statusText})`)
     }
 
+    /**
+     * Downloads a resource from the server using the specified download mode.
+     *
+     * @param {DownloadModes} mode - The mode to use for downloading the resource.
+     * @return {Promise<http.IncomingMessage>} - A promise that resolves with the incoming message representing the downloaded resource.
+     */
     download (mode: DownloadModes.Stream): Promise<http.IncomingMessage>
     download (mode: DownloadModes.Buffer): Promise<ContainerBufferResult>
     async download (mode: DownloadModes = DownloadModes.Stream): Promise<http.IncomingMessage | ContainerBufferResult> {

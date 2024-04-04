@@ -16,6 +16,11 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
     readonly type: RecordTypes = RecordTypes.UNKNOWN
     public recordId: number
     modId: number
+    /**
+     * An object containing each field in this record.
+     *
+     * @template T - The type of the field.
+     */
     fields: T
     protected portalData: any[] = []
 
@@ -31,6 +36,11 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
         return `${this.layout.endpoint}/records/${this.recordId}`
     }
 
+    /**
+     * A boolean indicating whether this record has been modified and should be committed
+     *
+     * @returns {boolean} A boolean value indicating whether any of the fields have been edited.
+     */
     get edited (): boolean {
         return !!this.fieldsArray.find(i => i.edited)
     }

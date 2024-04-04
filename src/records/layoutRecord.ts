@@ -40,6 +40,12 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
         return Object.values(this.portals)
     }
 
+    /**
+     * Asynchronously commits the changes made to the current record.
+     * @param {extraBodyOptions} extraBody - The options for the extra body elements.
+     * @returns {Promise<this>} - A promise that resolves with the modified object.
+     * @throws {FMError} - If an error occurs during the commit process.
+     */
     async commit (extraBody: extraBodyOptions = {}): Promise<this> {
         const data: any = this.toObject()
         delete data.recordId
@@ -60,7 +66,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
 
         if (this.recordId === -1) {
             // This is a new LayoutRecord
-            const res = await this.layout.database.apiRequestJSON<{ recordId: string, modId: string }>(`${this.layout.endpoint}/records`, {
+            const res = await this.layout.database._apiRequestJSON<{ recordId: string, modId: string }>(`${this.layout.endpoint}/records`, {
                 method: 'POST',
                 body: JSON.stringify(data)
             })
@@ -79,7 +85,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
         }
 
         // for (let item of Object.keys(data)) extraBody[item] = data[item]
-        const res = await this.layout.database.apiRequestJSON<{
+        const res = await this.layout.database._apiRequestJSON<{
             modId: string,
             newPortalRecordInfo: Array<{
                 tableName: string
@@ -118,13 +124,20 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
         }
     }
 
+    /**
+     * Re-fetches the current record from the database server.
+     * Throws an error if commit() has not been called.
+     *
+     * @return {Promise<this>} A Promise that resolves to this RecordBase instance if the record is successfully retrieved.
+     * @throws {Error} If commit() has not been called.
+     * @throws {FMError} If the retrieval fails.
+     */
     async get (): Promise<this> {
-        const trace = new Error()
         if (this.recordId === -1) {
-            throw 'Cannot get this RecordBase until a commit() is done.'
+            throw new Error('Cannot get this RecordBase until a commit() is done.')
         }
         if (!this.layout.metadata) await this.layout.getLayoutMeta()
-        const res = await this.layout.database.apiRequestJSON<ApiRecordResponseObj>(this.endpoint, {
+        const res = await this.layout.database._apiRequestJSON<ApiRecordResponseObj>(this.endpoint, {
             method: 'GET'
         })
 
@@ -142,7 +155,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
 
     async duplicate (): Promise<LayoutRecord<LAYOUT>> {
         const trace = new Error()
-        const res = await this.layout.database.apiRequestJSON<{ recordId: string, modId: string }>(this.endpoint, {
+        const res = await this.layout.database._apiRequestJSON<{ recordId: string, modId: string }>(this.endpoint, {
             method: 'POST'
         })
         if (!res.response) {
@@ -161,7 +174,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
     }
 
     async delete (): Promise<void> {
-        const res = await this.layout.database.apiRequestJSON(this.endpoint, {
+        const res = await this.layout.database._apiRequestJSON(this.endpoint, {
             method: 'DELETE'
         })
         console.log(res)

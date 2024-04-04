@@ -17,6 +17,10 @@ import {type ApiResults} from '../models/apiResults.js'
 import {type DatabaseStructure} from '../databaseStructure.js'
 import {type Moment} from 'moment'
 
+/**
+ * Represents a FileMaker host.
+ * @implements {HostBase}
+ */
 export default class FMHost implements HostBase {
     readonly hostname: string
     readonly timezoneOffsetFunc: (moment: Moment) => number
@@ -60,6 +64,13 @@ export default class FMHost implements HostBase {
             .replace('yyyy', 'YYYY')
     }
 
+    /**
+     * Retrieves a list of databases from the FileMaker Server.
+     *
+     * @param {loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris} [credentials] - Optional credentials required for authentication.
+     * @throws {FMError} If the request to the FileMaker Server fails or if the response contains an error.
+     * @returns {Promise<any[]>} A promise that resolves to an array of database objects if successful.
+     */
     async listDatabases (credentials?: loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris) {
         let headers = {}
         if (credentials) {
@@ -80,6 +91,13 @@ export default class FMHost implements HostBase {
         }
     }
 
+    /**
+     * Creates a new database connection with the specified options.
+     *
+     * @template T - The type of the database structure.
+     * @param {databaseOptionsWithExternalSources} data - The options for the database, including external sources.
+     * @return {Database<T>} A new Database instance.
+     */
     database<T extends DatabaseStructure>(data: databaseOptionsWithExternalSources) {
         return new Database<T>(this, data)
     }

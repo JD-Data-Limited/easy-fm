@@ -25,10 +25,15 @@ export class Layout<T extends LayoutInterface> implements LayoutBase {
         return `${this.database.endpoint}/layouts/${this.name}`
     }
 
+    /**
+     * Executes a FileMaker script on this layout asynchronously and returns the result.
+     * @param {Script} script - The script to be executed.
+     * @returns {Promise<ScriptResult>} - A promise that resolves to the script result or rejects with an error.
+     */
     async runScript (script: Script): Promise<ScriptResult> {
         let url = `${this.endpoint}/script/${encodeURIComponent(script.name)}`
         if (script.parameter) url += '?script.param=' + encodeURIComponent(script.parameter)
-        const res = await this.database.apiRequestJSON<ApiScriptResult>(url, {
+        const res = await this.database._apiRequestJSON<ApiScriptResult>(url, {
             method: 'GET'
         })
         if (res.response && res.messages[0].code === '0') {
@@ -42,12 +47,18 @@ export class Layout<T extends LayoutInterface> implements LayoutBase {
         }
     }
 
+    /**
+     * Retrieves the layout metadata
+     *
+     * @returns {Promise<ApiLayoutMetadata>} The layout metadata.
+     * @throws {FMError} If an error occurs during the API request.
+     */
     public async getLayoutMeta (): Promise<ApiLayoutMetadata> {
         if (this.metadata) {
             return this.metadata
         }
 
-        const res = await this.database.apiRequestJSON<ApiLayoutMetadata>(this.endpoint)
+        const res = await this.database._apiRequestJSON<ApiLayoutMetadata>(this.endpoint)
         if (!res.response) throw new FMError(res.messages[0].code, res.httpStatus, res)
         this.metadata = res.response
         return this.metadata
