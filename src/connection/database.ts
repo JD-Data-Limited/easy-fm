@@ -60,11 +60,12 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
     }
 
     async login (forceLogin = false) {
-    // Reset cookies
+        // console.trace()
+        // Reset cookies
         this.cookies = {}
 
         await this.host.getMetadata()
-        if (this.token === '' && !forceLogin) throw new Error('Already logged in. Run logout() first')
+        if (this.token !== '' && !forceLogin) throw new Error('Already logged in. Run logout() first')
 
         if (this.connection_details.credentials.method === 'token') {
             this._token = (this.connection_details.credentials).token
