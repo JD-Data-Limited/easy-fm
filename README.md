@@ -1,16 +1,19 @@
-# easy-fm
+# Introduction
 
-Making NodeJS + FileMaker easier than ever
+A FileMaker Data API client for NodeJS
 
 easy-fm is a Node.js module that allows you to interact with
-a [FileMaker database](https://www.claris.com/filemaker/) stored on
-a [FileMaker server](https://www.claris.com/filemaker/server/)
-or [FileMaker Cloud](https://store.claris.com/filemaker-cloud). This module interacts with your server using the
-[FileMaker Data API](https://help.claris.com/en/data-api-guide/content/index.html).
+a FileMaker database stored on a FileMaker server
+or FileMaker Cloud. This module interacts with your server using the
+FileMaker Data API.
+
+# Contents
+
 <!-- TOC -->
-* [easy-fm](#easy-fm)
-  * [FileMaker setup instructions](#filemaker-setup-instructions)
-  * [Before you begin](#before-you-begin)
+* [Introduction](#introduction)
+* [Contents](#contents)
+* [Installation](#installation)
+* [Usage](#usage)
   * [Connecting to a database](#connecting-to-a-database)
   * [Getting records](#getting-records)
     * [Fetch a range of records](#fetch-a-range-of-records)
@@ -22,7 +25,14 @@ or [FileMaker Cloud](https://store.claris.com/filemaker-cloud). This module inte
 * [Portal names](#portal-names)
 * [Typescript Implementation](#typescript-implementation)
 <!-- TOC -->
-## FileMaker setup instructions
+
+# Installation
+
+```npm
+npm install @jd-data-limited/easy-fm --save
+```
+
+easy-fm also requires the following to be configured within your FileMaker enviroment:
 
 1. Enable the FileMaker Data API from the server's admin console. This setting is located
    in `Connectors > FileMaker Data API`.
@@ -31,10 +41,11 @@ or [FileMaker Cloud](https://store.claris.com/filemaker-cloud). This module inte
 
 ---
 
-## Before you begin
+# Usage
 
 - You need to know what your server's UTC time offset (in minutes) is.
-    - Running `0 - (new Date()).getTimezoneOffset()` in javascript will give you the UTC time offset for your current timezone.
+    - Running `0 - (new Date()).getTimezoneOffset()` in javascript will give you the UTC time offset for your current
+      timezone.
 
 ## Connecting to a database
 
@@ -77,26 +88,34 @@ One of (if not the) most common interactions you'll need to use is fetching reco
 
 ```javascript
 let layout = database.getLayout("Your layout name")
-let range_request = layout.records.range()
+let query = layout.records.list({
+    portals: {
+        test: {limit: 10, offset: 1} // Include results from the 'test' portal
+    },
+    limit: 10, // Limit result set to 10 records...
+    offset: 30 // ...starting from the 30th record
+})
 
-range_request.setOffset(50) // Starting from the 50th record...
-range_request.setLimit(100) // Fetch 100 records
-
-let records = await range_request.fetch()
+let records = await query.fetch()
 console.log(records)
 ```
 
 ### Searching for records
+Searching for records uses the same syntax as above, but with additional steps to add your search parameters.
 
 ```javascript
 let layout = database.getLayout("Your layout name")
-let find_request = layout.records.find()
+let query = layout.records.list({
+    portals: {
+        test: {limit: 10, offset: 1} // Include results from the 'test' portal
+    },
+    limit: 10, // Limit result set to 10 records...
+    offset: 30 // ...starting from the 30th record
+})
 
-find_request.addRequests({"GroupID": "abc"}) // Find only the records with field GroupID set to 'abc'
-find_request.setOffset(30) // Starting from the 30th matching record
-find_request.setLimit(10) // Fetch only 10 records
+query.addRequest({"GroupID": "=abc"}) // Add a filter
 
-let records = await range_request.fetch()
+let records = await query.fetch()
 console.log(records)
 ```
 
@@ -152,7 +171,8 @@ When interacting with FileMaker, it is important to remember how FileMaker field
 
 > Please read this section carefully if you are working with portals
 
-It is important to note that a portal's name **is not** the same as the name of the table that it links to. The name of a
+It is important to note that a portal's name **is not** the same as the name of the table that it links to. The name of
+a
 portal matches the object name it was assigned in FileMaker's layout editor.
 
 > **NOTE**: When no name has been manually assigned to it, it will default to the name of the related table.

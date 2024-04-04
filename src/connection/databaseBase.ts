@@ -1,12 +1,10 @@
 /*
- * Copyright (c) 2023. See LICENSE file for more information
+ * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
 import {HostBase} from "./HostBase.js"
-import {Request} from "node-fetch";
-import {DatabaseStructure} from "../types";
-import {ApiResults} from "../models/apiResults";
-import HTTP_REDIRECT  from "follow-redirects"
+import {ApiResults} from "../models/apiResults.js";
+import {IncomingMessage} from "http";
 
 export interface DatabaseBase {
     host: HostBase,
@@ -15,6 +13,7 @@ export interface DatabaseBase {
 
     // layouts: DatabaseStructure["layouts"]
 
-    apiRequest<T = unknown>(url: string | Request, options?: any, autoRelogin?: boolean): Promise<ApiResults<T>>
-    streamURL(url: string): Promise<HTTP_REDIRECT.http.IncomingMessage>
+    apiRequestJSON<T = unknown>(url: string | Request, options?: RequestInit | undefined, autoRelogin?: boolean): Promise<ApiResults<T>>
+    apiRequestRaw(url: string | Request, options?: RequestInit | undefined): Promise<Response>
+    streamURL(url: string): Promise<IncomingMessage>
 }

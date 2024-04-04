@@ -1,39 +1,32 @@
 /*
- * Copyright (c) 2023. See LICENSE file for more information
+ * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import {RecordBase, RecordTypes} from "./recordBase.js";
-import {File, FormData} from "node-fetch";
 import * as http from "http";
-import {ContainerBufferResult, DOWNLOAD_MODES, FieldMetaData} from "../types.js";
+import {ContainerBufferResult, DownloadModes, FieldMetaData, RecordTypes} from "../types.js";
 import {ApiFieldDisplayTypes, ApiFieldMetadata, ApiFieldResultTypes, ApiFieldTypes} from "../models/apiResults.js";
+import {LayoutBase} from "../layouts/layoutBase.js";
+import {Moment} from "moment";
 
-export type FieldValue = string | number | Date | Container
+export type FieldValue = string | number | Moment | Container
 export type Container = null
 
+export type Parentable = {layout: LayoutBase, type: RecordTypes, endpoint: string}
 export class Field<T extends FieldValue> {
-    record: RecordBase<any>;
+    parent: Parentable;
     id: string;
     protected _value: T;
     edited: boolean;
 
-    constructor(record, id, contents) {
-        this.record = record
+    constructor(record: Parentable, id: string, contents: T) {
+        this.parent = record
         this.id = id
         this._value = contents
         this.edited = false
     }
 
-    set(content: string | number | Date | undefined | null) {
+    set(content: T) {
         if (this.metadata.result === "container") throw "Cannot set container value using set(). Use upload() instead."
-        if (
-            (this.metadata.result === "timeStamp" ||
-                this.metadata.result === "date" ||
-                this.metadata.result === "time")
-            && !(content instanceof Date) && !!content
-        ) {
-            throw "Value was not an instance of Date: " + content
-        }
         // @ts-ignore
         if (!content) this._value = ""
         // @ts-ignore
@@ -42,7 +35,7 @@ export class Field<T extends FieldValue> {
     }
 
     get metadata(): ApiFieldMetadata {
-        if (!this.record.layout.metadata) {
+        if (!this.parent.layout.metadata) {
             // Default to a regular text field
             return {
                 name: this.id.toString(),
@@ -61,9 +54,9 @@ export class Field<T extends FieldValue> {
                 valueList: ""
             }
         }
-        if (this.record.type === RecordTypes.PORTAL) {
+        if (this.parent.type === RecordTypes.PORTAL) {
             // @ts-ignore
-            return this.record.layout.metadata.portalMetaData[this.record.portal.name || "portal not attached"].find(i => i.name === this.id) as FieldMetaData || {
+            return this.parent.layout.metadata.portalMetaData[this.parent.portal.name || "portal not attached"].find(i => i.name === this.id) as FieldMetaData || {
                 name: this.id.toString(),
                 type: 'normal',
                 displayType: 'editText',
@@ -81,7 +74,7 @@ export class Field<T extends FieldValue> {
             } as FieldMetaData
         }
         else {
-            return this.record.layout.metadata.fieldMetaData.find(i => i.name === this.id) || {
+            return this.parent.layout.metadata.fieldMetaData.find(i => i.name === this.id) || {
                 name: this.id.toString(),
                 type: ApiFieldTypes.NORMAL,
                 displayType: ApiFieldDisplayTypes.EDIT_TEXT,
@@ -136,25 +129,26 @@ export class Field<T extends FieldValue> {
         let form = new FormData()
         form.append("upload", new File([buffer], filename, {type: mime}))
 
-        await this.record.layout.database.apiRequest<null>(`${this.record.endpoint}/containers/${this.id}/1`, {
+        let res = await this.parent.layout.database.apiRequestRaw(`${this.parent.endpoint}/containers/${this.id}/1`, {
             method: "POST",
             // @ts-ignore
             headers: {"Authorization": "Bearer " + this.record.layout.database.token, "Content-Type": "multipart/form-data"},
             body: form
         })
+        if (!res.ok) throw new Error(`Upload failed with HTTP error: ${res.status} (${res.statusText})`)
     }
 
-    download(mode: DOWNLOAD_MODES.Stream): Promise<http.IncomingMessage>
-    download(mode: DOWNLOAD_MODES.Buffer): Promise<ContainerBufferResult>
-    async download(mode: DOWNLOAD_MODES = DOWNLOAD_MODES.Stream): Promise<http.IncomingMessage | ContainerBufferResult> {
+    download(mode: DownloadModes.Stream): Promise<http.IncomingMessage>
+    download(mode: DownloadModes.Buffer): Promise<ContainerBufferResult>
+    async download(mode: DownloadModes = DownloadModes.Stream): Promise<http.IncomingMessage | ContainerBufferResult> {
         if (this.metadata.result !== ApiFieldResultTypes.CONTAINER) throw new Error("Cannot perform download() on a non-container field")
 
-        let stream = await this.record.layout.database.streamURL(this.string)
-        if (mode === DOWNLOAD_MODES.Stream) {
+        let stream = await this.parent.layout.database.streamURL(this.string)
+        if (mode === DownloadModes.Stream) {
             return stream
         }
 
-        let body = []
+        let body: Uint8Array[] = []
         return new Promise((resolve, reject) => {
             stream.on("data", chunk => {
                 body.push(chunk)
