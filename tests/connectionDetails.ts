@@ -14,11 +14,11 @@ export const DATABASE_PASSWORD = process.env.FM_DB_PASSWORD ?? 'password'
 
 export const HOST = new FMHost(DATABASE_HOST, (moment) => 0 - moment.toDate().getTimezoneOffset(), false)
 export const DATABASE = HOST.database({
-  database: DATABASE_NAME,
-  credentials: {
-    method: 'filemaker',
-    username: DATABASE_ACCOUNT,
-    password: DATABASE_PASSWORD
-  },
-  externalSources: []
+    database: DATABASE_NAME,
+    credentials: {
+        method: 'filemaker',
+        username: DATABASE_ACCOUNT,
+        password: DATABASE_PASSWORD
+    },
+    externalSources: []
 })
