@@ -9,6 +9,10 @@ import {type RecordFieldsMap} from '../layouts/recordFieldsMap.js'
 import {type PortalBase} from './portalBase.js'
 import {type Field, type FieldValue} from './field.js'
 
+/**
+ * Represents a PortalRecord, which is a record in a portal within a parent record.
+ * @template T - The type of the record's field map.
+ */
 export class PortalRecord<T extends RecordFieldsMap> extends RecordBase<T> {
     readonly portal: PortalBase<T>
     readonly type = RecordTypes.PORTAL
@@ -23,6 +27,12 @@ export class PortalRecord<T extends RecordFieldsMap> extends RecordBase<T> {
         this.portal.record._onSave()
     }
 
+    /**
+     * Commits the parent record, and in turn this one.
+     *
+     * @param {extraBodyOptions} [extraBody={}] - The optional extra body options.
+     * @returns {Promise} - A promise that resolves when the record is committed.
+     */
     async commit (extraBody: extraBodyOptions = {}) {
         return await this.portal.record.commit(extraBody)
     }

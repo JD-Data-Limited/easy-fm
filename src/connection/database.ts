@@ -15,6 +15,10 @@ import {type ApiLayout, type ApiResults} from '../models/apiResults.js'
 import {type DatabaseStructure} from '../databaseStructure.js'
 import {type IncomingMessage} from 'http'
 
+/**
+ * Represents a database connection.
+ * @template T - The structure of the database.
+ */
 export class Database<T extends DatabaseStructure> extends EventEmitter implements DatabaseBase {
     private _token: string = ''
     readonly host: HostBase
@@ -45,6 +49,13 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         }
     }
 
+    /**
+     * Logs out the user by deleting the current session token.
+     * Throws an error if the user is not logged in.
+     *
+     * @returns {Promise<void>} A promise that resolves with no value once the logout is successful.
+     * @throws {Error} Throws an error if the user is not logged in.
+     */
     async logout (): Promise<void> {
         if (this.token === '') throw new Error('Not logged in')
 
@@ -59,6 +70,14 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         this._token = ''
     }
 
+    /**
+     * Logs in to the database. Not required, as this is often done automatically
+     *
+     * @param {boolean} [forceLogin=false] - Whether to force login even if already logged in.
+     * @throws {Error} - Throws an error if already logged in and forceLogin is false.
+     * @throws {FMError} - Throws an FMError if login fails.
+     * @return {Promise<string>} - Returns a promise that resolves to the access token upon successful login.
+     */
     async login (forceLogin = false) {
         // console.trace()
         // Reset cookies
@@ -103,11 +122,16 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         return this._token
     }
 
+    /**
+     * Returns the endpoint URL for the database connection.
+     *
+     * @returns {string} The endpoint URL.
+     */
     get endpoint (): string {
         return `${this.host.hostname}/fmi/data/v2/databases/${this.name}`
     }
 
-    async apiRequestRaw (url: string | Request, options: RequestInit & { headers?: Record<string, string> } = {}, autoRelogin = true): Promise<Response> {
+    async _apiRequestRaw (url: string | Request, options: RequestInit & { headers?: Record<string, string> } = {}, autoRelogin = true): Promise<Response> {
         if (this.debug) console.log(`EASYFM DEBUG: ${JSON.stringify(options)} ${url instanceof Request ? url.url : url}`)
         if (this.token === '') await this.login(true)
 
@@ -125,15 +149,15 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
 
         if (_fetch.status === 401 && autoRelogin) {
             await this.login(true)
-            return await this.apiRequestRaw(url, options, false)
+            return await this._apiRequestRaw(url, options, false)
         }
         return _fetch
     }
 
-    async apiRequestJSON<T = any>(url: string | Request, options: RequestInit & { headers?: Record<string, string> } = {}): Promise<ApiResults<T>> {
+    async _apiRequestJSON<T = any>(url: string | Request, options: RequestInit & { headers?: Record<string, string> } = {}): Promise<ApiResults<T>> {
         if (!options.headers) options.headers = {}
         options.headers['content-type'] = options.headers['content-type'] ? options.headers['content-type'] : 'application/json'
-        const _fetch = await this.apiRequestRaw(url, options)
+        const _fetch = await this._apiRequestRaw(url, options)
         const data = await _fetch.json() as ApiResults<T>
 
         // Remove response if it is empty. This makes checking for an empty response easier
@@ -148,8 +172,14 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         return data
     }
 
+    /**
+     * Retrieves a list of layouts in the current FileMaker database.
+     *
+     * @returns {Promise<Layout[]>} A promise that resolves to an array of Layout objects.
+     * @throws {FMError} If there was an error retrieving the layouts.
+     */
     async listLayouts () {
-        const req = await this.apiRequestJSON<{ layouts: ApiLayout[] }>(`${this.endpoint}/layouts?page=2`)
+        const req = await this._apiRequestJSON<{ layouts: ApiLayout[] }>(`${this.endpoint}/layouts?page=2`)
         if (!req.response) throw new FMError(req.messages[0].code, req.httpStatus, req.messages[0].message)
 
         const cycleLayoutNames = (layouts: ApiLayout[]) => {
@@ -163,18 +193,14 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         return cycleLayoutNames(req.response.layouts).map(layout => new Layout(this, layout))
     }
 
-    getLayout<R extends keyof T['layouts']>(name: R): Layout<T['layouts'][R]>
-    getLayout<R extends LayoutInterface>(name: string): Layout<R>
-    getLayout (name: string): Layout<any> {
+    layout<R extends keyof T['layouts']>(name: R): Layout<T['layouts'][R]>
+    layout<R extends LayoutInterface>(name: string): Layout<R>
+    layout (name: string): Layout<any> {
         return new Layout<LayoutInterface>(this, name)
     }
 
     script (name: string, parameter = ''): Script {
         return ({ name, parameter } satisfies Script)
-    }
-
-    _tokenExpired () {
-        this.emit('token_expired')
     }
 
     async streamURL (url: string): Promise<IncomingMessage> {

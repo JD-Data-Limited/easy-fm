@@ -43,8 +43,8 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         this.layout = layout
         this.sortData = []
         this.portals = options.portals
-        this.offset = options.offset || 1 // Offset refers to the starting record. offset 1 is the same as no offset.
-        this.limit = options.limit || 100
+        this.offset = options.offset ?? 1 // Offset refers to the starting record. offset 1 is the same as no offset.
+        this.limit = options.limit ?? 100
     }
 
     get isFindRequest () {
@@ -114,19 +114,33 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
 
         const portals: Array<keyof typeof this.portals> = Object.keys(this.portals)
         for (const portal of portals) {
-            params.set(`_offset.${portal.toString()}`, (this.portals[portal]?.limit || '').toString())
-            params.set(`_offset.${portal.toString()}`, (this.portals[portal]?.offset || '').toString())
+            params.set(`_offset.${portal.toString()}`, (this.portals[portal]?.limit ?? '').toString())
+            params.set(`_offset.${portal.toString()}`, (this.portals[portal]?.offset ?? '').toString())
         }
         params.set('portal', JSON.stringify(portals))
 
         return params
     }
 
+    /**
+     * Configures any FileMaker scripts to be run as a part of the request
+     *
+     * @param {ScriptRequestData} scripts - The script request data to set.
+     * @return {this} - The current instance of the class.
+     */
     scripts (scripts: ScriptRequestData) {
         this.scriptData = scripts
         return this
     }
 
+    /**
+     * Sorts the data based on the given field name and sort order.
+     *
+     * @param {string} fieldName - The name of the field by which the data should be sorted.
+     * @param {SortOrder} sortOrder - The sort order to be applied (either "asc" for ascending or "desc" for descending).
+     *
+     * @return {this} - Returns the current instance of the object.
+     */
     sort (fieldName: string, sortOrder: SortOrder) {
         this.sortData.push({fieldName, sortOrder})
         return this
@@ -155,11 +169,23 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         return out
     }
 
+    /**
+     * Adds a new request/query to the list of queries.
+     *
+     * @param {FindRequest} query - The find request to be added.
+     * @param {boolean} [omit=false] - Flag to indicate if the find request should be omitted.
+     * @return {Object} - The current object instance.
+     */
     addRequest (query: FindRequest, omit = false) {
         this.queries.push({req: this.parseFindRequest(query), omit})
         return this
     }
 
+    /**
+     * Perform a fetch operation.
+     *
+     * @returns {Promise} A promise that resolves with the result of the fetch operation.
+     */
     async fetch () {
         return await this.performFind(this.offset, this.limit)
     }
@@ -170,17 +196,17 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         const trace = new Error()
         await this.layout.getLayoutMeta()
 
-        const is_find = this.isFindRequest
-        let endpoint = this.layout.endpoint + (is_find ? '/_find' : '/records')
-        if (!is_find) endpoint += '?' + new URLSearchParams(this.generateParamsURL(offset, limit)).toString()
+        const isFind = this.isFindRequest
+        let endpoint = this.layout.endpoint + (isFind ? '/_find' : '/records')
+        if (!isFind) endpoint += '?' + new URLSearchParams(this.generateParamsURL(offset, limit)).toString()
         const reqData = {
             // port: 443,
-            method: is_find ? 'POST' : 'GET',
-            body: is_find ? JSON.stringify(this.generateParamsBody(offset, limit)) : undefined
+            method: isFind ? 'POST' : 'GET',
+            body: isFind ? JSON.stringify(this.generateParamsBody(offset, limit)) : undefined
         }
 
         try {
-            const res = await this.layout.database.apiRequestJSON<ApiRecordResponseObj>(
+            const res = await this.layout.database._apiRequestJSON<ApiRecordResponseObj>(
                 endpoint,
                 reqData
             )
@@ -209,28 +235,28 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         const startOffset: number = JSON.parse(JSON.stringify(this.offset))
         const limit = this.limit
 
-        let exit_after_last_record = false
+        let exitAfterLastRecord = false
         let records: Array<LayoutRecord<PickPortals<T, keyof OPTIONS['portals']>>> = []
 
         const fetch = async () => {
-            const theoretical_limit = (limit - nextOffset) + startOffset
-            if (theoretical_limit === 0) {
-                exit_after_last_record = true
+            const theoreticalLimit = (limit - nextOffset) + startOffset
+            if (theoreticalLimit === 0) {
+                exitAfterLastRecord = true
                 records = []
                 return
             }
-            records = await this.performFind(nextOffset, theoretical_limit < 100 ? theoretical_limit : 100)
+            records = await this.performFind(nextOffset, theoreticalLimit < 100 ? theoreticalLimit : 100)
             nextOffset += 100
-            if (records.length < 100) exit_after_last_record = true
+            if (records.length < 100) exitAfterLastRecord = true
         }
 
         return {
             next: async () => {
-                if (records.length === 0 && !exit_after_last_record) {
+                if (records.length === 0 && !exitAfterLastRecord) {
                     await fetch()
                 }
 
-                if (records.length === 0 && exit_after_last_record) {
+                if (records.length === 0 && exitAfterLastRecord) {
                     return {done: true, value: undefined}
                 } else {
                     const record = records.shift()

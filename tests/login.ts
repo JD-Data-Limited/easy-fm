@@ -38,7 +38,7 @@ describe('Database interactions', () => {
     })
 
     it('Fetch layout metadata', async () => {
-        testLayout = DATABASE.getLayout(testLayoutName)
+        testLayout = DATABASE.layout(testLayoutName)
         await testLayout.getLayoutMeta()
     })
 
