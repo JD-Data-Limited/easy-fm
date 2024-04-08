@@ -4,9 +4,10 @@
 
 import {after, before, describe, it} from 'node:test'
 import {equal, notEqual} from 'node:assert'
-import {DATABASE, HOST} from './connectionDetails.js'
-import {asTime, type Field, type Layout, type LayoutRecord, type Portal, query} from '../src/index.js'
+import {DATABASE, DatabaseSchema, HOST} from './connectionDetails.js'
+import {asTime, type Layout, type LayoutRecord, type PickPortals, query} from '../src/index.js'
 import * as moment from 'moment'
+import {FindRequestSymbol} from "../src/utils/query.js";
 
 describe('Fetch host data', () => {
     it('Able to get host metadata', async () => {
@@ -16,16 +17,11 @@ describe('Fetch host data', () => {
 
 describe('Database interactions', () => {
     const testLayoutName = 'EasyFMBenchmark'
-    let testLayout: Layout<{
-        fields: never
-        portals: {
-            test: Portal<{
-                field1: Field<string>
-            }>
-        }
-    }>
+    let testLayout: Layout<DatabaseSchema["layouts"]["EasyFMBenchmark"]>
     const testField = 'OneVeryLongField'
-    let record: LayoutRecord<any>
+    let record: LayoutRecord<
+        PickPortals<DatabaseSchema["layouts"]["EasyFMBenchmark"], never>
+    >
 
     before(async () => {
         const token = await DATABASE.login()
@@ -76,14 +72,14 @@ describe('Database interactions', () => {
     })
 
     it('Modify first record', async () => {
-        record.fields[testField].set(Math.random())
+        record.fields[testField].set(Math.random().toString())
         await record.commit()
     })
 
     it('Perform a search for a single record', async () => {
         const search = testLayout.records.list({portals: {}, limit: 1})
         search.addRequest({
-            PrimaryKey: query`=${record.fields.PrimaryKey.value}`
+            PrimaryKey: query`=${record.fields.PrimaryKey.value || ""}`
         })
         const records = await search.fetch()
         equal(records.length, 1)
@@ -101,6 +97,32 @@ describe('Database interactions', () => {
     it('Duplicate first record', async () => {
         console.log('HERE!')
         await record.duplicate()
+    })
+
+    describe("Containers", () => {
+        it("Test uploading", async () => {
+            const file = new File(
+                [new TextEncoder()
+                    .encode(JSON.stringify(new Array(1_000_000).fill(null)))
+                ],
+                "file.json",
+                {type: "application/json"}
+            )
+            console.log(record)
+            await record.fields.Container.upload(file);
+        })
+
+        it("Test downloading as a buffer", async () => {
+            await record.fields.Container.arrayBuffer()
+        })
+
+        it("Test downloading as a stream (NodeJS readable stream)", () => {
+            // const stream = record.fields.Container.stream()
+            // return new Promise<void>((resolve, reject) => {
+            //     stream.on("error", (e) => reject(e))
+            //     stream.on("end", () => resolve())
+            // })
+        })
     })
 
     it('Delete first record', async () => {
@@ -150,9 +172,10 @@ describe('Database interactions', () => {
         equal(
             foundCount,
             0,
-            'Query escaping/sanitization failed. Generated query that failed: ' + JSON.stringify(query`=${'*'}`)
+            'Query escaping/sanitization failed. Generated query that failed: ' + JSON.stringify(query`=${asTime(moment.default())}`[FindRequestSymbol])
         )
     })
+
 
     after(async () => {
         await DATABASE.logout()

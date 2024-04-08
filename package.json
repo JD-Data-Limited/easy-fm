@@ -4,7 +4,9 @@
   "dependencies": {
     "@types/follow-redirects": "^1.14.4",
     "follow-redirects": "^1.15.5",
-    "moment": "^2.29.4"
+    "moment": "^2.29.4",
+    "node-fetch": "^3.3.2",
+    "node-fetch-cookies": "^2.1.1"
   },
   "type": "module",
   "main": "src/index.js",
@@ -49,6 +51,7 @@
     "eslint-plugin-promise": "^6.1.1",
     "inquirer": "^9.2.13",
     "ts-morph": "^21.0.1",
+    "typedoc": "^0.25.12",
     "typescript": "^5.4.3",
     "webpack": "^5.81.0",
     "webpack-cli": "^5.0.2"
