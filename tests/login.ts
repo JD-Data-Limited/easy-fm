@@ -5,9 +5,8 @@
 import {after, before, describe, it} from 'node:test'
 import {equal, notEqual} from 'node:assert'
 import {DATABASE, DatabaseSchema, HOST} from './connectionDetails.js'
-import {asTime, type Layout, type LayoutRecord, type PickPortals, query} from '../src/index.js'
+import {asDate, asTime, asTimestamp, type Layout, type LayoutRecord, type PickPortals, query} from '../src/index.js'
 import * as moment from 'moment'
-import {FindRequestSymbol} from "../src/utils/query.js";
 
 describe('Fetch host data', () => {
     it('Able to get host metadata', async () => {
@@ -38,28 +37,96 @@ describe('Database interactions', () => {
         await testLayout.getLayoutMeta()
     })
 
-    it('Fetch first 999 records', async () => {
-        const range = testLayout.records.list({portals: {}})
-        const records = await range.fetch()
-        record = records[0]
-    })
+    describe("Queries", () => {
+        it('Fetch first 999 records', async () => {
+            const range = testLayout.records.list({portals: {}})
+            const records = await range.fetch()
+            record = records[0]
+        })
 
-    it('Fetch first 999 records, with a portal', async () => {
-        const range = testLayout.records.list({portals: {test: {limit: 10, offset: 1}}, limit: 999})
-        const records = await range.fetch()
-        record = records[0]
-    })
+        it('Fetch first 999 records, with a portal', async () => {
+            const range = testLayout.records.list({portals: {test: {limit: 10, offset: 1}}, limit: 999})
+            const records = await range.fetch()
+            record = records[0]
+        })
 
-    const randomRecord = Math.floor(Math.random() * 500) + 1
-    it(`Iterate through 500 records, starting at record ${randomRecord} (changes randomly)`, async () => {
-        const records = testLayout.records.list({portals: {}, limit: 500, offset: randomRecord})
-        let recordCount = 0
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        for await (const record of records) {
-            recordCount += 1
-        }
+        const randomRecord = Math.floor(Math.random() * 500) + 1
+        it(`Iterate through 500 records, starting at record ${randomRecord} (changes randomly)`, async () => {
+            const records = testLayout.records.list({portals: {}, limit: 500, offset: randomRecord})
+            let recordCount = 0
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            for await (const record of records) {
+                recordCount += 1
+            }
 
-        equal(recordCount, 500)
+            equal(recordCount, 500)
+        })
+
+        it('Check query escaping', async () => {
+            const records = await testLayout.records.list({portals: {}, limit: 10})
+                .addRequest({
+                    OneVeryLongField: query`=${'*'}`
+                })
+                .fetch()
+            equal(
+                records.length,
+                0,
+                'Query escaping/sanitization failed. Generated query that failed: ' + JSON.stringify(query`=${'*'}`)
+            )
+        })
+
+        it('Check query escaping using iterable search', async () => {
+            const records = testLayout.records.list({portals: {}, limit: 10})
+                .addRequest({
+                    OneVeryLongField: query`=${'*'}`
+                })
+            let foundCount = 0
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            for await (const record of records) {
+                foundCount += 1
+            }
+            equal(
+                foundCount,
+                0,
+                'Query escaping/sanitization failed. Generated query that failed: ' + JSON.stringify(query`=${'*'}`)
+            )
+        })
+
+        it('Test searching based on times', async () => {
+            const records = testLayout.records.list({portals: {}, limit: 10})
+                .addRequest({
+                    CreationTimestamp: query`=${asTime(moment.default())}`
+                })
+            let foundCount = 0
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            for await (const record of records) {
+                foundCount += 1
+            }
+        })
+
+        it('Test searching based on dates', async () => {
+            const records = testLayout.records.list({portals: {}, limit: 10})
+                .addRequest({
+                    CreationTimestamp: query`=${asDate(moment.default())}`
+                })
+            let foundCount = 0
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            for await (const record of records) {
+                foundCount += 1
+            }
+        })
+
+        it('Test searching based on timestamps', async () => {
+            const records = testLayout.records.list({portals: {}, limit: 10})
+                .addRequest({
+                    CreationTimestamp: query`=${asTimestamp(moment.default())}`
+                })
+            let foundCount = 0
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            for await (const record of records) {
+                foundCount += 1
+            }
+        })
     })
 
     it('Create a record', async () => {
@@ -96,7 +163,9 @@ describe('Database interactions', () => {
 
     it('Duplicate first record', async () => {
         console.log('HERE!')
-        await record.duplicate()
+        let duplicateRecord = await record.duplicate()
+        // Delete duplicate
+        await duplicateRecord.delete()
     })
 
     describe("Containers", () => {
@@ -112,12 +181,16 @@ describe('Database interactions', () => {
             await record.fields.Container.upload(file);
         })
 
+        it('Re-fetch record', async () => {
+            await record.get()
+        })
+
         it("Test downloading as a buffer", async () => {
             await record.fields.Container.arrayBuffer()
         })
 
-        it("Test downloading as a stream (NodeJS readable stream)", () => {
-            // const stream = record.fields.Container.stream()
+        it("Test downloading as a stream (NodeJS readable stream)", async () => {
+            const stream = await record.fields.Container.stream()
             // return new Promise<void>((resolve, reject) => {
             //     stream.on("error", (e) => reject(e))
             //     stream.on("end", () => resolve())
@@ -128,54 +201,6 @@ describe('Database interactions', () => {
     it('Delete first record', async () => {
         await record.delete()
     })
-
-    it('Check query escaping', async () => {
-        const records = await testLayout.records.list({portals: {}, limit: 10})
-            .addRequest({
-                OneVeryLongField: query`=${'*'}`
-            })
-            .fetch()
-        equal(
-            records.length,
-            0,
-            'Query escaping/sanitization failed. Generated query that failed: ' + JSON.stringify(query`=${'*'}`)
-        )
-    })
-
-    it('Check query escaping using iterable search', async () => {
-        const records = testLayout.records.list({portals: {}, limit: 10})
-            .addRequest({
-                OneVeryLongField: query`=${'*'}`
-            })
-        let foundCount = 0
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        for await (const record of records) {
-            foundCount += 1
-        }
-        equal(
-            foundCount,
-            0,
-            'Query escaping/sanitization failed. Generated query that failed: ' + JSON.stringify(query`=${'*'}`)
-        )
-    })
-
-    it('Test searching based on timestamps', async () => {
-        const records = testLayout.records.list({portals: {}, limit: 10})
-            .addRequest({
-                CreationTimestamp: query`=${asTime(moment.default())}`
-            })
-        let foundCount = 0
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        for await (const record of records) {
-            foundCount += 1
-        }
-        equal(
-            foundCount,
-            0,
-            'Query escaping/sanitization failed. Generated query that failed: ' + JSON.stringify(query`=${asTime(moment.default())}`[FindRequestSymbol])
-        )
-    })
-
 
     after(async () => {
         await DATABASE.logout()
