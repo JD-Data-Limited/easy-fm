@@ -4,7 +4,7 @@
 
 import {type HostBase} from './HostBase.js'
 import {type ApiResults} from '../models/apiResults.js'
-import {RequestInfo, RequestInit, Response} from "node-fetch";
+import {type RequestInfo, type RequestInit, type Response} from 'node-fetch'
 
 export interface DatabaseBase {
     host: HostBase

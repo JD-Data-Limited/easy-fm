@@ -165,7 +165,6 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
                                 : this.layout.database.host.timeStampFormat
                     )
             }).join('')
-            console.log(this.layout.database.host.timeStampFormat, out[key])
         }
         return out
     }

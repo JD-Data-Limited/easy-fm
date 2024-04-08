@@ -12,9 +12,9 @@ import {type HostBase} from './HostBase.js'
 import {type DatabaseBase} from './databaseBase.js'
 import {type ApiLayout, type ApiResults} from '../models/apiResults.js'
 import {type DatabaseStructure} from '../databaseStructure.js'
-import fetch, {HeadersInit, RequestInfo, RequestInit, Response} from 'node-fetch';
-// @ts-ignore
-import fetchWithCookies, {CookieJar} from "node-fetch-cookies"
+import fetch, {type HeadersInit, type RequestInfo, type RequestInit, type Response} from 'node-fetch'
+// @ts-expect-error
+import fetchWithCookies, {CookieJar} from 'node-fetch-cookies'
 
 /**
  * Represents a database connection.
@@ -28,7 +28,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
     readonly name: string
     readonly debug: boolean
 
-    constructor(host: HostBase, conn: databaseOptionsWithExternalSources) {
+    constructor (host: HostBase, conn: databaseOptionsWithExternalSources) {
         super()
         this.host = host
         this.name = conn.database
@@ -37,7 +37,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
     }
 
     // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-    private generateExternalSourceLogin(data: databaseOptionsBase) {
+    private generateExternalSourceLogin (data: databaseOptionsBase) {
         if (data.credentials.method === 'filemaker') {
             const _data = data.credentials
             return {
@@ -45,8 +45,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
                 username: _data.username,
                 password: _data.password
             }
-        }
-        else {
+        } else {
             throw new Error('Not yet supported login method')
         }
     }
@@ -58,7 +57,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
      * @returns {Promise<void>} A promise that resolves with no value once the logout is successful.
      * @throws {Error} Throws an error if the user is not logged in.
      */
-    async logout(): Promise<void> {
+    async logout (): Promise<void> {
         if (this.token === '') throw new Error('Not logged in')
 
         const _fetch = await fetch(`${this.endpoint}/sessions/${this.token}`, {
@@ -68,7 +67,6 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
             }
         })
         await _fetch.json()
-        // console.log(data)
         this._token = ''
     }
 
@@ -80,11 +78,9 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
      * @throws {FMError} - Throws an FMError if login fails.
      * @return {Promise<string>} - Returns a promise that resolves to the access token upon successful login.
      */
-    async login(forceLogin = false) {
+    async login (forceLogin = false) {
         if (this.token !== '' && !forceLogin) return
 
-        console.log("RELOGGING IN")
-        console.trace()
         // Reset cookies
         this.cookies = new CookieJar()
 
@@ -93,9 +89,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         if (this.connection_details.credentials.method === 'token') {
             this._token = (this.connection_details.credentials).token
             return this.token
-        }
-        else {
-            console.time()
+        } else {
             const url = new URL(`${this.endpoint}/sessions`)
             url.hostname = this.host.hostname
             const res = await fetch(url, {
@@ -108,13 +102,11 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
                     })
                 })
             })
-            console.time()
             const _res = (await res.json()) as any
             if (res.status === 200) {
                 this._token = res.headers.get('x-fm-data-access-token') ?? ''
                 return this._token
-            }
-            else {
+            } else {
                 throw new FMError(
                     _res.messages[0].code as string | number,
                     _res.status as number,
@@ -124,7 +116,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         }
     }
 
-    get token() {
+    get token () {
         return this._token
     }
 
@@ -133,13 +125,13 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
      *
      * @returns {string} The endpoint URL.
      */
-    get endpoint(): string {
+    get endpoint (): string {
         return `${this.host.hostname}/fmi/data/v2/databases/${this.name}`
     }
 
-    async _apiRequestRaw(url: URL | RequestInfo, options: RequestInit & {
-        headers?: Record<string, string>,
-        useCookieJar?: boolean,
+    async _apiRequestRaw (url: URL | RequestInfo, options: RequestInit & {
+        headers?: Record<string, string>
+        useCookieJar?: boolean
     } = {}, autoRelogin = true): Promise<Response> {
         if (this.debug) console.log(`EASYFM DEBUG: ${JSON.stringify(options)} ${url instanceof Request ? url.url : url}`)
         if (this.token === '') await this.login(true)
@@ -152,9 +144,9 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         // options.rejectUnauthorized = this.host.verify
 
         const _fetch: Response =
-            options.useCookieJar ?
-                await fetchWithCookies(this.cookies, url, options):
-                await fetch(url, options)
+            options.useCookieJar
+                ? await fetchWithCookies(this.cookies, url, options)
+                : await fetch(url, options)
         // if (_fetch.headers.get('set-cookie')) {
         //     console.log(_fetch.headers.get('set-cookie'))
         //     for (const cookie of (_fetch.headers.get("Set-Cookie") ?? "").split("; ")) {
@@ -170,16 +162,15 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
             console.trace()
             await this.login(true)
             return await this._apiRequestRaw(url, options, false)
-        }
-        else return _fetch
+        } else return _fetch
     }
 
-    private _generateCookieHeader() {
-        let out: string[] = []
-        for (let key of Object.keys(this.cookies)) {
+    private _generateCookieHeader () {
+        const out: string[] = []
+        for (const key of Object.keys(this.cookies)) {
             out.push(`${key}=${this.cookies[key]}`)
         }
-        return out.join("; ")
+        return out.join('; ')
     }
 
     async _apiRequestJSON<T = any>(url: URL | RequestInfo, options: RequestInit & {
@@ -208,7 +199,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
      * @returns {Promise<Layout[]>} A promise that resolves to an array of Layout objects.
      * @throws {FMError} If there was an error retrieving the layouts.
      */
-    async listLayouts() {
+    async listLayouts () {
         const req = await this._apiRequestJSON<{ layouts: ApiLayout[] }>(`${this.endpoint}/layouts?page=2`)
         if (!req.response) throw new FMError(req.messages[0].code, req.httpStatus, req.messages[0].message)
 
@@ -225,11 +216,11 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
 
     layout<R extends keyof T['layouts']>(name: R): Layout<T['layouts'][R]>
     layout<R extends LayoutInterface>(name: string): Layout<R>
-    layout(name: string): Layout<any> {
+    layout (name: string): Layout<any> {
         return new Layout<LayoutInterface>(this, name)
     }
 
-    script(name: string, parameter = ''): Script {
+    script (name: string, parameter = ''): Script {
         return ({name, parameter} satisfies Script)
     }
 }

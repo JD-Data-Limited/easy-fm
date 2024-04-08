@@ -14,12 +14,12 @@ export const DATABASE_PASSWORD = process.env.FM_DB_PASSWORD ?? 'password'
 
 export const HOST = new FMHost(DATABASE_HOST, (moment) => 0 - moment.toDate().getTimezoneOffset(), false)
 
-export type DatabaseSchema = {
+export interface DatabaseSchema {
     layouts: {
         EasyFMBenchmark: {
             fields: {
-                Container: Field<Container>,
-                OneVeryLongField: Field<string>,
+                Container: Field<Container>
+                OneVeryLongField: Field<string>
                 PrimaryKey: Field<string>
             }
             portals: {
