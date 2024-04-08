@@ -4,7 +4,7 @@
 
 import {type HostBase} from './HostBase.js'
 import {type ApiResults} from '../models/apiResults.js'
-import {type IncomingMessage} from 'http'
+import {RequestInfo, RequestInit, Response} from "node-fetch";
 
 export interface DatabaseBase {
     host: HostBase
@@ -14,7 +14,6 @@ export interface DatabaseBase {
 
     // layouts: DatabaseStructure["layouts"]
 
-    _apiRequestJSON: <T = unknown>(url: string | Request, options?: RequestInit & { headers?: Record<string, string> } | undefined, autoRelogin?: boolean) => Promise<ApiResults<T>>
-    _apiRequestRaw: (url: string | Request, options?: RequestInit & { headers?: Record<string, string> } | undefined) => Promise<Response>
-    streamURL: (url: string) => Promise<IncomingMessage>
+    _apiRequestJSON: <T = unknown>(url: URL | RequestInfo, options?: RequestInit & { headers?: Record<string, string> } | undefined, autoRelogin?: boolean) => Promise<ApiResults<T>>
+    _apiRequestRaw: (url: URL | RequestInfo, options?: RequestInit & { headers?: Record<string, string>, useCookieJar?: boolean } | undefined) => Promise<Response>
 }

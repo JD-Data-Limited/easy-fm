@@ -65,11 +65,6 @@ export interface extraBodyOptions {
     scripts?: ScriptRequestData
 }
 
-export enum DownloadModes {
-    Stream,
-    Buffer
-}
-
 export interface Script {
     name: string
     parameter: string
