@@ -146,7 +146,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
 
         if (!options.headers) options.headers = {}
         options.headers.authorization = 'Bearer ' + this._token
-        options.redirect = "manual"
+        // options.redirect = "manual"
         // options.headers.cookies = this._generateCookieHeader()
         // console.log(options.headers.cookies)
         // options.rejectUnauthorized = this.host.verify
@@ -166,17 +166,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         // console.log(this.cookies, _fetch.status)
         // // console.log(this, this.cookies, url)
         // console.trace()
-        if (_fetch.type === "opaqueredirect" || _fetch.status === 301 || _fetch.status === 302) {
-            const redirectLocation = _fetch.headers.get("Location")
-            console.log(`REDIRECTED TO ${redirectLocation}!`)
-            if (redirectLocation) {
-                return await this._apiRequestRaw(`${redirectLocation}`, options)
-            }
-            else {
-                throw new Error("Location header missing")
-            }
-        }
-        else if (_fetch.status === 401 && autoRelogin) {
+        if (_fetch.status === 401 && autoRelogin) {
             console.trace()
             await this.login(true)
             return await this._apiRequestRaw(url, options, false)

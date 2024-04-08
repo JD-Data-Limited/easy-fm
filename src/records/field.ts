@@ -7,8 +7,6 @@ import {ApiFieldDisplayTypes, type ApiFieldMetadata, ApiFieldResultTypes, ApiFie
 import {type LayoutBase} from '../layouts/layoutBase.js'
 import {type Moment} from 'moment'
 import {FMError} from "../FMError.js";
-import {PassThrough, Readable} from "node:stream"
-import {EventEmitter} from "events";
 
 export type FieldValue = string | number | Moment | Container
 export type Container = null
@@ -166,25 +164,21 @@ export class Field<T extends FieldValue> {
     }
 
     @containerDownloadFunction
-    async #streamAsync(stream: PassThrough) {
+    async #streamAsync() {
         let req = await this.parent.layout.database._apiRequestRaw(this.string, {useCookieJar: true})
         if (!req.ok || !req.body) {
-            stream.destroy(new Error(`HTTP Error: ${req.status} (${req.statusText})`))
-            return
+            throw new Error(`HTTP Error: ${req.status} (${req.statusText})`)
         }
-        req.body.pipe(stream)
+        return req.body
     }
 
-    stream(): Readable {
-        const stream = new PassThrough()
-        console.log(this.string)
-        this.#streamAsync(stream)
-
-        return stream
+    stream() {
+        return this.#streamAsync()
     }
 
     @containerDownloadFunction
     async arrayBuffer() {
+        console.log(this.string)
         const req = await this.parent.layout.database._apiRequestRaw(this.string, {useCookieJar: true})
         if (!req.ok) throw new Error(`HTTP Error: ${req.status} (${req.statusText})`)
         console.log(req)
@@ -194,33 +188,53 @@ export class Field<T extends FieldValue> {
 
 function containerDownloadFunction<T extends FieldValue, R = unknown>(originalMethod: (...p: any[]) => Promise<R>, context: ClassMethodDecoratorContext<Field<T>>) {
     async function replacementMethod(this: Field<T>, ...args: any[]) {
-        return ContainerDownloadExecutor.enqueue(() => originalMethod.call(this, ...args))
+        return ContainerDownloadExecutor.processTask(() => originalMethod.call(this, ...args))
     }
 
     return replacementMethod
 }
 
-class ContainerDownloadExecutorClass extends EventEmitter {
+class ContainerDownloadExecutorClass {
     hasDownloadedFirstContainer: 0 | 1 | 2 = 0
+    waitingFuncs: {
+        func: (() => any),
+        done: ((...args: any[]) => any),
+        err: ((e: Error) => any)
+    }[] = []
 
-    constructor() {
-        super()
-    }
+    constructor() {}
 
-    async enqueue<T extends () => Promise<any>>(task: T) {
+    async processTask<T extends () => Promise<any>>(task: T) {
         let isFirstTask = this.hasDownloadedFirstContainer === 0
         if (isFirstTask) {
             this.hasDownloadedFirstContainer = 1
-            let res = await task()
+            let res
+            try {
+                res = await task()
+            } catch(e) {
+                this.hasDownloadedFirstContainer = 0
+                let nextTask = this.waitingFuncs.splice(0, 1)[0]
+                if (nextTask) {
+                    this.processTask(nextTask.func)
+                        .then(res => nextTask.done(res))
+                        .catch(e => nextTask.err(e))
+                }
+                throw e
+            }
             this.hasDownloadedFirstContainer = 2
-            console.log("EMITTED!")
-            this.emit("firstTaskDone")
+            for (let task of this.waitingFuncs) {
+                task.func()
+                    .then((res: any) => task.done(res))
+                    .catch((e: any) => task.err(e))
+            }
             return res
         }
         else if (this.hasDownloadedFirstContainer === 1) {
             return new Promise((resolve, reject) => {
-                this.once("firstTaskDone", async () => {
-                    resolve(await task())
+                this.waitingFuncs.push({
+                    func: task,
+                    done: resolve,
+                    err: reject
                 })
             })
         }
