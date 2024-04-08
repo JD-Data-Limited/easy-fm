@@ -177,7 +177,6 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
         const res = await this.layout.database._apiRequestJSON(this.endpoint, {
             method: 'DELETE'
         })
-        console.log(res)
         if (typeof res.response?.scriptError !== 'undefined' && res.response?.scriptError !== '0') {
             throw new FMError(res.response.scriptError, res.httpStatus, res)
         } else if (res.messages[0].code === '0') {

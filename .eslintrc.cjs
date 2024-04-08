@@ -26,6 +26,7 @@ module.exports = {
         "@typescript-eslint/indent": ["error", 4],
         "@typescript-eslint/explicit-function-return-type": 0,
         "@typescript-eslint/strict-boolean-expressions": 0,
-        "@typescript-eslint/object-curly-spacing": 0
+        "@typescript-eslint/object-curly-spacing": 0,
+        "no-useless-return": 0
     }
 }
