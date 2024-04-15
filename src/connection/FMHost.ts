@@ -25,6 +25,7 @@ export default class FMHost implements HostBase {
     readonly hostname: string
     readonly timezoneOffsetFunc: (moment: Moment) => number
     readonly verify: boolean
+    readonly protocol: 'http:' | 'https:'
     _metadata: FMHostMetadata | null = null
 
     constructor (
@@ -33,7 +34,8 @@ export default class FMHost implements HostBase {
         verify = true
     ) {
         if (!(/^https?:\/\//).test(_hostname)) throw new Error('hostname MUST begin with either http:// or https://')
-        this.hostname = _hostname
+        this.protocol = _hostname.startsWith('https:') ? 'https:' : 'http:'
+        this.hostname = _hostname.split('//')[1]
         this.timezoneOffsetFunc = timezoneOffset
         this.verify = verify
     }
@@ -105,7 +107,7 @@ export default class FMHost implements HostBase {
     async getMetadata () {
         if (this._metadata) return this._metadata
 
-        const _fetch = await fetch(`${this.hostname}/fmi/data/v2/productInfo`, {
+        const _fetch = await fetch(`${this.protocol}//${this.hostname}/fmi/data/v2/productInfo`, {
             method: 'GET'
         })
         const data = await _fetch.json() as ApiResults<FMHostMetadata>
