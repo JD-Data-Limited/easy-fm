@@ -7,6 +7,7 @@ import {type Moment} from 'moment'
 
 export interface HostBase {
     readonly hostname: string
+    readonly protocol: string
     readonly timezoneOffsetFunc: (moment: Moment) => number
     readonly verify: boolean
     metadata: FMHostMetadata

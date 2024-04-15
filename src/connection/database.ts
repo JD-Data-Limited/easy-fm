@@ -13,7 +13,7 @@ import {type DatabaseBase} from './databaseBase.js'
 import {type ApiLayout, type ApiResults} from '../models/apiResults.js'
 import {type DatabaseStructure} from '../databaseStructure.js'
 import fetch, {type HeadersInit, type RequestInfo, type RequestInit, type Response} from 'node-fetch'
-// @ts-expect-error
+// @ts-expect-error - fetchWithCookies does not have available typescript types
 import fetchWithCookies, {CookieJar} from 'node-fetch-cookies'
 
 /**
@@ -45,7 +45,8 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
                 username: _data.username,
                 password: _data.password
             }
-        } else {
+        }
+        else {
             throw new Error('Not yet supported login method')
         }
     }
@@ -89,7 +90,8 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         if (this.connection_details.credentials.method === 'token') {
             this._token = (this.connection_details.credentials).token
             return this.token
-        } else {
+        }
+        else {
             const url = new URL(`${this.endpoint}/sessions`)
             url.hostname = this.host.hostname
             const res = await fetch(url, {
@@ -106,7 +108,8 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
             if (res.status === 200) {
                 this._token = res.headers.get('x-fm-data-access-token') ?? ''
                 return this._token
-            } else {
+            }
+            else {
                 throw new FMError(
                     _res.messages[0].code as string | number,
                     _res.status as number,
@@ -126,18 +129,34 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
      * @returns {string} The endpoint URL.
      */
     get endpoint (): string {
-        return `${this.host.hostname}/fmi/data/v2/databases/${this.name}`
+        return `${this.host.protocol}//${this.host.hostname}/fmi/data/v2/databases/${this.name}`
     }
 
     async _apiRequestRaw (url: URL | RequestInfo, options: RequestInit & {
         headers?: Record<string, string>
         useCookieJar?: boolean
+        retries?: number
     } = {}, autoRelogin = true): Promise<Response> {
-        if (this.debug) console.log(`EASYFM DEBUG: ${JSON.stringify(options)} ${url instanceof Request ? url.url : url}`)
-        if (this.token === '') await this.login(true)
+        if (this.debug) {
+            console.log(
+                `EASYFM DEBUG: ${JSON.stringify(options)} ${
+                    url instanceof URL
+                        ? url.toString()
+                        : typeof url === 'string' ? url : url.url
+                }`
+            )
+        }
+        const reqIsToDBHost = (
+            url instanceof URL
+                ? url
+                : typeof url === 'string'
+                    ? new URL(url)
+                    : new URL(url.url)
+        ).hostname === this.host.hostname
+        if (reqIsToDBHost && this.token === '') await this.login(true)
 
         if (!options.headers) options.headers = {}
-        options.headers.authorization = 'Bearer ' + this._token
+        if (reqIsToDBHost) options.headers.authorization = 'Bearer ' + this._token
         // options.redirect = "manual"
         // options.headers.cookies = this._generateCookieHeader()
         // console.log(options.headers.cookies)
@@ -158,19 +177,21 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         // console.log(this.cookies, _fetch.status)
         // // console.log(this, this.cookies, url)
         // console.trace()
-        if (_fetch.status === 401 && autoRelogin) {
-            console.trace()
+        if (!_fetch.ok && (!options.retries || options.retries > 0)) {
+            if (this.debug) {
+                console.log(`EASYFM DEBUG: RE-ATTEMPTING REQUEST (${_fetch.status}) ${
+                    url instanceof URL
+                        ? url.toString()
+                        : typeof url === 'string' ? url : url.url
+                }`)
+            }
+            return await this._apiRequestRaw(url, {...options, retries: (options?.retries ?? 1) - 1})
+        }
+        else if (_fetch.status === 401 && reqIsToDBHost && autoRelogin) {
             await this.login(true)
             return await this._apiRequestRaw(url, options, false)
-        } else return _fetch
-    }
-
-    private _generateCookieHeader () {
-        const out: string[] = []
-        for (const key of Object.keys(this.cookies)) {
-            out.push(`${key}=${this.cookies[key]}`)
         }
-        return out.join('; ')
+        else return _fetch
     }
 
     async _apiRequestJSON<T = any>(url: URL | RequestInfo, options: RequestInit & {

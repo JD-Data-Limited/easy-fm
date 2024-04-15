@@ -38,5 +38,6 @@ export const DATABASE = HOST.database<DatabaseSchema>({
         username: DATABASE_ACCOUNT,
         password: DATABASE_PASSWORD
     },
-    externalSources: []
+    externalSources: [],
+    debug: true
 })

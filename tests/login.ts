@@ -40,14 +40,12 @@ describe('Database interactions', () => {
     describe('Queries', () => {
         it('Fetch first 999 records', async () => {
             const range = testLayout.records.list({portals: {}})
-            const records = await range.fetch()
-            record = records[0]
+            await range.fetch()
         })
 
         it('Fetch first 999 records, with a portal', async () => {
             const range = testLayout.records.list({portals: {test: {limit: 10, offset: 1}}, limit: 999})
-            const records = await range.fetch()
-            record = records[0]
+            await range.fetch()
         })
 
         const randomRecord = Math.floor(Math.random() * 500) + 1
@@ -133,7 +131,7 @@ describe('Database interactions', () => {
     })
 
     it('Create a record', async () => {
-        const record = await testLayout.records.create({portals: []})
+        record = await testLayout.records.create({portals: []})
         await record.commit()
     })
 
@@ -165,7 +163,9 @@ describe('Database interactions', () => {
     })
 
     it('Duplicate first record', async () => {
+        console.log(record.recordId)
         const duplicateRecord = await record.duplicate()
+        console.log(duplicateRecord.recordId)
         // Delete duplicate
         await duplicateRecord.delete()
     })

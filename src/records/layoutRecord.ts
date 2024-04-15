@@ -70,6 +70,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
                 method: 'POST',
                 body: JSON.stringify(data)
             })
+            console.log(res)
 
             if (!res.response) {
                 throw new FMError(res.messages[0].code, res.httpStatus, res)
