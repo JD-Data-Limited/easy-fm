@@ -27,6 +27,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
     private cookies = new CookieJar()
     readonly name: string
     readonly debug: boolean
+    readonly #layoutCache = new Map<string, Layout<any>>()
 
     constructor (host: HostBase, conn: databaseOptionsWithExternalSources) {
         super()
@@ -220,8 +221,9 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
      * @returns {Promise<Layout[]>} A promise that resolves to an array of Layout objects.
      * @throws {FMError} If there was an error retrieving the layouts.
      */
-    async listLayouts () {
-        const req = await this._apiRequestJSON<{ layouts: ApiLayout[] }>(`${this.endpoint}/layouts?page=2`)
+    async listLayouts (page: number = 0) {
+        const req = await this._apiRequestJSON<{ layouts: ApiLayout[] }>(`${this.endpoint}/layouts?page=${encodeURIComponent(page)}`)
+        console.log(req)
         if (!req.response) throw new FMError(req.messages[0].code, req.httpStatus, req.messages[0].message)
 
         const cycleLayoutNames = (layouts: ApiLayout[]) => {
@@ -238,7 +240,15 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
     layout<R extends keyof T['layouts']>(name: R): Layout<T['layouts'][R]>
     layout<R extends LayoutInterface>(name: string): Layout<R>
     layout (name: string): Layout<any> {
-        return new Layout<LayoutInterface>(this, name)
+        let layout = this.#layoutCache.get(name)
+        if (layout) return layout
+        layout = new Layout<LayoutInterface>(this, name)
+        this.#layoutCache.set(name, layout)
+        return layout
+    }
+
+    clearLayoutCache () {
+        this.#layoutCache.clear()
     }
 
     script (name: string, parameter = ''): Script {
