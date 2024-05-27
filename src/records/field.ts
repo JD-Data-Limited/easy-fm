@@ -160,12 +160,12 @@ export class Field<T extends FieldValue> {
     }
 
     @containerDownloadFunction
-    async #streamAsync (): Promise<{data: NodeJS.ReadableStream, mime: string}> {
+    async #streamAsync (): Promise<{ data: NodeJS.ReadableStream, mime: string }> {
         const req = await this.parent.layout.database._apiRequestRaw(this.string, {useCookieJar: true})
         if (!req.ok || !req.body) {
             throw new Error(`HTTP Error: ${req.status} (${req.statusText})`)
         }
-        return {data: req.body, mime: req.headers.get("Content-Type") ?? ''}
+        return {data: req.body, mime: req.headers.get('Content-Type') ?? ''}
     }
 
     async stream () {
@@ -173,10 +173,10 @@ export class Field<T extends FieldValue> {
     }
 
     @containerDownloadFunction
-    async arrayBuffer (): Promise<{data: ArrayBuffer, mime: string}> {
+    async arrayBuffer (): Promise<{ data: ArrayBuffer, mime: string }> {
         const req = await this.parent.layout.database._apiRequestRaw(this.string, {useCookieJar: true})
         if (!req.ok) throw new Error(`HTTP Error: ${req.status} (${req.statusText})`)
-        return {data: await req.arrayBuffer(), mime: req.headers.get("Content-Type") ?? ''}
+        return {data: await req.arrayBuffer(), mime: req.headers.get('Content-Type') ?? ''}
     }
 }
 
