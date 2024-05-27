@@ -15,6 +15,7 @@ FileMaker Data API.
 * [Installation](#installation)
 * [Usage](#usage)
   * [Connecting to a database](#connecting-to-a-database)
+  * [An important note about timezones](#an-important-note-about-timezones)
   * [Getting records](#getting-records)
     * [Fetch a range of records](#fetch-a-range-of-records)
     * [Searching for records](#searching-for-records)
@@ -43,21 +44,11 @@ easy-fm also requires the following to be configured within your FileMaker envir
 
 # Usage
 
-- You need to know what your server's UTC time offset (in minutes) is.
-    - Running `0 - (new Date()).getTimezoneOffset()` in javascript will give you the UTC time offset for your current
-      timezone.
-
 ## Connecting to a database
 
-easy-fm currently does not support connecting to external data sources, or authenticating by any method other than plain
-FileMaker authentication.
-
 ```javascript
-import FMHost, {FMError} from "easy-fm"; // Import the module
-const host = new FMHost(
-    "https://<your-servers-address>",
-    700 // Timezone offset
-)
+import FMHost from "easy-fm"; // Import the module
+const host = new FMHost("https://<your-servers-address>")
 const database = host.database({
     database: "your_database.fmp12",
     credentials: {
@@ -68,17 +59,33 @@ const database = host.database({
     externalSources: []
 })
 
+// OPTIONAL - EasyFM will automatically attempt a login anyway when you perform your first operation
 database.login().then(() => {
-    // Record operations can only be performed after a successful login
+
 })
 ```
 
 > **NOTE:** A connection will only give you access to the layouts in the database you are connected to, and not the
 > layouts
 > in
-> the external sources that you have specified.
+> any external sources that you have specified.
 >
-> If you need to interact with layouts on multiple databases, you need to open one connection per database.
+> If you need to interact with layouts on multiple databases, you need to open a separate connection for each.
+
+## An important note about timezones
+
+Although it is recommended, timestamps in FileMaker databases are not always stored in UTC time. To account for this,
+EasyFM allows you to specify a function/method that determines the server's current timezone.
+EasyFM will use this timezone offset to convert timestamps to and from JavaScript Date objects.
+
+```typescript
+import FMHost from "easy-fm";
+import {type Moment} from 'moment'
+
+const host = new FMHost("https://<your-servers-address>", (moment: Moment) => {
+
+})
+```
 
 ## Getting records
 
@@ -101,6 +108,7 @@ console.log(records)
 ```
 
 ### Searching for records
+
 Searching for records uses the same syntax as above, but with additional steps to add your search parameters.
 
 ```javascript

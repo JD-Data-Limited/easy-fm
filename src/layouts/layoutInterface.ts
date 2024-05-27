@@ -2,14 +2,12 @@
  * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import {Portal} from "../records/portal.js";
-import {RecordFieldsMap} from "./recordFieldsMap.js";
+import {type Portal} from '../records/portal.js'
+import {type RecordFieldsMap} from './recordFieldsMap.js'
 
 export interface LayoutInterface {
-    fields: RecordFieldsMap,
+    fields: RecordFieldsMap
     portals: PortalInterface
 }
 
-export interface PortalInterface {
-    [key: string | number | symbol]: Portal<RecordFieldsMap>
-}
+export type PortalInterface = Record<string | number | symbol, Portal<RecordFieldsMap>>
