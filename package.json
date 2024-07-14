@@ -28,8 +28,11 @@
   },
   "keywords": [
     "FileMaker",
-    "Data API",
-    "REST"
+    "Data",
+    "API",
+    "REST",
+    "simplicity",
+    "business"
   ],
   "author": "JD-Data Limited",
   "bugs": {
