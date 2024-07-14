@@ -63,6 +63,8 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
             data['script.presort'] = extraBody.scripts.presort.name
             if (extraBody.scripts.presort.parameter) data['script.presort.param'] = extraBody.scripts.presort.parameter
         }
+        if (extraBody.options) data.options = extraBody.options
+        if (extraBody.deleteRelatedRecords) data.fieldData.deleteRelated = extraBody.deleteRelatedRecords.map(i => `${i.table}.${i.recordId}`)
 
         if (this.recordId === -1) {
             // This is a new LayoutRecord
@@ -70,7 +72,6 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
                 method: 'POST',
                 body: JSON.stringify(data)
             })
-            console.log(res)
 
             if (!res.response) {
                 throw new FMError(res.messages[0].code, res.httpStatus, res)

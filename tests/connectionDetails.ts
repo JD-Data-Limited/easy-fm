@@ -21,6 +21,7 @@ export interface DatabaseSchema {
                 Container: Field<Container>
                 OneVeryLongField: Field<string>
                 PrimaryKey: Field<string>
+                AVeryStrictField: Field<string>
             }
             portals: {
                 test: Portal<{
@@ -30,6 +31,8 @@ export interface DatabaseSchema {
         }
     }
 }
+
+console.log(DATABASE_HOST, DATABASE_NAME, DATABASE_ACCOUNT, DATABASE_PASSWORD)
 
 export const DATABASE = HOST.database<DatabaseSchema>({
     database: DATABASE_NAME,

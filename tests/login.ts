@@ -3,6 +3,7 @@
  */
 
 import {after, before, describe, it} from 'node:test'
+import * as assert from 'node:assert'
 import {equal, notEqual} from 'node:assert'
 import {DATABASE, type DatabaseSchema, HOST} from './connectionDetails.js'
 import {asDate, asTime, asTimestamp, type Layout, type LayoutRecord, type PickPortals, query} from '../src/index.js'
@@ -142,6 +143,26 @@ describe('Database interactions', () => {
     it('Modify first record', async () => {
         record.fields[testField].set(Math.random().toString())
         await record.commit()
+    })
+
+    it('Attempt to commit invalid data', async () => {
+        await assert.rejects(async () => {
+            record.fields.AVeryStrictField.set('12')
+            await record.commit()
+        })
+    })
+
+    it('Attempt to commit invalid data (with override)', async () => {
+        record.fields.AVeryStrictField.set('12')
+        await record.commit({
+            options: {entrymode: 'script'}
+        })
+
+        after(async () => {
+            // Remove the invalid data
+            record.fields.AVeryStrictField.set('')
+            await record.commit()
+        })
     })
 
     it('Perform a search for a single record', async () => {

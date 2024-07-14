@@ -63,6 +63,18 @@ export interface ScriptRequestData {
 
 export interface extraBodyOptions {
     scripts?: ScriptRequestData
+    options?: {
+        /**
+         * Defines what entry mode to use (FileMaker Server 2024 and newer)
+         * user (default) - Field validation occurs as per normal. Request is blocked if validation failed.
+         * script - Field validation is overridden/ignored when allowed in the database schema.
+         */
+        entrymode: 'user' | 'script'
+    }
+    deleteRelatedRecords?: Array<{
+        table: string
+        recordId: number
+    }>
 }
 
 export interface Script {
