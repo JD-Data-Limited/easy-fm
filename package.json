@@ -8,7 +8,7 @@
   },
   "type": "module",
   "main": "src/index.js",
-  "module": "es2022",
+  "module": "es2023",
   "homepage": "https://github.com/JD-Data-Limited/easy-fm",
   "url": "https://github.com/JD-Data-Limited/easy-fm",
   "license": "SEE LICENSE IN LICENSE",
