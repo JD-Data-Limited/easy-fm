@@ -2,46 +2,45 @@
  * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import {EventEmitter} from "events";
-import {generateAuthorizationHeaders} from "./generateAuthorizationHeaders.js";
-import {FMError} from "../FMError.js";
-import {LayoutInterface} from "../layouts/layoutInterface.js";
-import {Layout} from "../layouts/layout.js";
-import HTTP_REDIRECT from "follow-redirects"
-import {
-    databaseOptionsBase,
-    databaseOptionsWithExternalSources,
-    loginOptionsFileMaker,
-    loginOptionsToken,
-    Script
-} from "../types.js";
-import {HostBase} from "./HostBase.js"
-import {DatabaseBase} from "./databaseBase.js";
-import {ApiLayout, ApiResults} from "../models/apiResults.js";
-import {DatabaseStructure} from "../databaseStructure.js";
-import {IncomingMessage} from "http";
+import {EventEmitter} from 'events'
+import {generateAuthorizationHeaders} from './generateAuthorizationHeaders.js'
+import {FMError} from '../FMError.js'
+import {type LayoutInterface} from '../layouts/layoutInterface.js'
+import {Layout} from '../layouts/layout.js'
+import {type databaseOptionsBase, type databaseOptionsWithExternalSources, type Script} from '../types.js'
+import {type HostBase} from './HostBase.js'
+import {type DatabaseBase} from './databaseBase.js'
+import {type ApiLayout, type ApiResults} from '../models/apiResults.js'
+import {type DatabaseStructure} from '../databaseStructure.js'
+import fetch, {type HeadersInit, type RequestInfo, type RequestInit, type Response} from 'node-fetch'
+// @ts-expect-error - fetchWithCookies does not have available typescript types
+import fetchWithCookies, {CookieJar} from 'node-fetch-cookies'
 
-type GetLayoutReturnType<T extends DatabaseStructure, R extends LayoutInterface | string> = R extends string ? T["layouts"][R] : R
-
+/**
+ * Represents a database connection.
+ * @template T - The structure of the database.
+ */
 export class Database<T extends DatabaseStructure> extends EventEmitter implements DatabaseBase {
-    private _token: any;
-    readonly host: HostBase;
-    private connection_details: databaseOptionsWithExternalSources
-    private cookies: { [key: string]: string } = {}
-    readonly name: string;
+    private _token: string = ''
+    readonly host: HostBase
+    private readonly connection_details: databaseOptionsWithExternalSources
+    private cookies = new CookieJar()
+    readonly name: string
     readonly debug: boolean
+    readonly #layoutCache = new Map<string, Layout<any>>()
 
-    constructor(host: HostBase, conn: databaseOptionsWithExternalSources) {
+    constructor (host: HostBase, conn: databaseOptionsWithExternalSources) {
         super()
         this.host = host
         this.name = conn.database
         this.connection_details = conn
-        this.debug = !!conn.debug
+        this.debug = conn.debug ?? false
     }
 
-    private generateExternalSourceLogin(data: databaseOptionsBase) {
-        if (data.credentials.method === "filemaker") {
-            let _data = <loginOptionsFileMaker>data.credentials
+    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+    private generateExternalSourceLogin (data: databaseOptionsBase) {
+        if (data.credentials.method === 'filemaker') {
+            const _data = data.credentials
             return {
                 database: data.database,
                 username: _data.username,
@@ -49,102 +48,166 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
             }
         }
         else {
-            throw "Not yet supported login method"
+            throw new Error('Not yet supported login method')
         }
     }
 
-    async logout(): Promise<void> {
-        if (!this.token) throw new Error("Not logged in")
+    /**
+     * Logs out the user by deleting the current session token.
+     * Throws an error if the user is not logged in.
+     *
+     * @returns {Promise<void>} A promise that resolves with no value once the logout is successful.
+     * @throws {Error} Throws an error if the user is not logged in.
+     */
+    async logout (): Promise<void> {
+        if (this.token === '') throw new Error('Not logged in')
 
-        let _fetch = await fetch(`${this.endpoint}/sessions/${this.token}`, {
-            method: "DELETE",
+        const _fetch = await fetch(`${this.endpoint}/sessions/${this.token}`, {
+            method: 'DELETE',
             headers: {
-                "content-type": "application/json"
+                'content-type': 'application/json'
             }
         })
-        let data = await _fetch.json()
-        // console.log(data)
-        this._token = null
+        await _fetch.json()
+        this._token = ''
     }
 
-    async login(forceLogin = false) {
+    /**
+     * Logs in to the database. Not required, as this is often done automatically
+     *
+     * @param {boolean} [forceLogin=false] - Whether to force login even if already logged in.
+     * @throws {Error} - Throws an error if already logged in and forceLogin is false.
+     * @throws {FMError} - Throws an FMError if login fails.
+     * @return {Promise<string>} - Returns a promise that resolves to the access token upon successful login.
+     */
+    async login (forceLogin = false) {
+        if (this.token !== '' && !forceLogin) return
+
         // Reset cookies
-        this.cookies = {}
+        this.cookies = new CookieJar()
 
         await this.host.getMetadata()
-        if (this.token && !forceLogin) throw new Error("Already logged in. Run logout() first")
 
-        if (this.connection_details.credentials.method === "token") {
-            this._token = (<loginOptionsToken>this.connection_details.credentials).token
+        if (this.connection_details.credentials.method === 'token') {
+            this._token = (this.connection_details.credentials).token
             return this.token
         }
         else {
-            console.time()
-            let url = new URL(`${this.endpoint}/sessions`)
+            const url = new URL(`${this.endpoint}/sessions`)
             url.hostname = this.host.hostname
-            let res = await fetch(url, {
-                method: "POST",
+            const res = await fetch(url, {
+                method: 'POST',
                 headers: generateAuthorizationHeaders(this.connection_details.credentials) as unknown as HeadersInit,
                 body: JSON.stringify({
                     fmDataSource: this.connection_details.externalSources.map(i => {
-                        let _i = <databaseOptionsBase>i
+                        const _i = i
                         return this.generateExternalSourceLogin(_i)
                     })
                 })
             })
-            console.time()
-            let _res = <any>(await res.json())
+            const _res = (await res.json()) as any
             if (res.status === 200) {
-                this._token = res.headers.get('x-fm-data-access-token')
+                this._token = res.headers.get('x-fm-data-access-token') ?? ''
                 return this._token
             }
             else {
-                throw new FMError(_res.messages[0].code, _res.status, res)
+                throw new FMError(
+                    _res.messages[0].code as string | number,
+                    _res.status as number,
+                    res
+                )
             }
         }
     }
 
-    get token() {
+    get token () {
         return this._token
     }
 
-    get endpoint(): string {
-        return `${this.host.hostname}/fmi/data/v2/databases/${this.name}`
+    /**
+     * Returns the endpoint URL for the database connection.
+     *
+     * @returns {string} The endpoint URL.
+     */
+    get endpoint (): string {
+        return `${this.host.protocol}//${this.host.hostname}/fmi/data/v2/databases/${this.name}`
     }
 
-    async apiRequestRaw(url: string | Request, options: any = {}, autoRelogin = true): Promise<Response> {
-        if (this.debug) console.log(`EASYFM DEBUG: ${options.method?.toString().toUpperCase() || "GET"} ${url instanceof Request ? url.url : url}`)
-        if (!this.token) await this.login(true)
+    async _apiRequestRaw (url: URL | RequestInfo, options: RequestInit & {
+        headers?: Record<string, string>
+        useCookieJar?: boolean
+        retries?: number
+    } = {}, autoRelogin = true): Promise<Response> {
+        if (this.debug) {
+            console.log(
+                `EASYFM DEBUG: ${JSON.stringify(options)} ${
+                    url instanceof URL
+                        ? url.toString()
+                        : typeof url === 'string' ? url : url.url
+                }`
+            )
+        }
+        const reqIsToDBHost = (
+            url instanceof URL
+                ? url
+                : typeof url === 'string'
+                    ? new URL(url)
+                    : new URL(url.url)
+        ).hostname === this.host.hostname
+        if (reqIsToDBHost && this.token === '') await this.login(true)
 
         if (!options.headers) options.headers = {}
-        options.headers["authorization"] = "Bearer " + this._token
-        options.rejectUnauthorized = this.host.verify
+        if (reqIsToDBHost) options.headers.authorization = 'Bearer ' + this._token
+        // options.redirect = "manual"
+        // options.headers.cookies = this._generateCookieHeader()
+        // console.log(options.headers.cookies)
+        // options.rejectUnauthorized = this.host.verify
 
-        let _fetch = await fetch(url, options)
-        if (_fetch.headers.get('set-cookie')) {
-            for (let cookie of _fetch.headers.get('set-cookie') || []) {
-                let cookie_split = cookie.split("=")
-                this.cookies[cookie_split[0]] = cookie_split[1]
+        const _fetch: Response =
+            options.useCookieJar
+                ? await fetchWithCookies(this.cookies, url, options)
+                : await fetch(url, options)
+        // if (_fetch.headers.get('set-cookie')) {
+        //     console.log(_fetch.headers.get('set-cookie'))
+        //     for (const cookie of (_fetch.headers.get("Set-Cookie") ?? "").split("; ")) {
+        //         const cookieSplit = cookie.split('=')
+        //         console.log("COOKIE SPLIT:", cookieSplit)
+        //         if (cookieSplit[1]) this.cookies[cookieSplit[0]] = cookieSplit[1]
+        //     }
+        // }
+        // console.log(this.cookies, _fetch.status)
+        // // console.log(this, this.cookies, url)
+        // console.trace()
+        if (!_fetch.ok && (!options.retries || options.retries > 0)) {
+            if (this.debug) {
+                console.log(`EASYFM DEBUG: RE-ATTEMPTING REQUEST (${_fetch.status}) ${
+                    url instanceof URL
+                        ? url.toString()
+                        : typeof url === 'string' ? url : url.url
+                }`)
             }
+            return await this._apiRequestRaw(url, {...options, retries: (options?.retries ?? 1) - 1})
         }
-
-        if (_fetch.status === 401 && autoRelogin) {
+        else if (_fetch.status === 401 && reqIsToDBHost && autoRelogin) {
             await this.login(true)
-            return await this.apiRequestRaw(url, options, false)
+            return await this._apiRequestRaw(url, options, false)
         }
-        return _fetch
+        else return _fetch
     }
-    async apiRequestJSON<T = any>(url: string | Request, options: any = {}): Promise<ApiResults<T>> {
+
+    async _apiRequestJSON<T = any>(url: URL | RequestInfo, options: RequestInit & {
+        headers?: Record<string, string>
+    } = {}): Promise<ApiResults<T>> {
         if (!options.headers) options.headers = {}
-        options.headers["content-type"] = options.headers["content-type"] ? options.headers["content-type"] : "application/json"
-        let _fetch = await this.apiRequestRaw(url, options)
-        let data = await _fetch.json() as ApiResults<T>
+        options.headers['content-type'] = options.headers['content-type'] ? options.headers['content-type'] : 'application/json'
+        const _fetch = await this._apiRequestRaw(url, options)
+        const data = await _fetch.json() as ApiResults<T>
 
         // Remove response if it is empty. This makes checking for an empty response easier
         if (data.response && Object.keys(data.response).length === 0) delete data.response
 
         // console.log(data.messages[0])
-        if (data.messages[0].code !== "0") {
+        if (data.messages[0].code !== '0') {
             throw new FMError(data.messages[0].code, _fetch.status, data)
         }
 
@@ -152,72 +215,43 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
         return data
     }
 
-    async listLayouts() {
-        let req = await this.apiRequestJSON<{layouts: ApiLayout[]}>(`${this.endpoint}/layouts?page=2`)
+    /**
+     * Retrieves a list of layouts in the current FileMaker database.
+     *
+     * @returns {Promise<Layout[]>} A promise that resolves to an array of Layout objects.
+     * @throws {FMError} If there was an error retrieving the layouts.
+     */
+    async listLayouts (page: number = 0) {
+        const req = await this._apiRequestJSON<{ layouts: ApiLayout[] }>(`${this.endpoint}/layouts?page=${encodeURIComponent(page)}`)
+        console.log(req)
         if (!req.response) throw new FMError(req.messages[0].code, req.httpStatus, req.messages[0].message)
 
         const cycleLayoutNames = (layouts: ApiLayout[]) => {
-            let names: string[] =  []
-            for (let layout of layouts) {
+            let names: string[] = []
+            for (const layout of layouts) {
                 if (layout.folderLayoutNames) names = names.concat(cycleLayoutNames(layout.folderLayoutNames))
                 else names.push(layout.name)
             }
             return names
         }
-        let layoutNames
-
         return cycleLayoutNames(req.response.layouts).map(layout => new Layout(this, layout))
     }
 
-    getLayout<R extends keyof T["layouts"]>(name: R): Layout<T["layouts"][R]>
-    getLayout<R extends LayoutInterface>(name: string): Layout<R>
-    getLayout(name: string): Layout<any> {
-        return new Layout<LayoutInterface>(this, name)
+    layout<R extends keyof T['layouts']>(name: R): Layout<T['layouts'][R]>
+    layout<R extends LayoutInterface>(name: string): Layout<R>
+    layout (name: string): Layout<any> {
+        let layout = this.#layoutCache.get(name)
+        if (layout) return layout
+        layout = new Layout<LayoutInterface>(this, name)
+        this.#layoutCache.set(name, layout)
+        return layout
     }
 
-    script(name: string, parameter = ""): Script {
-        return ({name, parameter} as Script)
+    clearLayoutCache () {
+        this.#layoutCache.clear()
     }
 
-    _tokenExpired() {
-        this.emit("token_expired")
-    }
-
-    streamURL(url: string): Promise<IncomingMessage> {
-        return new Promise((resolve, reject) => {
-            if (!url || typeof url !== "string") {
-                throw new Error("URL is empty, or has invalid value")
-            }
-
-            let headers: {[key: string]: string} = {}
-            if (Object.keys(this.cookies).length !== 0) {
-                headers["Cookie"] = Object.keys(this.cookies)
-                    .map(key => {
-                        return key + "=" + this.cookies[key]
-                    })
-                    .join("; ")
-            }
-
-            const check_for_cookies = (res: HTTP_REDIRECT.ResponseDetails) => {
-                // Check for the 'set-cookie' header. If it exists, remember it and strip it for better security.
-                if (res.headers['set-cookie']) {
-                    for (let cookie of res.headers['set-cookie']) {
-                        let cookie_split = cookie.split("=")
-                        this.cookies[cookie_split[0]] = cookie_split[1]
-                    }
-                    res.headers['set-cookie'] = undefined
-                }
-            }
-
-            // Automatically switch between the http and https modules, based on which is needed
-            (url.startsWith("https") ? HTTP_REDIRECT.https : HTTP_REDIRECT.http).get(url, {
-                headers,
-                beforeRedirect: (options: any, res: any) => check_for_cookies(res)
-            }, (res) => {
-                check_for_cookies(res)
-
-                resolve(res)
-            })
-        })
+    script (name: string, parameter = ''): Script {
+        return ({name, parameter} satisfies Script)
     }
 }
