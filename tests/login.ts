@@ -9,8 +9,6 @@ import {asTime, Field, Layout, LayoutRecord, Portal, query} from "../src/index.j
 import * as moment from "moment";
 
 describe("Fetch host data", () => {
-    it(`Hostname: ${HOST.hostname}`)
-
     it("Able to get host metadata", async () => {
         await HOST.getMetadata()
     })
