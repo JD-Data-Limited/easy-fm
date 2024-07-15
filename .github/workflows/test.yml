@@ -26,9 +26,6 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Check env variables
-        run: echo ${{ secrets.FM_DB_HOST }} | sed 's/./& /g'
-
       - name: Run tests
         env:
           FM_DB_HOST: ${{ secrets.FM_DB_HOST }}
