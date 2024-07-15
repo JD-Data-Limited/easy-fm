@@ -1,11 +1,6 @@
 /*
  * Copyright (c) 2022-2024. See LICENSE file for more information
  */
-export var DownloadModes;
-(function (DownloadModes) {
-    DownloadModes[DownloadModes["Stream"] = 0] = "Stream";
-    DownloadModes[DownloadModes["Buffer"] = 1] = "Buffer";
-})(DownloadModes || (DownloadModes = {}));
 export var RecordTypes;
 (function (RecordTypes) {
     RecordTypes[RecordTypes["UNKNOWN"] = 0] = "UNKNOWN";
