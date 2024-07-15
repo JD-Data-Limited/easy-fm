@@ -1,0 +1,36 @@
+name: Node.js CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    environment: TEST DB ENVIROMENT
+
+    strategy:
+      matrix:
+        node-version: [20.x]  # Adjust the Node.js versions as needed
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        env:
+          FM_DB_HOST: ${{ secrets.FM_DB_HOST }}
+          FM_DB_NAME: ${{ secrets.FM_DB_NAME }}
+          FM_DB_ACCOUNT: ${{ secrets.FM_DB_ACCOUNT }}
+          FM_DB_PASSWORD: ${{ secrets.FM_DB_PASSWORD }}
+          # Add all other environment variables here
+        run: npm test
