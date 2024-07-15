@@ -17,7 +17,7 @@
     "./src/**/*"
   ],
   "scripts": {
-    "test": "node --test tests/login.js",
+    "test": "npx tsc -p . && node --test tests/login.js",
     "build": "webpack"
   },
   "repository": {
