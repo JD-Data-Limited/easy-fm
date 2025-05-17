@@ -6,14 +6,16 @@
     "moduleResolution": "NodeNext",
     "declaration": true,
     "noImplicitAny": true,
-    "strict": true
-//    "outDir": "./dist"
+    "strict": true,
+    "esModuleInterop": true,
+    "outDir": "./dist"
   },
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "__tests__",
+    "__mocks__"
   ],
   "files": [
-    "src/index.ts",
-    "tests/login.ts",
+    "src/index.ts"
   ]
 }

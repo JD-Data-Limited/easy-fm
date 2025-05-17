@@ -16,5 +16,11 @@ module.exports = {
     target: "web",
     externals: {
         "node-fetch": "fetch"
+    },
+    resolve: {
+        fallback: {
+            url: false,
+            fs: false
+        }
     }
 }
