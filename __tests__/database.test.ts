@@ -5,9 +5,18 @@
 import {after, before, describe, it} from 'node:test'
 import * as assert from 'node:assert'
 import {equal, notEqual} from 'node:assert'
-import {DATABASE, type DatabaseSchema, HOST} from './connectionDetails.js'
-import {asDate, asTime, asTimestamp, type Layout, type LayoutRecord, type PickPortals, query} from '../src/index.js'
-import * as moment from 'moment'
+import {DATABASE, type DatabaseSchema, HOST} from '../__mocks__/connectionDetails.js'
+// @ts-expect-error
+import {
+    asDate,
+    asTime,
+    asTimestamp,
+    type Layout,
+    type LayoutRecord,
+    type PickPortals,
+    query
+} from '../dist/index.min.js'
+import moment from 'moment'
 
 describe('Fetch host data', () => {
     it('Able to get host metadata', async () => {
@@ -94,7 +103,7 @@ describe('Database interactions', () => {
         it('Test searching based on times', async () => {
             const records = testLayout.records.list({portals: {}, limit: 10})
                 .addRequest({
-                    CreationTimestamp: query`=${asTime(moment.default())}`
+                    CreationTimestamp: query`=${asTime(moment())}`
                 })
             let foundCount = 0
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -107,7 +116,7 @@ describe('Database interactions', () => {
         it('Test searching based on dates', async () => {
             const records = testLayout.records.list({portals: {}, limit: 10})
                 .addRequest({
-                    CreationTimestamp: query`=${asDate(moment.default())}`
+                    CreationTimestamp: query`=${asDate(moment())}`
                 })
             let foundCount = 0
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -120,7 +129,7 @@ describe('Database interactions', () => {
         it('Test searching based on timestamps', async () => {
             const records = testLayout.records.list({portals: {}, limit: 10})
                 .addRequest({
-                    CreationTimestamp: query`=${asTimestamp(moment.default())}`
+                    CreationTimestamp: query`=${asTimestamp(moment())}`
                 })
             let foundCount = 0
             // eslint-disable-next-line @typescript-eslint/no-unused-vars

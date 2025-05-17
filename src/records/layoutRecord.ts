@@ -16,7 +16,7 @@ import {
     type ApiRowDataDef
 } from '../models/apiResults.js'
 import {type LayoutBase} from '../layouts/layoutBase.js'
-import * as moment from 'moment/moment.js'
+import moment from 'moment'
 import {type Field, type FieldValue} from './field.js'
 
 export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAYOUT['fields']> implements LayoutRecordBase {
@@ -88,7 +88,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
 
         // for (let item of Object.keys(data)) extraBody[item] = data[item]
         const res = await this.layout.database._apiRequestJSON<{
-            modId: string,
+            modId: string
             newPortalRecordInfo: Array<{
                 tableName: string
                 recordId: string
@@ -189,12 +189,12 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
     }
 
     fieldsToObject (filter = (a: Field<FieldValue>) => a.edited): Omit<ApiRowDataDef, 'portalData'> {
-        const fields_processed: ApiFieldData = {}
+        const fieldsProcessed: ApiFieldData = {}
         let field: Field<FieldValue>
         for (field of this.fieldsArray.filter(field => filter(field))) {
             let value = field.value as string | number | Date
             if (value instanceof Date) {
-                let _value = moment.default(value)
+                let _value = moment(value)
                 _value = _value
                     .utcOffset(this.layout.database.host.timezoneOffsetFunc(_value))
 
@@ -209,12 +209,12 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
                         value = _value.format(this.layout.database.host.timeStampFormat)
                 }
             }
-            fields_processed[field.id] = value
+            fieldsProcessed[field.id] = value
         }
         const obj = {
             recordId: this.recordId.toString(),
             modId: this.modId.toString(),
-            fieldData: fields_processed
+            fieldData: fieldsProcessed
         }
         return obj
     }
@@ -222,7 +222,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
     toObject (
         filter: (a: Field<FieldValue>) => any = (a) => a.edited,
         portalFilter: (a: Portal<any>) => any = (a) => a.records.find(record => record.edited),
-        portalRowFilter: (a: PortalRecord<never>) => any = (a) => a.edited,
+        portalRowFilter: (a: PortalRecord<any>) => any = (a) => a.edited,
         portalFieldFilter: (a: Field<FieldValue>) => any = (a) => a.edited
     ) {
         const obj: ApiRowDataDef = {
@@ -235,7 +235,6 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
         if (portals) {
             obj.portalData = {}
             for (const portal of portals) {
-                // @ts-expect-error
                 obj.portalData[portal.name] = portal.records.filter(a => portalRowFilter(a)).map(record => {
                     return record.toObject(portalFieldFilter)
                 })

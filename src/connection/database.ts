@@ -81,6 +81,7 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
      * @return {Promise<string>} - Returns a promise that resolves to the access token upon successful login.
      */
     async login (forceLogin = false) {
+        console.log(this.endpoint)
         if (this.token !== '' && !forceLogin) return
 
         // Reset cookies
@@ -92,31 +93,30 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
             this._token = (this.connection_details.credentials).token
             return this.token
         }
-        else {
-            const url = new URL(`${this.endpoint}/sessions`)
-            url.hostname = this.host.hostname
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: generateAuthorizationHeaders(this.connection_details.credentials) as unknown as HeadersInit,
-                body: JSON.stringify({
-                    fmDataSource: this.connection_details.externalSources.map(i => {
-                        const _i = i
-                        return this.generateExternalSourceLogin(_i)
-                    })
+
+        const url = new URL(`${this.endpoint}/sessions`)
+        url.hostname = this.host.hostname
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: generateAuthorizationHeaders(this.connection_details.credentials) as unknown as HeadersInit,
+            body: JSON.stringify({
+                fmDataSource: this.connection_details.externalSources.map(i => {
+                    const _i = i
+                    return this.generateExternalSourceLogin(_i)
                 })
             })
-            const _res = (await res.json()) as any
-            if (res.status === 200) {
-                this._token = res.headers.get('x-fm-data-access-token') ?? ''
-                return this._token
-            }
-            else {
-                throw new FMError(
-                    _res.messages[0].code as string | number,
-                    _res.status as number,
-                    res
-                )
-            }
+        })
+        const _res = (await res.json()) as any
+        if (res.status === 200) {
+            this._token = res.headers.get('x-fm-data-access-token') ?? ''
+            return this._token
+        }
+        else {
+            throw new FMError(
+                _res.messages[0].code as string | number,
+                _res.status as number,
+                res
+            )
         }
     }
 
@@ -147,37 +147,24 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
                 }`
             )
         }
-        const reqIsToDBHost = (
+        const urlParsed = (
             url instanceof URL
                 ? url
                 : typeof url === 'string'
                     ? new URL(url)
                     : new URL(url.url)
-        ).hostname === this.host.hostname
+        )
+        const reqIsToDBHost = urlParsed.hostname === this.host.hostname && urlParsed.pathname.startsWith("/fmi/data")
         if (reqIsToDBHost && this.token === '') await this.login(true)
 
         if (!options.headers) options.headers = {}
         if (reqIsToDBHost) options.headers.authorization = 'Bearer ' + this._token
-        // options.redirect = "manual"
-        // options.headers.cookies = this._generateCookieHeader()
-        // console.log(options.headers.cookies)
-        // options.rejectUnauthorized = this.host.verify
 
         const _fetch: Response =
             options.useCookieJar
                 ? await fetchWithCookies(this.cookies, url, options)
                 : await fetch(url, options)
-        // if (_fetch.headers.get('set-cookie')) {
-        //     console.log(_fetch.headers.get('set-cookie'))
-        //     for (const cookie of (_fetch.headers.get("Set-Cookie") ?? "").split("; ")) {
-        //         const cookieSplit = cookie.split('=')
-        //         console.log("COOKIE SPLIT:", cookieSplit)
-        //         if (cookieSplit[1]) this.cookies[cookieSplit[0]] = cookieSplit[1]
-        //     }
-        // }
-        // console.log(this.cookies, _fetch.status)
-        // // console.log(this, this.cookies, url)
-        // console.trace()
+
         if (!_fetch.ok && (!options.retries || options.retries > 0)) {
             if (this.debug) {
                 console.log(`EASYFM DEBUG: RE-ATTEMPTING REQUEST (${_fetch.status}) ${

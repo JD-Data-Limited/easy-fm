@@ -3,6 +3,7 @@ module.exports = {
         "browser": false,
         "es2021": true
     },
+    "ignorePatterns": ["__test__/", "__mocks__/"],
     "extends": "standard-with-typescript",
     "overrides": [
         {

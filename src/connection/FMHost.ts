@@ -34,8 +34,9 @@ export default class FMHost implements HostBase {
         verify = true
     ) {
         if (!(/^https?:\/\//).test(_hostname)) throw new Error('hostname MUST begin with either http:// or https://')
-        this.protocol = _hostname.startsWith('https:') ? 'https:' : 'http:'
-        this.hostname = _hostname.split('//')[1]
+        const url = new URL(_hostname)
+        this.protocol = url.protocol as ('http:' | 'https:')
+        this.hostname = url.hostname
         this.timezoneOffsetFunc = timezoneOffset
         this.verify = verify
     }
