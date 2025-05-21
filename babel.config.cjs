@@ -6,7 +6,7 @@ module.exports = {
                 targets: {
                     node: 'current',
                 },
-                modules: 'commonjs',  // Transpile ESM to CommonJS
+                modules: false // Preserve ESM modules
             },
         ],
         '@babel/preset-typescript'

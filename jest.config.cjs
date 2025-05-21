@@ -1,7 +1,11 @@
 module.exports = {
     preset: 'ts-jest',
     testEnvironment: 'node',
+    moduleNameMapper: {
+        '^(.+)\\.js$': '$1'  // Remove .js extension for imports
+    },
     moduleFileExtensions: ['ts', 'js', 'json'],
+    extensionsToTreatAsEsm: ['.ts'],
     transform: {
         '^.+\\.ts$': 'babel-jest',
         '^.+\\.js$': 'babel-jest',
