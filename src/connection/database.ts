@@ -81,7 +81,6 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
      * @return {Promise<string>} - Returns a promise that resolves to the access token upon successful login.
      */
     async login (forceLogin = false) {
-        console.log(this.endpoint)
         if (this.token !== '' && !forceLogin) return
 
         // Reset cookies
@@ -210,7 +209,6 @@ export class Database<T extends DatabaseStructure> extends EventEmitter implemen
      */
     async listLayouts (page: number = 0) {
         const req = await this._apiRequestJSON<{ layouts: ApiLayout[] }>(`${this.endpoint}/layouts?page=${encodeURIComponent(page)}`)
-        console.log(req)
         if (!req.response) throw new FMError(req.messages[0].code, req.httpStatus, req.messages[0].message)
 
         const cycleLayoutNames = (layouts: ApiLayout[]) => {
