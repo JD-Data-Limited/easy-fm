@@ -1,6 +1,6 @@
 {
   "name": "@jd-data-limited/easy-fm",
-  "version": "4.1.7",
+  "version": "4.1.8",
   "dependencies": {
     "@types/follow-redirects": "^1.14.4",
     "@types/node": "^22.7.7",
@@ -18,7 +18,7 @@
   "license": "SEE LICENSE IN LICENSE",
   "description": "easy-fm is a Node.js module that allows you to interact with\r a [FileMaker database stored](https://www.claris.com/filemaker/) on\r a [FileMaker server](https://www.claris.com/filemaker/server/). This module interacts with your server using the\r [FileMaker Data API](https://help.claris.com/en/data-api-guide/content/index.html).",
   "files": [
-    "./src/**/*"
+    "./dist/**/*"
   ],
   "scripts": {
     "build": "tsc",
