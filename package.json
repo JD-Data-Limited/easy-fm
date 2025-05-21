@@ -1,16 +1,17 @@
 {
   "name": "@jd-data-limited/easy-fm",
-  "version": "4.1.6",
+  "version": "4.1.7",
   "dependencies": {
     "@types/follow-redirects": "^1.14.4",
     "@types/node": "^22.7.7",
+    "commander": "^14.0.0",
     "follow-redirects": "^1.15.5",
     "moment": "^2.29.4",
     "node-fetch": "^3.3.2",
     "node-fetch-cookies": "^2.1.1"
   },
   "type": "module",
-  "main": "src/index.js",
+  "main": "dist/index.js",
   "module": "es2022",
   "homepage": "https://jd-data.com/project/easyfm/",
   "url": "https://github.com/JD-Data-Limited/easy-fm",
@@ -20,7 +21,7 @@
     "./src/**/*"
   ],
   "scripts": {
-    "build": "tsc && webpack",
+    "build": "tsc",
     "test": "npm run build && jest"
   },
   "repository": {
@@ -63,9 +64,8 @@
     "jest": "^29.7.0",
     "ts-jest": "^29.2.5",
     "ts-morph": "^21.0.1",
-    "typescript": "^5.6.3",
-    "webpack": "^5.81.0",
-    "webpack-cli": "^5.0.2"
+    "tsx": "^4.19.4",
+    "typescript": "^5.6.3"
   },
   "bin": {
     "easyfm": "src/bin/cli.js"

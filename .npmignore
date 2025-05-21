@@ -1,0 +1,7 @@
+/.env
+/.idea
+/node_modules
+/src
+/coverage
+/__mocks__
+/__test__

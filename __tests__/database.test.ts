@@ -2,20 +2,9 @@
  * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import {after, before, describe, it} from 'node:test'
-import * as assert from 'node:assert'
 import {equal, notEqual} from 'node:assert'
 import {DATABASE, type DatabaseSchema, HOST} from '../__mocks__/connectionDetails.js'
-// @ts-expect-error
-import {
-    asDate,
-    asTime,
-    asTimestamp,
-    type Layout,
-    type LayoutRecord,
-    type PickPortals,
-    query
-} from '../dist/index.min.js'
+import {asDate, asTime, asTimestamp, type Layout, type LayoutRecord, type PickPortals, query} from '../dist/index.js'
 import moment from 'moment'
 
 describe('Fetch host data', () => {
@@ -32,7 +21,7 @@ describe('Database interactions', () => {
     PickPortals<DatabaseSchema['layouts']['EasyFMBenchmark'], never>
     >
 
-    before(async () => {
+    beforeAll(async () => {
         const token = await DATABASE.login()
         console.log('TOKEN:', token)
         equal(typeof token, 'string')
@@ -155,23 +144,24 @@ describe('Database interactions', () => {
     })
 
     it('Attempt to commit invalid data', async () => {
-        await assert.rejects(async () => {
+        await expect(async () => {
             record.fields.AVeryStrictField.set('12')
             await record.commit()
-        })
+        }).rejects.toThrow()
     })
 
     it('Attempt to commit invalid data (with override)', async () => {
-        record.fields.AVeryStrictField.set('12')
-        await record.commit({
-            options: {entrymode: 'script'}
-        })
-
-        after(async () => {
+        try {
+            record.fields.AVeryStrictField.set('12')
+            await record.commit({
+                options: {entrymode: 'script'}
+            })
+        } finally {
             // Remove the invalid data
             record.fields.AVeryStrictField.set('')
             await record.commit()
-        })
+        }
+
     })
 
     it('Perform a search for a single record', async () => {
@@ -233,7 +223,7 @@ describe('Database interactions', () => {
         await record.delete()
     })
 
-    after(async () => {
+    afterAll(async () => {
         await DATABASE.logout()
     })
 })
