@@ -26,6 +26,7 @@ type PortalData<T extends LayoutInterface> = {
 }
 export interface GetOperationOptions<T extends LayoutInterface> {
     portals: Partial<PortalData<T>>
+    requests?: Array<{ req: FindRequest, omit?: boolean }>
     limit?: number
     offset?: number
 }
@@ -37,7 +38,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
     protected sortData: Array<{ fieldName: string, sortOrder: SortOrder }> = []
     protected portals: Partial<PortalData<T>>
     protected offset: number = 1
-    protected queries: Array<{ req: FindRequestRaw, omit: boolean }> = []
+    protected requests: Array<{ req: FindRequestRaw, omit?: boolean }> = []
 
     constructor (layout: LayoutBase, options: OPTIONS) {
         this.layout = layout
@@ -45,14 +46,17 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         this.portals = options.portals
         this.offset = options.offset ?? 1 // Offset refers to the starting record. offset 1 is the same as no offset.
         this.limit = options.limit ?? 100
+        if (options.requests) {
+            for (const req of options.requests) this.addRequest(req.req, req.omit ?? false)
+        }
     }
 
     get isFindRequest () {
-        return this.queries.length !== 0
+        return this.requests.length !== 0
     }
 
     private formatQueries () {
-        const test = this.queries.map(query => {
+        const test = this.requests.map(query => {
             const out: any = {}
             for (const key of Object.keys(query.req)) {
                 if (query.req[key]) out[key] = query.req[key]
@@ -83,7 +87,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         if (this.scriptData.prerequest) params['script.prerequest'] = this.scriptData.prerequest.name
         if (this.scriptData.prerequest?.parameter) params['script.prerequest.param'] = this.scriptData.prerequest.parameter
 
-        if (this.queries.length !== 0) params.query = this.formatQueries()
+        if (this.requests.length !== 0) params.query = this.formatQueries()
 
         const portals: Array<keyof typeof this.portals> = Object.keys(this.portals)
         params.portal = portals
@@ -177,7 +181,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
      * @return {Object} - The current object instance.
      */
     addRequest (query: FindRequest, omit = false) {
-        this.queries.push({req: this.parseFindRequest(query), omit})
+        this.requests.push({req: this.parseFindRequest(query), omit})
         return this
     }
 

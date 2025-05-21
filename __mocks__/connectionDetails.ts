@@ -2,7 +2,7 @@
  * Copyright (c) 2023. See LICENSE file for more information
  */
 
-import FMHost, {type Container, type Field, type Portal} from '../src/index.js'
+import FMHost, {type Container, type Field, type Portal} from '../dist/index.js'
 import {config} from 'dotenv'
 
 config()
@@ -34,8 +34,18 @@ export interface DatabaseSchema {
 
 console.log(DATABASE_HOST, DATABASE_NAME, DATABASE_ACCOUNT, DATABASE_PASSWORD)
 
-export const DATABASE = HOST.database<DatabaseSchema>({
+console.log({
     database: DATABASE_NAME,
+    credentials: {
+        method: 'filemaker',
+        username: DATABASE_ACCOUNT,
+        password: DATABASE_PASSWORD
+    },
+    externalSources: [],
+    debug: true
+})
+export const DATABASE = HOST.database<DatabaseSchema>({
+    database: 'EasyFMBenchmark',
     credentials: {
         method: 'filemaker',
         username: DATABASE_ACCOUNT,
