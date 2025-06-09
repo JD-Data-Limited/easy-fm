@@ -75,8 +75,8 @@ export interface extraBodyOptions {
          * user (default) - Follow this rule
          * script - Ignore this rule
          */
-        prohibitMode?: 'user' | 'script'
-    }
+        prohibitmode?: 'user' | 'script'
+    } & Record<string, any>
     deleteRelatedRecords?: Array<{
         table: string
         recordId: number
