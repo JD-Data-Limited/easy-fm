@@ -1,6 +1,6 @@
 {
   "name": "@jd-data-limited/easy-fm",
-  "version": "4.1.10",
+  "version": "4.1.12",
   "dependencies": {
     "@types/follow-redirects": "^1.14.4",
     "@types/node": "^22.7.7",

@@ -61,21 +61,21 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
                         .utcOffset(this.layout.database.host.timezoneOffsetFunc(date), true)
                         .local()
                     _field.set(date)
-                    _field.edited = false
+                    _field.updateOriginalContents()
                 } else if (_field.metadata.result === 'time') {
                     let date = moment.default(fieldData[key])
                     date = date
                         .utcOffset(this.layout.database.host.timezoneOffsetFunc(date), true)
                         .local()
                     _field.set(date)
-                    _field.edited = false
+                    _field.updateOriginalContents()
                 } else if (_field.metadata.result === 'date') {
                     let date = moment.default(fieldData[key])
                     date = date
                         .utcOffset(this.layout.database.host.timezoneOffsetFunc(date), true)
                         .local()
                     _field.set(date)
-                    _field.edited = false
+                    _field.updateOriginalContents()
                 }
             }
             fields[key] = _field
@@ -86,6 +86,6 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
 
     _onSave () {
         this.emit('saved')
-        for (const field of this.fieldsArray) field.edited = false
+        for (const field of this.fieldsArray) field.updateOriginalContents()
     }
 }
