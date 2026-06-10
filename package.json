@@ -1,6 +1,6 @@
 {
   "name": "@jd-data-limited/easy-fm",
-  "version": "4.1.8",
+  "version": "4.1.9",
   "dependencies": {
     "@types/follow-redirects": "^1.14.4",
     "@types/node": "^22.7.7",
@@ -69,5 +69,6 @@
   },
   "bin": {
     "easyfm": "src/bin/cli.js"
-  }
+  },
+  "packageManager": "pnpm@11.5.3+sha512.7ac1c919341c213a34dc0d02afb7143c5c26ac26ee8c4782deea821b8ac64d2134a081fd8941dae6e29bbb48f58dfc2b7fbceeccc07cb2f09d219d342a4969ed"
 }
