@@ -234,7 +234,11 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         }
     }
 
-    [Symbol.asyncIterator] () {
+    /**
+     * Creates an iterator that iterates throguh all results
+     * @param pageSize min: 1, max: 999
+     */
+    iterate (pageSize = 100) {
         let nextOffset = this.offset
         const startOffset: number = JSON.parse(JSON.stringify(this.offset))
         const limit = this.limit
@@ -249,12 +253,13 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
                 records = []
                 return
             }
-            records = await this.performFind(nextOffset, theoreticalLimit < 100 ? theoreticalLimit : 100)
-            nextOffset += 100
-            if (records.length < 100) exitAfterLastRecord = true
+            const requestLimit = Math.min(theoreticalLimit, pageSize)
+            records = await this.performFind(nextOffset, requestLimit)
+            nextOffset += pageSize
+            if (records.length < requestLimit) exitAfterLastRecord = true
         }
 
-        return {
+        const iterator = {
             next: async () => {
                 if (records.length === 0 && !exitAfterLastRecord) {
                     await fetch()
@@ -266,7 +271,16 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
                     const record = records.shift()
                     return {done: false, value: record}
                 }
+            },
+            [Symbol.asyncIterator] () {
+                return this
             }
         }
+
+        return iterator
+    }
+
+    [Symbol.asyncIterator] () {
+        return this.iterate()
     }
 }
