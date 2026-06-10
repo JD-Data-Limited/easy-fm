@@ -27,15 +27,26 @@ export class Field<T extends FieldValue> {
     parent: Parentable
     id: string
     protected _value: T | null
-    edited: boolean
+    #originalContents: T | null
 
     static firstContainerDownload: Promise<any> | null = null
 
-    constructor (record: Parentable, id: string, contents: T) {
+    constructor (record: Parentable, id: string, originalContents: T) {
         this.parent = record
         this.id = id
-        this._value = contents
-        this.edited = false
+        this._value = originalContents
+        this.#originalContents = originalContents
+    }
+
+    get edited () {
+        return this.#originalContents !== this._value
+    }
+
+    /**
+     * Resets the 'edited' state of this field, without changing its value
+     */
+    updateOriginalContents () {
+        this.#originalContents = this._value
     }
 
     /**
@@ -47,7 +58,6 @@ export class Field<T extends FieldValue> {
     set (content: T | null) {
         if (this.metadata.result === 'container') throw new Error('Cannot set container value using set(). Use upload() instead.')
         else this._value = content
-        this.edited = true
     }
 
     get metadata (): ApiFieldMetadata {
@@ -114,7 +124,7 @@ export class Field<T extends FieldValue> {
     }
 
     set value (value: T) {
-        this._value = value
+        this.set(value)
     }
 
     get string (): string {

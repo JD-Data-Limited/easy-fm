@@ -69,8 +69,14 @@ export interface extraBodyOptions {
          * user (default) - Field validation occurs as per normal. Request is blocked if validation failed.
          * script - Field validation is overridden/ignored when allowed in the database schema.
          */
-        entrymode: 'user' | 'script'
-    }
+        entrymode?: 'user' | 'script'
+        /**
+         * Overrides the 'prohibit modification of this field during data entry' property (FileMaker Server 2024 - 21.1.1 and newer)
+         * user (default) - Follow this rule
+         * script - Ignore this rule
+         */
+        prohibitmode?: 'user' | 'script'
+    } & Record<string, any>
     deleteRelatedRecords?: Array<{
         table: string
         recordId: number
