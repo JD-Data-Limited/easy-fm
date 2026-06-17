@@ -10,6 +10,7 @@ import {type RecordFieldsMap} from '../layouts/recordFieldsMap.js'
 import {type LayoutBase} from '../layouts/layoutBase.js'
 import {type ApiFieldData} from '../models/apiResults.js'
 import {Field, type FieldValue} from './field.js'
+import {type z} from 'zod'
 
 export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter {
     readonly layout: LayoutBase
@@ -24,7 +25,7 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
     fields: T
     protected portalData: any[] = []
 
-    protected constructor (layout: LayoutBase, recordId: number, modId = recordId, fieldData: ApiFieldData) {
+    protected constructor (layout: LayoutBase, recordId: number, modId = recordId, fieldData: z.infer<typeof ApiFieldData>) {
         super()
         this.layout = layout
         this.recordId = recordId
@@ -49,7 +50,7 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
         return Object.values(this.fields)
     }
 
-    protected processFieldData (fieldData: ApiFieldData) {
+    protected processFieldData (fieldData: z.infer<typeof ApiFieldData>) {
         const fields: RecordFieldsMap = {}
 
         for (const key of Object.keys(fieldData)) {

@@ -8,13 +8,14 @@ import {type LayoutInterface} from './layoutInterface.js'
 import {FMError} from '../FMError.js'
 import {type LayoutBase} from './layoutBase.js'
 import {type DatabaseBase} from '../connection/databaseBase.js'
-import {type ApiLayoutMetadata, type ApiScriptResult} from '../models/apiResults.js'
+import {ApiLayoutMetadata, ApiScriptResult} from '../models/apiResults.js'
+import {type z} from 'zod'
 
 export class Layout<T extends LayoutInterface> implements LayoutBase {
     readonly database: DatabaseBase
     readonly name: string
     readonly records = new LayoutRecordManager<T>(this)
-    metadata: ApiLayoutMetadata | null = null
+    metadata: z.infer<typeof ApiLayoutMetadata> | null = null
 
     constructor (database: DatabaseBase, name: string) {
         this.database = database
@@ -33,17 +34,14 @@ export class Layout<T extends LayoutInterface> implements LayoutBase {
     async runScript (script: Script): Promise<ScriptResult> {
         let url = `${this.endpoint}/script/${encodeURIComponent(script.name)}`
         if (script.parameter) url += '?script.param=' + encodeURIComponent(script.parameter)
-        const res = await this.database._apiRequestJSON<ApiScriptResult>(url, {
+        const res = await this.database.fetchJSON(url, {
+            type: ApiScriptResult,
             method: 'GET'
         })
-        if (res.response && res.messages[0].code === '0') {
-            const error = parseInt(res.response.scriptError)
-            return {
-                scriptError: error ? new FMError(error, 200, res) : undefined,
-                scriptResult: res.response.scriptResult
-            }
-        } else {
-            throw new FMError(res.messages[0].code, res.httpStatus, res)
+        const error = parseInt(res.scriptError)
+        return {
+            scriptError: error ? new FMError(error, 200, res) : undefined,
+            scriptResult: res.scriptResult
         }
     }
 
@@ -53,14 +51,13 @@ export class Layout<T extends LayoutInterface> implements LayoutBase {
      * @returns {Promise<ApiLayoutMetadata>} The layout metadata.
      * @throws {FMError} If an error occurs during the API request.
      */
-    public async getLayoutMeta (): Promise<ApiLayoutMetadata> {
+    public async getLayoutMeta (): Promise<z.infer<typeof ApiLayoutMetadata>> {
         if (this.metadata) {
             return this.metadata
         }
 
-        const res = await this.database._apiRequestJSON<ApiLayoutMetadata>(this.endpoint)
-        if (!res.response) throw new FMError(res.messages[0].code, res.httpStatus, res)
-        this.metadata = res.response
+        const res = await this.database.fetchJSON(this.endpoint, {type: ApiLayoutMetadata})
+        this.metadata = res
         return this.metadata
     }
 }

@@ -6,7 +6,7 @@ import {type LayoutInterface} from '../../layouts/layoutInterface.js'
 import {type PickPortals, type ScriptRequestData} from '../../types.js'
 import {type LayoutBase} from '../../layouts/layoutBase.js'
 import {LayoutRecord} from '../layoutRecord.js'
-import {type ApiRecordResponseObj} from '../../models/apiResults.js'
+import {ApiRecordResponseObj} from '../../models/apiResults.js'
 import {FMError} from '../../FMError.js'
 import {FindRequestSymbol, type Query} from '../../utils/query.js'
 
@@ -164,7 +164,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
                     .format(
                         item.type === 'date'
                             ? this.layout.database.host.dateFormat
-                            : item.type == 'time'
+                            : item.type === 'time'
                                 ? this.layout.database.host.timeFormat
                                 : this.layout.database.host.timeStampFormat
                     )
@@ -197,7 +197,6 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
     private async performFind (offset: number, limit: number): Promise<Array<LayoutRecord<
     PickPortals<T, keyof OPTIONS['portals']>
     >>> {
-        const trace = new Error()
         await this.layout.getLayoutMeta()
 
         const isFind = this.isFindRequest
@@ -206,23 +205,20 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         const reqData = {
             // port: 443,
             method: isFind ? 'POST' : 'GET',
+            type: ApiRecordResponseObj,
             body: isFind ? JSON.stringify(this.generateParamsBody(offset, limit)) : undefined
         }
 
         try {
-            const res = await this.layout.database._apiRequestJSON<ApiRecordResponseObj>(
+            const res = await this.layout.database.fetchJSON(
                 endpoint,
                 reqData
             )
-            if (res.messages[0].code === '0' && res.response) {
-                // console.log("RESOLVING")
-                if (!this.layout.metadata) await this.layout.getLayoutMeta()
-                return res.response.data.map(item => {
-                    return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
-                })
-            } else {
-                throw new FMError(res.messages[0].code, res.httpStatus, res, trace)
-            }
+            // console.log("RESOLVING")
+            if (!this.layout.metadata) await this.layout.getLayoutMeta()
+            return res.data.map(item => {
+                return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
+            })
         } catch (e) {
             if (e instanceof FMError) {
                 if (e.code === 401) {

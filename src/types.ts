@@ -6,21 +6,26 @@
 import type * as http from 'http'
 import {type FMError} from './FMError.js'
 import {type LayoutInterface} from './layouts/layoutInterface.js'
+import z from "zod"
 
 export type PickPortals<LAYOUT extends LayoutInterface, PORTALS extends string | number | symbol = ''> =
     Omit<LAYOUT, 'portals'> & { portals: Pick<LAYOUT['portals'], PORTALS> }
 
-export interface databaseOptionsBase {
+export interface databaseOptionsBase<
+    CREDENTAILS = loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken
+> {
     database: string
     debug?: boolean
-    credentials: loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken
+    credentials: CREDENTAILS
 }
 
-export interface databaseOptionsWithExternalSources extends databaseOptionsBase {
+export interface databaseOptionsWithExternalSources<
+    CREDENTIALS = loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken
+> extends databaseOptionsBase<CREDENTIALS> {
     database: string
     debug?: boolean
-    credentials: loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken
-    externalSources: databaseOptionsBase[]
+    credentials: CREDENTIALS
+    externalSources: Array<databaseOptionsBase<loginOptionsFileMaker>>
 }
 
 export interface loginOptionsToken {
@@ -40,6 +45,10 @@ export interface loginOptionsFileMaker {
     method: 'filemaker'
     username: string
     password: string
+    /**
+     * sessionPoolSize - The maximum number of sessions to keep open in the pool. Default is 4.
+     */
+    sessionPoolSize?: number
 }
 
 export interface loginOptionsClaris {
@@ -119,16 +128,16 @@ export interface LayoutMetaData {
     portalMetaData?: Record<string, FieldMetaData[]>
 }
 
-export interface FMHostMetadata {
-    productInfo: {
-        buildDate: Date
-        name: string
-        version: string
-        dateFormat: string
-        timeFormat: string
-        timeStampFormat: string
-    }
-}
+export const FMHostMetadata = z.object({
+    productInfo: z.object({
+        buildDate: z.coerce.date().optional(),
+        name: z.string(),
+        version: z.string().optional(),
+        dateFormat: z.string(),
+        timeFormat: z.string(),
+        timeStampFormat: z.string()
+    })
+})
 
 export interface ScriptResult {
     scriptError?: FMError
@@ -146,12 +155,12 @@ export interface ContainerBufferResult {
 //     default: {FileMakerConnection}
 // }
 
-export interface AuthorizationHeaders {
+export interface AuthorizationHeaders extends Record<string, string> {
     'Content-Type': 'application/json'
     Authorization: string
 }
 
-export interface AuthorizationHeadersOAuth {
+export interface AuthorizationHeadersOAuth extends Record<string, string> {
     'Content-Type': 'application/json'
     'X-FM-Data-OAuth-RequestId': string
     'X-FM-Data-OAuth-Identifier': string
