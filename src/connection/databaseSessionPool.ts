@@ -95,7 +95,6 @@ export class DatabaseSessionPool<T extends DatabaseStructure> extends Database<T
         try {
             session.working = true
             const result = await callback(session.session)
-            session.working = false
             return result
         } catch (e) {
             if (e instanceof HttpError && e.status === 401) {
@@ -104,6 +103,11 @@ export class DatabaseSessionPool<T extends DatabaseStructure> extends Database<T
                 if (retry) return await this.withSession(callback, false)
             }
             throw e
+        } finally {
+            if (this.#activeSessions.has(session)) {
+                session.working = false
+            }
+            await this.#scheduleQueuedWork()
         }
     }
 
@@ -111,6 +115,30 @@ export class DatabaseSessionPool<T extends DatabaseStructure> extends Database<T
         const job = this.#withSessionQueue.shift()
         if (!job) return
         await this.#withSessionInternal(session, job.callback, job.retry).then(job.resolve).catch(job.reject)
+    }
+
+    async #scheduleQueuedWork () {
+        if (this.#withSessionQueue.length === 0) return
+
+        for (const session of this.#activeSessions) {
+            if (!session.working) {
+                session.working = true
+                void this.#processWithSessionQueue(session)
+                return
+            }
+        }
+
+        if (this.#activeSessions.size < this.#maxSessions) {
+            void this.#openSession().then(async session => {
+                const newSession = {
+                    working: true,
+                    session,
+                    disconnectTimeout: null
+                }
+                this.#activeSessions.add(newSession)
+                await this.#processWithSessionQueue(newSession)
+            })
+        }
     }
 
     async withSession<T>(callback: (session: Session) => Promise<T>, retry: boolean = true): Promise<T> {

@@ -6,7 +6,6 @@
 import {Command, Option} from 'commander'
 import {config} from 'dotenv'
 import FMHost, {query} from '../index.js'
-import type {databaseOptionsBase, loginOptionsFileMaker} from '../types.js'
 
 config()
 
@@ -22,7 +21,6 @@ interface Stats {
 }
 
 interface ResultRow {
-    sessionPoolSize: number
     concurrency: number
     stats: Stats
 }
@@ -78,9 +76,8 @@ function padCell (value: string, width: number, align: 'left' | 'right' = 'right
 }
 
 function buildTable (rows: ResultRow[]) {
-    const headers = ['pool', 'conc', 'ops', 'errs', 'min', 'p50', 'p95', 'max', 'throughput']
-    const body = rows.map(({sessionPoolSize, concurrency, stats}) => [
-        formatInteger(sessionPoolSize),
+    const headers = ['conc', 'ops', 'errs', 'min', 'p50', 'p95', 'max', 'throughput']
+    const body = rows.map(({concurrency, stats}) => [
         formatInteger(concurrency),
         formatInteger(stats.count),
         formatInteger(stats.errors),
@@ -121,7 +118,6 @@ function printRunSummary (options: {
     iterations: number
     warmup: number
     concurrencyLevels: number[]
-    sessionPoolSizes: number[]
 }) {
     console.log('Stress Search')
     console.log(`  host: ${options.host}`)
@@ -133,7 +129,7 @@ function printRunSummary (options: {
     console.log(`  iterations/worker: ${formatInteger(options.iterations)}`)
     console.log(`  warmup/worker: ${formatInteger(options.warmup)}`)
     console.log(`  concurrency sweep: ${options.concurrencyLevels.join(', ')}`)
-    console.log(`  session pools: ${options.sessionPoolSizes.join(', ')}`)
+    console.log('  session pool: package default')
     console.log('')
 }
 
@@ -153,10 +149,10 @@ function printResultSummary (rows: ResultRow[]) {
     console.log('')
     console.log('Summary')
     console.log(
-        `  best throughput: pool=${bestThroughput.sessionPoolSize}, concurrency=${bestThroughput.concurrency}, ${formatRate(bestThroughput.stats.opsPerSecond)}`
+        `  best throughput: concurrency=${bestThroughput.concurrency}, ${formatRate(bestThroughput.stats.opsPerSecond)}`
     )
     console.log(
-        `  best p95 latency: pool=${bestP95.sessionPoolSize}, concurrency=${bestP95.concurrency}, ${formatDuration(bestP95.stats.p95Ms)}`
+        `  best p95 latency: concurrency=${bestP95.concurrency}, ${formatDuration(bestP95.stats.p95Ms)}`
     )
 
     if (rows.some(row => row.stats.errors !== 0)) {
@@ -164,17 +160,10 @@ function printResultSummary (rows: ResultRow[]) {
     }
 }
 
-function formatLiveProgress (
-    sessionPoolSize: number,
-    concurrency: number,
-    completed: number,
-    total: number,
-    running: RunningStats
-) {
+function formatLiveProgress (concurrency: number, completed: number, total: number, running: RunningStats) {
     const wallClockMs = performance.now() - running.startedAt
     const stats = summarizeDurations(running.durations, running.errors, wallClockMs)
     return [
-        `pool=${sessionPoolSize}`,
         `conc=${concurrency}`,
         `progress=${completed}/${total}`,
         `avg=${formatRate(stats.opsPerSecond)}`,
@@ -184,16 +173,23 @@ function formatLiveProgress (
     ].join('  ')
 }
 
-function printLiveProgress (
-    sessionPoolSize: number,
-    concurrency: number,
-    completed: number,
-    total: number,
-    running: RunningStats
-) {
-    const line = formatLiveProgress(sessionPoolSize, concurrency, completed, total, running)
+function printLiveProgress (concurrency: number, completed: number, total: number, running: RunningStats) {
+    const line = formatLiveProgress(concurrency, completed, total, running)
     process.stdout.write(`\r${line}`)
     if (completed === total) process.stdout.write('\n')
+}
+
+function printRunStart (concurrency: number, iterations: number, warmup: number) {
+    console.log(
+        `Run start: conc=${concurrency}, iterations/worker=${iterations}, warmup/worker=${warmup}`
+    )
+}
+
+function printRunEnd (concurrency: number, stats: Stats) {
+    console.log(
+        `Run done:  conc=${concurrency}, ${formatRate(stats.opsPerSecond)}, p50=${formatDuration(stats.p50Ms)}, p95=${formatDuration(stats.p95Ms)}, errs=${formatInteger(stats.errors)}`
+    )
+    console.log('')
 }
 
 function buildFindRequest (field: string, operator: string, value: string) {
@@ -219,7 +215,6 @@ async function main () {
         .option('--iterations <number>', 'operations per worker', '20')
         .option('--warmup <number>', 'warmup operations per worker', '2')
         .addOption(new Option('--concurrency <list>', 'comma-separated concurrency levels').default('1,2,4,8'))
-        .addOption(new Option('--session-pools <list>', 'comma-separated session pool sizes').default('1,2,4,8'))
         .option('--debug', 'enable easy-fm debug logging', false)
 
     program.parse(argv)
@@ -233,7 +228,6 @@ async function main () {
         iterations: string
         warmup: string
         concurrency: string
-        sessionPools: string
         debug: boolean
     }>()
 
@@ -250,16 +244,9 @@ async function main () {
     }
 
     const concurrencyLevels = parseIntegerList(options.concurrency)
-    const sessionPoolSizes = parseIntegerList(options.sessionPools)
     const limit = parseInt(options.limit, 10)
     const iterations = parseInt(options.iterations, 10)
     const warmup = parseInt(options.warmup, 10)
-
-    const credentials: databaseOptionsBase<loginOptionsFileMaker>['credentials'] = {
-        method: 'filemaker',
-        username,
-        password
-    }
 
     printRunSummary({
         mode: options.mode,
@@ -272,81 +259,82 @@ async function main () {
         limit,
         iterations,
         warmup,
-        concurrencyLevels,
-        sessionPoolSizes
+        concurrencyLevels
+    })
+
+    const fmHost = new FMHost(host, (moment) => 0 - moment.toDate().getTimezoneOffset(), false)
+    const connection = fmHost.database({
+        database,
+        credentials: {
+            method: 'filemaker',
+            username,
+            password
+        },
+        externalSources: [],
+        debug: options.debug
     })
 
     const rows: ResultRow[] = []
 
-    for (const sessionPoolSize of sessionPoolSizes) {
+    try {
+        const layout = connection.layout(options.layout)
+        await layout.getLayoutMeta()
+
         for (const concurrency of concurrencyLevels) {
-            const fmHost = new FMHost(host, (moment) => 0 - moment.toDate().getTimezoneOffset(), false)
-            const connection = fmHost.database({
-                database,
-                credentials: {
-                    ...credentials,
-                    sessionPoolSize
-                },
-                externalSources: [],
-                debug: options.debug
-            })
+            printRunStart(concurrency, iterations, warmup)
 
-            try {
-                const layout = connection.layout(options.layout)
-                await layout.getLayoutMeta()
-
-                const runOperation = async () => {
-                    const startedAt = performance.now()
-                    try {
-                        const request = layout.records.list({portals: {}, limit})
-                        if (options.mode === 'find') {
-                            request.addRequest(buildFindRequest(
-                                options.field as string,
-                                options.operator,
-                                options.value as string
-                            ))
-                        }
-                        await request.fetch()
-                        return {durationMs: performance.now() - startedAt, error: false}
-                    } catch {
-                        return {durationMs: performance.now() - startedAt, error: true}
+            const runOperation = async () => {
+                const startedAt = performance.now()
+                try {
+                    const request = layout.records.list({portals: {}, limit})
+                    if (options.mode === 'find') {
+                        request.addRequest(buildFindRequest(
+                            options.field as string,
+                            options.operator,
+                            options.value as string
+                        ))
                     }
+                    await request.fetch()
+                    return {durationMs: performance.now() - startedAt, error: false}
+                } catch {
+                    return {durationMs: performance.now() - startedAt, error: true}
                 }
-
-                for (let i = 0; i < warmup * concurrency; i++) {
-                    await runOperation()
-                }
-
-                const totalOperations = concurrency * iterations
-                let completed = 0
-                const running: RunningStats = {
-                    durations: [],
-                    errors: 0,
-                    startedAt: performance.now()
-                }
-
-                await Promise.all(
-                    Array.from({length: concurrency}, async () => {
-                        for (let i = 0; i < iterations; i++) {
-                            const result = await runOperation()
-                            running.durations.push(result.durationMs)
-                            if (result.error) running.errors += 1
-                            completed += 1
-                            printLiveProgress(sessionPoolSize, concurrency, completed, totalOperations, running)
-                        }
-                    })
-                )
-
-                const stats = summarizeDurations(
-                    running.durations,
-                    running.errors,
-                    performance.now() - running.startedAt
-                )
-                rows.push({sessionPoolSize, concurrency, stats})
-            } finally {
-                await connection.logout()
             }
+
+            for (let i = 0; i < warmup * concurrency; i++) {
+                await runOperation()
+            }
+
+            const totalOperations = concurrency * iterations
+            let completed = 0
+            const running: RunningStats = {
+                durations: [],
+                errors: 0,
+                startedAt: performance.now()
+            }
+
+            await Promise.all(
+                Array.from({length: concurrency}, async () => {
+                    for (let i = 0; i < iterations; i++) {
+                        const result = await runOperation()
+                        running.durations.push(result.durationMs)
+                        if (result.error) running.errors += 1
+                        completed += 1
+                        printLiveProgress(concurrency, completed, totalOperations, running)
+                    }
+                })
+            )
+
+            const stats = summarizeDurations(
+                running.durations,
+                running.errors,
+                performance.now() - running.startedAt
+            )
+            rows.push({concurrency, stats})
+            printRunEnd(concurrency, stats)
         }
+    } finally {
+        await connection.logout()
     }
 
     console.log(buildTable(rows))
