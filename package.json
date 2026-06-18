@@ -22,7 +22,8 @@
     "test:coverage": "jest --coverage --testPathIgnorePatterns='/__tests__/database.test.ts$'",
     "test:integration": "npm run build && jest __tests__/database.test.ts --runInBand",
     "test:unit": "jest __tests__/query.test.ts __tests__/CookieJar.test.ts --runInBand",
-    "stress:search": "tsx src/bin/stressSearch.ts"
+    "stress:search": "tsx src/bin/stressSearch.ts",
+    "docs:build": "typedoc --out ./docs_out"
   },
   "repository": {
     "type": "git",
@@ -48,7 +49,6 @@
     "node": ">=22.22.3"
   },
   "devDependencies": {
-    "@types/node": "^22.19.21",
     "@babel/cli": "^7.29.7",
     "@babel/core": "^7.29.7",
     "@babel/preset-env": "^7.29.7",
@@ -57,6 +57,7 @@
     "@types/events": "^3.0.3",
     "@types/inquirer": "^9.0.10",
     "@types/jest": "^29.5.14",
+    "@types/node": "^22.19.21",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "babel-jest": "^29.7.0",
     "dotenv": "^16.6.1",
@@ -70,6 +71,7 @@
     "ts-jest": "^29.4.11",
     "ts-morph": "^21.0.1",
     "tsx": "^4.22.4",
+    "typedoc": "^0.28.19",
     "typescript": "^5.9.3"
   },
   "bin": {
