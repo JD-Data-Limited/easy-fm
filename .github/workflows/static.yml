@@ -42,7 +42,7 @@ jobs:
         run: pnpm install
 
       - name: Generate docs
-        run: pnpx typedoc --out ./web
+        run: pnpm run docs:build
         
       - name: Setup Pages
         uses: actions/configure-pages@v5
