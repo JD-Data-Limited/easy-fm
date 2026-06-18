@@ -263,6 +263,9 @@ async function main () {
     })
 
     const fmHost = new FMHost(host, (moment) => 0 - moment.toDate().getTimezoneOffset(), false)
+
+    const rows: ResultRow[] = []
+
     const connection = fmHost.database({
         database,
         credentials: {
@@ -273,8 +276,6 @@ async function main () {
         externalSources: [],
         debug: options.debug
     })
-
-    const rows: ResultRow[] = []
 
     try {
         const layout = connection.layout(options.layout)

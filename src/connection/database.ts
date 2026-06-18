@@ -53,6 +53,10 @@ export abstract class Database<T extends DatabaseStructure> implements DatabaseB
         if (!this.abortController.signal.aborted) this.abortController.abort('Closing connection')
     }
 
+    async [Symbol.asyncDispose] () {
+        await this.close()
+    }
+
     /**
      * The inheriting database class must implement this method to provide a session object.
      * @param callback

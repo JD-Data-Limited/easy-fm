@@ -45,7 +45,7 @@ export class DatabaseSessionPool<T extends DatabaseStructure> extends Database<T
     }
 
     get #maxSessions () {
-        return this.#connectionDetails.credentials.sessionPoolSize ?? 4
+        return this.#connectionDetails.credentials.sessionPoolSize ?? 8
     }
 
     // Opens a new database session
