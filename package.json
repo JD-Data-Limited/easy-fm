@@ -1,6 +1,6 @@
 {
   "name": "@jd-data-limited/easy-fm",
-  "version": "4.1.15",
+  "version": "5.0.0-beta.1",
   "dependencies": {
     "commander": "^14.0.3",
     "moment": "^2.30.1",
@@ -23,7 +23,7 @@
     "test:integration": "npm run build && jest __tests__/database.test.ts --runInBand",
     "test:unit": "jest __tests__/query.test.ts __tests__/CookieJar.test.ts --runInBand",
     "stress:search": "tsx src/bin/stressSearch.ts",
-    "docs:build": "typedoc --out ./docs_out"
+    "docs:build": "typedoc --options ./docs/theme.json"
   },
   "repository": {
     "type": "git",

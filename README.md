@@ -1,197 +1,92 @@
-# Introduction
+# easy-fm
 
-A FileMaker Data API client for NodeJS
+`easy-fm` is a Node.js client for Claris FileMaker Data API.
 
-easy-fm is a Node.js module that allows you to interact with
-a FileMaker database stored on a FileMaker server
-or FileMaker Cloud. This module interacts with your server using the
-FileMaker Data API.
+It helps you connect Node.js code to FileMaker Server or FileMaker Cloud so you can fetch records, run finds, edit data, work with portals, and run scripts using a typed JavaScript or TypeScript API.
 
-# Contents
+## Requirements
 
-<!-- TOC -->
+- Node.js `22+`
+- FileMaker Data API enabled
+- account with `fmrest` privilege
+- at least one accessible layout
 
-* [Introduction](#introduction)
-* [Contents](#contents)
-* [Installation](#installation)
-* [Usage](#usage)
-    * [Connecting to a database](#connecting-to-a-database)
-    * [An important note about timezones](#an-important-note-about-timezones)
-    * [Getting records](#getting-records)
-        * [Fetch a range of records](#fetch-a-range-of-records)
-        * [Searching for records](#searching-for-records)
-        * [Fetch a record using its record ID (NOT RECOMMENDED)](#fetch-a-record-using-its-record-id-not-recommended)
-        * [Create a record](#create-a-record)
-        * [Modify a record](#modify-a-record)
-* [Field names](#field-names)
-* [Portal names](#portal-names)
-* [Typescript Implementation](#typescript-implementation)
+Claris Data API reference:
+[`help.claris.com/en/data-api-guide/content/index.html`](https://help.claris.com/en/data-api-guide/content/index.html)
 
-<!-- TOC -->
+## Install
 
-## What you need
-
-- NodeJS 22+
-- FileMaker Server with Data API enabled
-- A FileMaker account with the `fmrest` permission enabled
-- At least one layout exposed to that account
-
-See the offical documentation from Claris on how to enable the Data API:
-https://help.claris.com/en/data-api-guide/content/index.html
-
-# Installation
-
-```npm
-npm install @jd-data-limited/easy-fm --save
+```sh
+npm install @jd-data-limited/easy-fm
 ```
 
-# Quick Start
+## Quick Start
 
-Here's a quick example of how you can use easy-fm to connect to a FileMaker database and fetch a range of records:
+```ts
+import FMHost from "@jd-data-limited/easy-fm"
 
-```typescript
-import {FMHost} from "@jd-data-limited/easy-fm"
+const host = new FMHost("https://example.com")
 
-// 1. Define your server's address and connection details
-const host = new FMHost("https://<your-servers-address>")
 const database = host.database({
-    database: "your_database.fmp12",
-    credentials: {
-        method: "filemaker",
-        username: "<username>",
-        password: "<password>"
-    },
-    externalSources: []
+  database: "Contacts",
+  credentials: {
+    method: "filemaker",
+    username: "api-user",
+    password: "secret"
+  },
+  externalSources: []
 })
 
-// 2. Get a list of records from the database
-let layout = database.layout("Your layout name")
-let query = layout.records.list({
-    portals: {},
-    limit: 100
-})
-let records = await query.fetch()
+const layout = database.layout("Contacts_API")
+const records = await layout.records.list({
+  portals: {},
+  limit: 25
+}).fetch()
 
-// 3. Iterate through the records and print their values
-for (let record of records) {
-    console.log(record.fields["Field1"].value)
-}
-
-// 4. Make changes to the records
-for (let record of records) {
-    record.fields["Field1"].value = "New value"
-    await record.commit() // <-- This will save the changes to the database
+for (const record of records) {
+  console.log(record.fields.FirstName.value, record.fields.LastName.value)
 }
 ```
 
-See: [How to customize timezone](#how-to-customise-timezone)
+## Important Notes
 
-# Important Behaviour
+- FileMaker Data API is layout-based, so fields and portals must be available on the layout you use.
+- Portal data is not fetched unless you request it.
+- `recordId` and `modId` are internal FileMaker IDs. Avoid treating `recordId` as a business ID; `modId` can still be useful for change or concurrency checks.
+- Date and timestamp formatting follows the host timezone rules you configure, with defaults chosen to better match FileMaker UI expectations.
 
-## Timezones
+## Documentation
 
-FileMaker doesn't handle timezones itself. Because of this, by default EasyFM will assume that all timestamps within the
-database are stored in the same timezone which EasyFM is running in.
-> Unlike most other database tools, EasyFM does not assume UTC. This is intended for user experience and development
-> ease should you also be using FileMaker Pro as an interface.
+Start here:
 
-## Portals
+- [`docs/getting-started.md`](./docs/getting-started.md): first connection, first find, closing sessions
+- [`docs/core-concepts.md`](./docs/core-concepts.md): host, database, layout, record, portal, IDs
 
-To save on bandwidth and request execution time, EasyFM will not fetch any portal data unless you specifically request
-it.
+Task guides:
 
-## Record and Mod IDs
+- [`docs/working-with-records.md`](./docs/working-with-records.md): list, create, update, duplicate, delete, portal rows
+- [`docs/query-recipes.md`](./docs/query-recipes.md): find requests, sorting, paging, script hooks
+- [`docs/authentication-and-sessions.md`](./docs/authentication-and-sessions.md): auth modes, pooling, lifecycle
+- [`docs/timezones.md`](./docs/timezones.md): date, time, and timestamp behavior
+- [`docs/typescript-layouts.md`](./docs/typescript-layouts.md): typed layouts and stronger autocomplete
+- [`docs/testGuide.md`](./docs/testGuide.md): local test commands
 
-FileMaker automatically assigns an internal record ID and mod ID to all records. While these may
+API reference:
 
-# Core Concepts
+- [`docs_out/index.html`](./docs_out/index.html): generated TypeDoc site
 
-| Name         | Description                                                                                                                     |
-|--------------|---------------------------------------------------------------------------------------------------------------------------------|
-| Host         | The physical FileMaker Server machine                                                                                           |
-| Database     | A database provided by a host                                                                                                   |
-| Layout       | A FileMaker layout within a database                                                                                            |
-| Record       | A database record                                                                                                               |
-| LayoutRecord | A record that exists within the layout/found set                                                                                |
-| PortalRecord | A record that exists within a portal in a LayoutRecord                                                                          |
-| Record ID    | A unique number assigned by FileMaker to each record.<br />Same as `Get ( RecordID )` in FileMaker.<br />                       |
-| Mod ID       | A number that determines how many times a record has been modified.<br />Same as `Get ( RecordModificationCount )` in FileMaker |
+## Build Docs
 
-# Common Tasks
-
-## Get a layout
-
-```typescript
-const layout = database.layout("MyLayout")
-const layoutMeta = await layout.getMetadata()
-  ```
-
-## Listing Records
-
-To list records, use the `layout.records.list` method.
-
-```typescript
-const layout = database.layout("MyLayout")
-const query = layout.records.list({
-    portals: {},
-    limit: 100
-})
-const records = await query.fetch()
+```sh
+npm run docs:build
 ```
 
-## Finding records
+## Test
 
-To find records, you'll want to use the same API as above with a few extra bits.
-
-> It is recommended that you have an understanding of how Find Requests work in FileMaker.
-
-```typescript
-import {query as q} from "@jd-data-limited/easy-fm"
-
-const layout = database.layout("MyLayout")
-const query = layout.records.list({
-    portals: {},
-    requests: {
-        req: q`=123`
-    },
-    limit: 100
-})
-query.addRequest({
-    PrimaryKey: q`=456`
-})
-const records = await query.fetch()
+```sh
+npm test
+npm run test:unit
+npm run test:integration
 ```
 
-```typescript
-import {query as q} from "@jd-data-limited/easy-fm"
-
-const layout = database.layout("MyLayout")
-const query = layout.records.list({
-    portals: {},
-    requests: [{
-        req: {
-            PrimaryKey: q`=123`
-        }
-    }],
-    limit: 100
-})
-const records = await query.fetch()
-```
-
-## Find records
-
-This section is the same as above, with some extra steps.
-
-```typescript
-const query = layout.records.list({
-    portals: {},
-    limit: 100
-})
-const records = await query.fetch()
-```
-
-# How to customise timezone
-
-WIP
-
-[//]: # TODO: Finish this section()
+Integration tests require a working FileMaker environment and credentials.

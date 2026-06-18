@@ -22,6 +22,7 @@ export class Layout<T extends LayoutInterface> implements LayoutBase {
         this.name = name
     }
 
+    /** Base endpoint for this layout on FileMaker Data API. */
     get endpoint () {
         return `${this.database.endpoint}/layouts/${this.name}`
     }

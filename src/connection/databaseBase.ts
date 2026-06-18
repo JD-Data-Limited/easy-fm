@@ -17,9 +17,12 @@ export interface DatabaseBase {
 
     /**
      * Immediately closes all open sessions and prevents new ones from being created.
-     * @alias logout
      */
     close: () => Promise<void>
+    /**
+     * Immediately closes all open sessions and prevents new ones from being created.
+     * Alias of {@link close}
+     */
     logout: () => Promise<void>
     // layouts: DatabaseStructure["layouts"]
 

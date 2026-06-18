@@ -37,12 +37,13 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
         }
     }
 
+    /** Returns all loaded portals on this record as an array. */
     get portalsArray (): Array<Portal<any>> {
         return Object.values(this.portals)
     }
 
     /**
-     * Asynchronously commits the changes made to the current record.
+     * Saves this record back to FileMaker.
      * @param {extraBodyOptions} extraBody - The options for the extra body elements.
      * @returns {Promise<this>} - A promise that resolves with the modified object.
      * @throws {FMError} - If an error occurs during the commit process.
@@ -130,8 +131,8 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
     }
 
     /**
-     * Re-fetches the current record from the database server.
-     * Throws an error if commit() has not been called.
+     * Reloads this record from FileMaker.
+     * Throws if this record has not been saved yet.
      *
      * @return {Promise<this>} A Promise that resolves to this RecordBase instance if the record is successfully retrieved.
      * @throws {Error} If commit() has not been called.
@@ -154,6 +155,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
         return this
     }
 
+    /** Creates a duplicate of this record in FileMaker. */
     async duplicate (): Promise<LayoutRecord<LAYOUT>> {
         const trace = new Error()
         const res = await this.layout.database.fetchJSON(this.endpoint, {
@@ -174,6 +176,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
         return _res
     }
 
+    /** Deletes this record from FileMaker. */
     async delete (): Promise<void> {
         const res = await this.layout.database.fetchJSON(this.endpoint, {
             method: 'DELETE',
@@ -187,6 +190,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
         this.emit('deleted')
     }
 
+    /** Returns this record's edited fields as a FileMaker API payload. */
     fieldsToObject (filter = (a: Field<FieldValue>) => a.edited): Omit<z.infer<typeof ApiRowDataDef>, 'portalData'> {
         const fieldsProcessed: z.infer<typeof ApiFieldData> = {}
         let field: Field<FieldValue>
@@ -218,6 +222,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
         return obj
     }
 
+    /** Returns this record and its portal edits as a FileMaker API payload. */
     toObject (
         filter: (a: Field<FieldValue>) => any = (a) => a.edited,
         portalFilter: (a: Portal<any>) => any = (a) => a.records.find(record => record.edited),

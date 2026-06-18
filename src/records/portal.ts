@@ -11,8 +11,6 @@ import {type LayoutRecord} from './layoutRecord.js'
  * Represents a portal.
  *
  * @template T - The type of RecordFieldsMap.
- * @class
- * @implements {PortalBase<T>}
  */
 export class Portal<T extends RecordFieldsMap> implements PortalBase<T> {
     readonly record: LayoutRecord<any>
@@ -26,8 +24,6 @@ export class Portal<T extends RecordFieldsMap> implements PortalBase<T> {
 
     /**
      * Add a new record to the portal
-     * @function create
-     * @async
      * @summary Creates a new record.
      * @returns {Promise<PortalRecord<T>>} A Promise that resolves to the newly created record.
      */

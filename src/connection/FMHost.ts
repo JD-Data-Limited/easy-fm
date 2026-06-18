@@ -23,7 +23,6 @@ import {DatabaseConstantSession} from './databaseConstantSession.js'
 
 /**
  * Represents a FileMaker host.
- * @implements {HostBase}
  */
 export default class FMHost implements HostBase {
     readonly hostname: string
@@ -58,16 +57,19 @@ export default class FMHost implements HostBase {
         }
     }
 
+    /** FileMaker host date format converted to Moment-compatible tokens. */
     get dateFormat () {
         return this.metadata.productInfo.dateFormat
             .replace('dd', 'DD')
             .replace('yyyy', 'YYYY')
     }
 
+    /** FileMaker host time format. */
     get timeFormat () {
         return this.metadata.productInfo.timeFormat
     }
 
+    /** FileMaker host timestamp format converted to Moment-compatible tokens. */
     get timeStampFormat () {
         return this.metadata.productInfo.timeStampFormat
             .replace('dd', 'DD')
@@ -120,6 +122,7 @@ export default class FMHost implements HostBase {
         return new DatabaseConstantSession(this, data)
     }
 
+    /** Fetch and cache FileMaker host product metadata. */
     async getMetadata () {
         if (this._metadata) return this._metadata
 

@@ -51,6 +51,7 @@ export class Field<T extends FieldValue> {
         this.#originalContents = originalContents
     }
 
+    /** `true` if this field has changed since it was last loaded or saved. */
     get edited () {
         return this.#originalContents !== this._value
     }
@@ -73,6 +74,7 @@ export class Field<T extends FieldValue> {
         else this._value = content
     }
 
+    /** Returns the FileMaker metadata for this field. */
     get metadata (): z.infer<typeof ApiFieldMetadata> {
         if (!this.parent.layout.metadata) {
             // Default to a regular text field
@@ -134,6 +136,7 @@ export class Field<T extends FieldValue> {
         }
     }
 
+    /** Gets or sets the current field value. */
     get value (): T | null {
         // if (this.metadata.result === "container") throw "Use await field.stream() to get the contents of a container field, instead of field.value"
         return this._value
@@ -143,6 +146,7 @@ export class Field<T extends FieldValue> {
         this.set(value)
     }
 
+    /** Returns this field value as a string. Throws if the value is not a string. */
     get string (): string {
         if (typeof this._value === 'string') {
             return this._value
@@ -199,7 +203,6 @@ export class Field<T extends FieldValue> {
     }>
     /**
      * @deprecated use webStream instead.
-     * @param webApi
      */
     async stream () {
         const stream = await this.#streamAsync()
@@ -214,12 +217,13 @@ export class Field<T extends FieldValue> {
     }
 
     /**
-     * Returns a readable stream. Use Readable.fromWeb(stream.body) to convert it to a Node.js Readable stream.
+     * Returns the container download as a Web `Response`.
      */
     async webStream (options: StreamOptions) {
         return await this.#streamAsync(options)
     }
 
+    /** Downloads the full container contents into memory. */
     async arrayBuffer (): Promise<{ data: ArrayBuffer, mime: string }> {
         const stream = await this.#streamAsync()
         if (!stream.ok) throw await HttpError.new(stream)

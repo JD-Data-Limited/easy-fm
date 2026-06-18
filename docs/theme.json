@@ -1,0 +1,8 @@
+{
+  "entryPoints": ["../src/index.ts"],
+  "projectDocuments": "./**/*.md",
+  "out": "../docs_out",
+  "customCss": "./theme.css",
+  "name": "EasyFM",
+  "includeVersion": true
+}

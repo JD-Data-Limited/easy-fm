@@ -4,3 +4,4 @@
 /dist
 /coverage
 stressTest.sh
+/docs_out

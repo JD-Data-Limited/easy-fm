@@ -147,6 +147,9 @@ export abstract class Database<T extends DatabaseStructure> implements DatabaseB
 
     layout<R extends keyof T['layouts']>(name: R): Layout<T['layouts'][R]>
     layout<R extends LayoutInterface>(name: string): Layout<R>
+    /**
+     * Returns a FileMaker Layout object by name.
+     */
     layout (name: string): Layout<any> {
         let layout = this.#layoutCache.get(name)
         if (layout) return layout
@@ -155,10 +158,12 @@ export abstract class Database<T extends DatabaseStructure> implements DatabaseB
         return layout
     }
 
+    /** Clears any Layout objects previously returned by `database.layout(...)`. */
     clearLayoutCache () {
         this.#layoutCache.clear()
     }
 
+    /** Creates a script reference you can pass to read and write helpers. */
     script (name: string, parameter = ''): Script {
         return ({name, parameter} satisfies Script)
     }

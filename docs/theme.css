@@ -1,0 +1,417 @@
+@import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap");
+
+:root {
+    --jd-gold: #d1a438;
+    --jd-gold-deep: #b68822;
+    --jd-charcoal: #333333;
+    --jd-charcoal-soft: #444444;
+    --jd-page-bg: #ededed;
+    --jd-surface: #ffffff;
+    --jd-surface-soft: #f6f6f6;
+    --jd-surface-soft-2: #fbfbfb;
+    --jd-border: #e6e6e6;
+    --jd-divider: #f0f0f0;
+    --jd-text: #222222;
+    --jd-text-soft: #666666;
+    --jd-inline-code-bg: #f5f5f5;
+    --jd-blockquote-bg: #fffaf0;
+    --jd-nav-hover-bg: #fff7e5;
+    --jd-shadow: rgba(0, 0, 0, 0.12);
+    --jd-code-bg: #2b2b2b;
+    --jd-code-border: #3d3d3d;
+    --jd-code-text: #d4d4d4;
+    --jd-hl-0: #dcdcaa;
+    --jd-hl-1: #d4d4d4;
+    --jd-hl-2: #ce9178;
+    --jd-hl-3: #c586c0;
+    --jd-hl-4: #9cdcfe;
+    --jd-hl-5: #569cd6;
+    --jd-hl-6: #4fc1ff;
+    --jd-hl-7: #b5cea8;
+    --jd-hl-8: #c8c8c8;
+    --jd-hl-9: #4ec9b0;
+    --jd-hl-10: #d4d4d4;
+    --jd-hl-11: #6a9955;
+    --jd-hl-12: #d4d4d4;
+    --jd-hl-13: #9cdcfe;
+    --jd-hl-14: #d7ba7d;
+    --jd-hl-15: #569cd6;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: "Quicksand", sans-serif;
+    letter-spacing: 0.01em;
+    background: var(--jd-page-bg);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.tsd-page-title h1,
+.tsd-toolbar-contents .title,
+.tsd-navigation a {
+    font-family: "Quicksand", sans-serif;
+}
+
+:root[data-theme="light"],
+:root {
+    --light-color-background: #ededed;
+    --light-color-background-secondary: #f6f6f6;
+    --light-color-background-active: #f3ead1;
+    --light-color-background-warning: #fff4d8;
+    --light-color-warning-text: var(--jd-text);
+    --light-color-accent: var(--jd-border);
+    --light-color-active-menu-item: var(--jd-gold);
+    --light-color-text: var(--jd-text);
+    --light-color-contrast-text: #ffffff;
+    --light-color-text-aside: var(--jd-text-soft);
+    --light-color-icon-background: #f2f2f2;
+    --light-color-icon-text: var(--jd-charcoal);
+    --light-color-link: var(--jd-gold-deep);
+    --light-color-focus-outline: var(--jd-gold);
+    --light-color-ts-keyword: #8f6720;
+    --light-color-ts-project: #7f7f7f;
+    --light-color-ts-module: #7f7f7f;
+    --light-color-ts-namespace: #8f6720;
+    --light-color-ts-enum: #666666;
+    --light-color-ts-enum-member: #a06f10;
+    --light-color-ts-variable: #6a6a6a;
+    --light-color-ts-function: #b68822;
+    --light-color-ts-class: #4f4f4f;
+    --light-color-ts-interface: #5e5e5e;
+    --light-color-ts-constructor: #b68822;
+    --light-color-ts-property: #626262;
+    --light-color-ts-method: #b68822;
+    --light-color-ts-reference: #666666;
+    --light-color-ts-call-signature: #9f7520;
+    --light-color-ts-index-signature: #9f7520;
+    --light-color-ts-constructor-signature: #9f7520;
+    --light-color-ts-parameter: #7b6d47;
+    --light-color-ts-type-parameter: #7b6d47;
+    --light-color-ts-accessor: #9f7520;
+    --light-color-ts-get-signature: #9f7520;
+    --light-color-ts-set-signature: #9f7520;
+    --light-color-ts-type-alias: #666666;
+    --light-color-document: #b68822;
+    --light-color-alert-note: #f5f5f5;
+    --light-color-alert-tip: #f2f2f2;
+    --light-color-alert-important: #fff6df;
+    --light-color-alert-warning: #fff2cf;
+    --light-color-alert-caution: #ffe9bf;
+    --light-color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+    --jd-page-bg: #252525;
+    --jd-surface: #303030;
+    --jd-surface-soft: #353535;
+    --jd-surface-soft-2: #3a3a3a;
+    --jd-border: #494949;
+    --jd-divider: #424242;
+    --jd-text: #f4f4f4;
+    --jd-text-soft: #c8c8c8;
+    --jd-inline-code-bg: #3a3a3a;
+    --jd-blockquote-bg: #3a3425;
+    --jd-nav-hover-bg: #3a3425;
+    --jd-shadow: rgba(0, 0, 0, 0.28);
+    --dark-color-background: #252525;
+    --dark-color-background-secondary: #303030;
+    --dark-color-background-active: #3a3425;
+    --dark-color-background-warning: #4c4122;
+    --dark-color-warning-text: #fff7e3;
+    --dark-color-accent: #494949;
+    --dark-color-active-menu-item: #ebbf58;
+    --dark-color-text: #f4f4f4;
+    --dark-color-contrast-text: #ffffff;
+    --dark-color-text-aside: #c8c8c8;
+    --dark-color-icon-background: #383838;
+    --dark-color-icon-text: #f4f4f4;
+    --dark-color-link: #ebbf58;
+    --dark-color-focus-outline: #ebbf58;
+    --dark-color-ts-keyword: #ebbf58;
+    --dark-color-ts-project: #d7d7d7;
+    --dark-color-ts-module: #d7d7d7;
+    --dark-color-ts-namespace: #ebbf58;
+    --dark-color-ts-enum: #d0d0d0;
+    --dark-color-ts-enum-member: #f0c76c;
+    --dark-color-ts-variable: #e1e1e1;
+    --dark-color-ts-function: #f0c76c;
+    --dark-color-ts-class: #dadada;
+    --dark-color-ts-interface: #dadada;
+    --dark-color-ts-constructor: #f0c76c;
+    --dark-color-ts-property: #e1e1e1;
+    --dark-color-ts-method: #f0c76c;
+    --dark-color-ts-reference: #dadada;
+    --dark-color-ts-call-signature: #f0c76c;
+    --dark-color-ts-index-signature: #f0c76c;
+    --dark-color-ts-constructor-signature: #f0c76c;
+    --dark-color-ts-parameter: #e8d8a1;
+    --dark-color-ts-type-parameter: #e8d8a1;
+    --dark-color-ts-accessor: #f0c76c;
+    --dark-color-ts-get-signature: #f0c76c;
+    --dark-color-ts-set-signature: #f0c76c;
+    --dark-color-ts-type-alias: #dadada;
+    --dark-color-document: #ebbf58;
+    --dark-color-alert-note: #383838;
+    --dark-color-alert-tip: #404040;
+    --dark-color-alert-important: #544621;
+    --dark-color-alert-warning: #614f20;
+    --dark-color-alert-caution: #6e571d;
+    --dark-color-scheme: dark;
+}
+
+.tsd-page-toolbar {
+    background: var(--jd-charcoal);
+    border-bottom: 4px solid var(--jd-gold);
+    box-shadow: 0 8px 20px var(--jd-shadow);
+}
+
+.tsd-toolbar-contents.container,
+.container {
+    max-width: 1360px;
+}
+
+.tsd-toolbar-contents .title,
+.tsd-page-toolbar a {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.tsd-widget,
+#tsd-theme,
+#tsd-search-input {
+    border-radius: 999px;
+}
+
+.container-main {
+    gap: 1.75rem;
+    padding-top: 1.5rem;
+}
+
+.tsd-page-title {
+    margin-bottom: 1.25rem;
+    padding: 2rem 2.25rem 1.5rem;
+    border-radius: 1.6rem;
+    background: var(--jd-surface);
+    border: 1px solid var(--jd-border);
+    box-shadow: 0 14px 32px var(--jd-shadow);
+}
+
+.tsd-page-title h1 {
+    margin: 0;
+    color: var(--jd-text);
+    font-size: clamp(2rem, 3vw, 3rem);
+    font-weight: 700;
+}
+
+.tsd-panel.tsd-typography,
+.site-menu,
+.page-menu,
+.tsd-signature,
+.tsd-comment,
+.tsd-index-panel,
+.tsd-panel.tsd-member,
+.tsd-sources {
+    background: var(--jd-surface);
+    border: 1px solid var(--jd-border);
+    border-radius: 1.4rem;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+}
+
+.tsd-panel.tsd-typography {
+    padding: 1.75rem 2rem 2rem;
+}
+
+.page-menu {
+    margin-bottom: 1rem;
+}
+
+.tsd-panel.tsd-typography,
+.site-menu,
+.page-menu {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.site-menu,
+.page-menu {
+    overflow: visible;
+}
+
+.tsd-accordion-summary {
+    background: var(--jd-surface-soft-2);
+}
+
+.tsd-typography h1,
+.tsd-typography h2,
+.tsd-typography h3 {
+    color: var(--jd-text);
+    letter-spacing: 0;
+}
+
+.tsd-typography h1 {
+    font-size: clamp(2.1rem, 3vw, 3rem);
+    font-weight: 700;
+}
+
+.tsd-typography h2 {
+    margin-top: 2.6rem;
+    padding-top: 1rem;
+    border-top: 2px solid var(--jd-divider);
+    font-size: 1.55rem;
+    font-weight: 700;
+}
+
+.tsd-typography h3 {
+    margin-top: 1.8rem;
+    font-size: 1.16rem;
+    font-weight: 700;
+}
+
+.tsd-typography p,
+.tsd-typography li,
+.tsd-typography td,
+.tsd-typography th {
+    font-size: 1.02rem;
+    line-height: 1.72;
+    color: var(--jd-text);
+}
+
+.tsd-typography a,
+a {
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.16em;
+}
+
+.tsd-typography ul li::marker,
+.tsd-typography ol li::marker {
+    color: var(--jd-gold);
+}
+
+.tsd-typography blockquote {
+    margin: 1.5rem 0;
+    padding: 1rem 1.15rem;
+    border-left: 4px solid var(--jd-gold);
+    background: var(--jd-blockquote-bg);
+    border-radius: 0 1rem 1rem 0;
+}
+
+.tsd-typography code:not(pre code) {
+    padding: 0.16rem 0.42rem;
+    border-radius: 0.45rem;
+    background: var(--jd-inline-code-bg);
+}
+
+pre,
+.tsd-panel pre {
+    background: var(--jd-code-bg);
+    border: 1px solid var(--jd-code-border);
+    border-radius: 1.1rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+pre code,
+code.hl-0,
+code.hl-1,
+code.hl-2,
+code.hl-3,
+code.hl-4,
+code.hl-5,
+code.hl-6,
+code.hl-7,
+code.hl-8,
+code.hl-9,
+code.hl-10,
+code.hl-11,
+code.hl-12,
+code.hl-13,
+code.hl-14,
+code.hl-15 {
+    color: var(--jd-code-text);
+}
+
+pre,
+code {
+    --code-background: var(--jd-code-bg);
+    --hl-0: var(--jd-hl-0);
+    --hl-1: var(--jd-hl-1);
+    --hl-2: var(--jd-hl-2);
+    --hl-3: var(--jd-hl-3);
+    --hl-4: var(--jd-hl-4);
+    --hl-5: var(--jd-hl-5);
+    --hl-6: var(--jd-hl-6);
+    --hl-7: var(--jd-hl-7);
+    --hl-8: var(--jd-hl-8);
+    --hl-9: var(--jd-hl-9);
+    --hl-10: var(--jd-hl-10);
+    --hl-11: var(--jd-hl-11);
+    --hl-12: var(--jd-hl-12);
+    --hl-13: var(--jd-hl-13);
+    --hl-14: var(--jd-hl-14);
+    --hl-15: var(--jd-hl-15);
+}
+
+pre > button {
+    top: 0.85rem !important;
+    right: 0.85rem !important;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}
+
+pre > button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.tsd-navigation a,
+.tsd-page-navigation a {
+    border-radius: 0.85rem;
+    transition: background-color 120ms ease, color 120ms ease;
+}
+
+.tsd-navigation a.current,
+.tsd-page-navigation a.current,
+.tsd-navigation a:hover,
+.tsd-page-navigation a:hover {
+    background: var(--jd-nav-hover-bg);
+    color: var(--color-link);
+}
+
+.tsd-member-summary .tsd-member-summary-name,
+.tsd-kind-icon {
+    color: var(--jd-gold-deep);
+}
+
+table {
+    overflow: hidden;
+    border-radius: 1rem;
+}
+
+.tsd-typography td,
+.tsd-typography th {
+    border-color: var(--jd-border);
+}
+
+footer {
+    margin-top: 2.5rem;
+    padding: 2rem 0 3rem;
+    color: var(--jd-text-soft);
+}
+
+@media (max-width: 1024px) {
+    .tsd-page-title,
+    .tsd-panel.tsd-typography {
+        padding-left: 1.3rem;
+        padding-right: 1.3rem;
+    }
+}

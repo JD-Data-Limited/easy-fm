@@ -1,5 +1,6 @@
 module.exports = {
     testEnvironment: 'node',
+    setupFiles: ['<rootDir>/jest.setup-env.cjs'],
     watchman: false,
     collectCoverageFrom: [
         'src/**/*.ts',

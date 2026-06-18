@@ -6,13 +6,16 @@ import moment, {type Moment} from 'moment'
 
 export const FindRequestSymbol = Symbol('easyfm-findrequest')
 const SPECIAL_CHARACTERS = ['\\', '=', '<', '≤', '≥', '>', '…', '...', '//', '@', '#', '*', '"', '~']
+/** Represents a date, time, or timestamp value passed into `query(...)`. */
 export interface TimestampType {
     type: 'date' | 'time' | 'timestamp'
     moment: Moment
 }
 type QueryParameter = string | number | TimestampType
+/** Represents a FileMaker find value produced by `query(...)`. */
 export interface Query { [FindRequestSymbol]: Array<string | TimestampType> }
 
+/** Escapes special characters in a raw FileMaker find string. */
 export function queryEscape (str: string) {
     for (const char of SPECIAL_CHARACTERS) {
         str = str.replace(char, `\\${char}`)
@@ -20,6 +23,7 @@ export function queryEscape (str: string) {
     return str
 }
 
+/** Builds a FileMaker find value using template-string syntax. */
 export function query (strings: TemplateStringsArray, ...args: QueryParameter[]): Query {
     const argStrings = args.map(item => {
         if (typeof item === 'number') {
@@ -35,6 +39,7 @@ export function query (strings: TemplateStringsArray, ...args: QueryParameter[])
     return {[FindRequestSymbol]: query}
 }
 
+/** Marks a value as a FileMaker date for use inside `query(...)`. */
 export function asDate (date: Date | Moment): TimestampType {
     return {
         type: 'date',
@@ -42,6 +47,7 @@ export function asDate (date: Date | Moment): TimestampType {
     }
 }
 
+/** Marks a value as a FileMaker time for use inside `query(...)`. */
 export function asTime (date: Date | Moment): TimestampType {
     return {
         type: 'time',
@@ -49,6 +55,7 @@ export function asTime (date: Date | Moment): TimestampType {
     }
 }
 
+/** Marks a value as a FileMaker timestamp for use inside `query(...)`. */
 export function asTimestamp (date: Date | Moment): TimestampType {
     return {
         type: 'timestamp',
