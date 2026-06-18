@@ -6,12 +6,14 @@ import {type LayoutInterface} from '../../layouts/layoutInterface.js'
 import {type PickPortals, type ScriptRequestData} from '../../types.js'
 import {type LayoutBase} from '../../layouts/layoutBase.js'
 import {LayoutRecord} from '../layoutRecord.js'
-import {type ApiRecordResponseObj} from '../../models/apiResults.js'
+import {ApiRecordResponseObj} from '../../models/apiResults.js'
 import {FMError} from '../../FMError.js'
 import {FindRequestSymbol, type Query} from '../../utils/query.js'
 
 export type SortOrder = 'ascend' | 'descend'
+/** Raw FileMaker find request strings, already escaped/formatted. */
 export type FindRequestRaw = Record<string, string>
+/** Safe find request built from `query` tagged template helpers. */
 export type FindRequest = Record<string, Query>
 
 export interface PortalRequest {
@@ -31,6 +33,7 @@ export interface GetOperationOptions<T extends LayoutInterface> {
     offset?: number
 }
 
+/** Builder/executor for list and find operations against one layout. */
 export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOperationOptions<T>> {
     protected layout: LayoutBase
     protected limit: number = 100
@@ -138,7 +141,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
     }
 
     /**
-     * Sorts the data based on the given field name and sort order.
+     * Add sort clause in request order.
      *
      * @param {string} fieldName - The name of the field by which the data should be sorted.
      * @param {SortOrder} sortOrder - The sort order to be applied (either "asc" for ascending or "desc" for descending).
@@ -164,7 +167,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
                     .format(
                         item.type === 'date'
                             ? this.layout.database.host.dateFormat
-                            : item.type == 'time'
+                            : item.type === 'time'
                                 ? this.layout.database.host.timeFormat
                                 : this.layout.database.host.timeStampFormat
                     )
@@ -174,7 +177,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
     }
 
     /**
-     * Adds a new request/query to the list of queries.
+     * Add one FileMaker find request block.
      *
      * @param {FindRequest} query - The find request to be added.
      * @param {boolean} [omit=false] - Flag to indicate if the find request should be omitted.
@@ -186,7 +189,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
     }
 
     /**
-     * Perform a fetch operation.
+     * Execute request and return current page of records.
      *
      * @returns {Promise} A promise that resolves with the result of the fetch operation.
      */
@@ -197,7 +200,6 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
     private async performFind (offset: number, limit: number): Promise<Array<LayoutRecord<
     PickPortals<T, keyof OPTIONS['portals']>
     >>> {
-        const trace = new Error()
         await this.layout.getLayoutMeta()
 
         const isFind = this.isFindRequest
@@ -206,23 +208,20 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         const reqData = {
             // port: 443,
             method: isFind ? 'POST' : 'GET',
+            type: ApiRecordResponseObj,
             body: isFind ? JSON.stringify(this.generateParamsBody(offset, limit)) : undefined
         }
 
         try {
-            const res = await this.layout.database._apiRequestJSON<ApiRecordResponseObj>(
+            const res = await this.layout.database.fetchJSON(
                 endpoint,
                 reqData
             )
-            if (res.messages[0].code === '0' && res.response) {
-                // console.log("RESOLVING")
-                if (!this.layout.metadata) await this.layout.getLayoutMeta()
-                return res.response.data.map(item => {
-                    return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
-                })
-            } else {
-                throw new FMError(res.messages[0].code, res.httpStatus, res, trace)
-            }
+            // console.log("RESOLVING")
+            if (!this.layout.metadata) await this.layout.getLayoutMeta()
+            return res.data.map(item => {
+                return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
+            })
         } catch (e) {
             if (e instanceof FMError) {
                 if (e.code === 401) {
@@ -235,7 +234,7 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
     }
 
     /**
-     * Creates an iterator that iterates throguh all results
+     * Create async iterator that pages through results lazily.
      * @param pageSize min: 1, max: 999
      */
     iterate (pageSize = 100) {

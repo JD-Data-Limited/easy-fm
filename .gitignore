@@ -2,3 +2,6 @@
 /.idea
 /node_modules
 /dist
+/coverage
+stressTest.sh
+/docs_out

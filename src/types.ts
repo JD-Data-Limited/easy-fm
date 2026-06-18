@@ -6,28 +6,37 @@
 import type * as http from 'http'
 import {type FMError} from './FMError.js'
 import {type LayoutInterface} from './layouts/layoutInterface.js'
+import z from "zod"
 
 export type PickPortals<LAYOUT extends LayoutInterface, PORTALS extends string | number | symbol = ''> =
     Omit<LAYOUT, 'portals'> & { portals: Pick<LAYOUT['portals'], PORTALS> }
 
-export interface databaseOptionsBase {
+/** Shared database connection options. */
+export interface databaseOptionsBase<
+    CREDENTAILS = loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken
+> {
     database: string
     debug?: boolean
-    credentials: loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken
+    credentials: CREDENTAILS
 }
 
-export interface databaseOptionsWithExternalSources extends databaseOptionsBase {
+/** Database options including any external FileMaker sources. */
+export interface databaseOptionsWithExternalSources<
+    CREDENTIALS = loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken
+> extends databaseOptionsBase<CREDENTIALS> {
     database: string
     debug?: boolean
-    credentials: loginOptionsOAuth | loginOptionsFileMaker | loginOptionsClaris | loginOptionsToken
-    externalSources: databaseOptionsBase[]
+    credentials: CREDENTIALS
+    externalSources: Array<databaseOptionsBase<loginOptionsFileMaker>>
 }
 
+/** Use an existing FileMaker Data API token. */
 export interface loginOptionsToken {
     method: 'token'
     token: string
 }
 
+/** Use FileMaker Data API OAuth headers to create session. */
 export interface loginOptionsOAuth {
     method: 'oauth'
     oauth: {
@@ -36,12 +45,18 @@ export interface loginOptionsOAuth {
     }
 }
 
+/** Use standard FileMaker username/password login. */
 export interface loginOptionsFileMaker {
     method: 'filemaker'
     username: string
     password: string
+    /**
+     * sessionPoolSize - The maximum number of sessions to keep open in the pool. Default is 4.
+     */
+    sessionPoolSize?: number
 }
 
+/** Use Claris authentication for session creation. */
 export interface loginOptionsClaris {
     method: 'claris'
     claris: {
@@ -49,18 +64,21 @@ export interface loginOptionsClaris {
     }
 }
 
+/** Portal fetch paging options for one portal. */
 export interface portalFetchData<T = string> {
     portalName: T
     offset: number
     limit: number
 }
 
+/** FileMaker scripts to run before, during, or after request processing. */
 export interface ScriptRequestData {
     prerequest?: Script
     presort?: Script
     after?: Script
 }
 
+/** Additional body options accepted by write operations. */
 export interface extraBodyOptions {
     scripts?: ScriptRequestData
     options?: {
@@ -83,11 +101,13 @@ export interface extraBodyOptions {
     }>
 }
 
+/** Simple script reference with optional parameter. */
 export interface Script {
     name: string
     parameter: string
 }
 
+/** Raw record payload shape returned by FileMaker Data API. */
 export interface recordObject {
     recordId: number
     modId: number
@@ -97,6 +117,7 @@ export interface recordObject {
 
 export type portalDataObject = Record<string, recordObject>
 
+/** Field metadata returned by layout metadata endpoint. */
 export interface FieldMetaData {
     name: string
     type: string
@@ -114,27 +135,31 @@ export interface FieldMetaData {
     repetitionEnd: number
 }
 
+/** Layout metadata for top-level fields and portals. */
 export interface LayoutMetaData {
     fieldMetaData: FieldMetaData[]
     portalMetaData?: Record<string, FieldMetaData[]>
 }
 
-export interface FMHostMetadata {
-    productInfo: {
-        buildDate: Date
-        name: string
-        version: string
-        dateFormat: string
-        timeFormat: string
-        timeStampFormat: string
-    }
-}
+/** FileMaker host metadata returned by `/productInfo`. */
+export const FMHostMetadata = z.object({
+    productInfo: z.object({
+        buildDate: z.coerce.date().optional(),
+        name: z.string(),
+        version: z.string().optional(),
+        dateFormat: z.string(),
+        timeFormat: z.string(),
+        timeStampFormat: z.string()
+    })
+})
 
+/** Result returned when a script executes through API call. */
 export interface ScriptResult {
     scriptError?: FMError
     scriptResult?: string
 }
 
+/** Container download result with payload and response metadata. */
 export interface ContainerBufferResult {
     buffer: Buffer
     mime?: string
@@ -146,17 +171,20 @@ export interface ContainerBufferResult {
 //     default: {FileMakerConnection}
 // }
 
-export interface AuthorizationHeaders {
+/** Standard JSON request headers with bearer authorization. */
+export interface AuthorizationHeaders extends Record<string, string> {
     'Content-Type': 'application/json'
     Authorization: string
 }
 
-export interface AuthorizationHeadersOAuth {
+/** OAuth request headers required by FileMaker Data API. */
+export interface AuthorizationHeadersOAuth extends Record<string, string> {
     'Content-Type': 'application/json'
     'X-FM-Data-OAuth-RequestId': string
     'X-FM-Data-OAuth-Identifier': string
 }
 
+/** Options used when creating empty record shells. */
 export interface RecordFetchOptions {
     readonly portals: readonly string[]
 }

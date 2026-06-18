@@ -6,6 +6,7 @@ import {type ApiFieldMetadata, ApiFieldResultTypes} from '../models/apiResults.j
 import inquirer from 'inquirer'
 import FMHost from '../connection/FMHost.js'
 import * as fs from 'node:fs'
+import z from "zod";
 
 function sub (str: string) {
     return str
@@ -13,7 +14,7 @@ function sub (str: string) {
         .replace(/^[0-9]+/g, '') // Removing leading numbers
 }
 
-function generateFieldType (field: ApiFieldMetadata) {
+function generateFieldType (field: z.infer<typeof ApiFieldMetadata>) {
     switch (field.result) {
         case ApiFieldResultTypes.TEXT:
             return 'Field<string>'
@@ -30,7 +31,7 @@ function generateFieldType (field: ApiFieldMetadata) {
     }
 }
 
-function processFieldsChunk (fields: ApiFieldMetadata[]) {
+function processFieldsChunk (fields: z.infer<typeof ApiFieldMetadata>[]) {
     const existingFields: string[] = []
     fields = fields.filter(field => {
         if (existingFields.includes(field.name)) return false
@@ -125,7 +126,7 @@ export async function generateTypesCLI () {
         externalSources: []
     })
 
-    await DATABASE.login()
+    // await DATABASE.login()
     // Create file write stream
     const stream = fs.createWriteStream('./types.ts')
     const layouts = await DATABASE.listLayouts()

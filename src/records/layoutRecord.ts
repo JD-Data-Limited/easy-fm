@@ -12,12 +12,13 @@ import {type LayoutRecordBase} from './layoutRecordBase.js'
 import {
     type ApiFieldData,
     type ApiPortalData,
-    type ApiRecordResponseObj,
+    ApiRecordResponseObj,
     type ApiRowDataDef
 } from '../models/apiResults.js'
 import {type LayoutBase} from '../layouts/layoutBase.js'
 import moment from 'moment'
 import {type Field, type FieldValue} from './field.js'
+import z from 'zod'
 
 export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAYOUT['fields']> implements LayoutRecordBase {
     portals: LAYOUT['portals'] = {}
@@ -28,7 +29,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
         recordId: number | string,
         modId = recordId,
         fieldData: Record<string, string | number> = {},
-        portalData: ApiPortalData | null = null, portalsToInclude: Array<keyof LAYOUT['portals']> = []) {
+        portalData: z.infer<typeof ApiPortalData> | null = null, portalsToInclude: Array<keyof LAYOUT['portals']> = []) {
         super(layout, parseInt(recordId as string), parseInt(modId as string), fieldData)
         this.portalsToInclude = portalsToInclude
         if (portalData) {
@@ -36,12 +37,13 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
         }
     }
 
+    /** Returns all loaded portals on this record as an array. */
     get portalsArray (): Array<Portal<any>> {
         return Object.values(this.portals)
     }
 
     /**
-     * Asynchronously commits the changes made to the current record.
+     * Saves this record back to FileMaker.
      * @param {extraBodyOptions} extraBody - The options for the extra body elements.
      * @returns {Promise<this>} - A promise that resolves with the modified object.
      * @throws {FMError} - If an error occurs during the commit process.
@@ -68,50 +70,52 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
 
         if (this.recordId === -1) {
             // This is a new LayoutRecord
-            const res = await this.layout.database._apiRequestJSON<{ recordId: string, modId: string }>(`${this.layout.endpoint}/records`, {
-                method: 'POST',
-                body: JSON.stringify(data)
-            })
+            const res = await this.layout.database.fetchJSON(
+                `${this.layout.endpoint}/records`,
+                {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    type: z.object({
+                        recordId: z.string(),
+                        modId: z.string(),
+                        scriptError: z.string().optional()
+                    })
+                }
+            )
 
-            if (!res.response) {
-                throw new FMError(res.messages[0].code, res.httpStatus, res)
-            } else if (typeof res.response.scriptError !== 'undefined' && res.response.scriptError !== '0') {
-                throw new FMError(res.response.scriptError, res.httpStatus, res)
-            } else if (res.messages[0].code === '0') {
-                this.recordId = parseInt(res.response.recordId)
-                this.modId = parseInt(res.response.modId)
-                return this
-            } else {
-                throw new FMError(res.messages[0].code, res.httpStatus, res)
+            if (typeof res.scriptError !== 'undefined' && res.scriptError !== '0') {
+                throw new FMError(res.scriptError, res.httpStatus, res)
             }
+            this.recordId = parseInt(res.recordId)
+            this.modId = parseInt(res.modId)
+            return this
         }
 
         // for (let item of Object.keys(data)) extraBody[item] = data[item]
-        const res = await this.layout.database._apiRequestJSON<{
-            modId: string
-            newPortalRecordInfo: Array<{
-                tableName: string
-                recordId: string
-                modId: string
-            }>
-        }>(this.endpoint, {
+        const res = await this.layout.database.fetchJSON(this.endpoint, {
             method: 'PATCH',
-            body: JSON.stringify(data)
+            body: JSON.stringify(data),
+            type: z.object({
+                modId: z.string(),
+                newPortalRecordInfo: z.array(z.object({
+                    tableName: z.string(),
+                    recordId: z.string(),
+                    modId: z.string()
+                })).optional(),
+                scriptError: z.string().optional()
+            })
         })
-        if (!res.response) {
-            throw new FMError(res.messages[0].code, res.httpStatus, res)
-        } else if (typeof res.response.scriptError !== 'undefined' && res.response.scriptError !== '0') {
-            throw new FMError(res.response.scriptError, res.httpStatus, res)
-        } else if (res.messages[0].code === '0') {
-            this.modId = +res.response.modId
-            this._onSave()
-            return this
-        } else {
-            throw new FMError(res.messages[0].code, res.httpStatus, res)
+
+        if (typeof res.scriptError !== 'undefined' && res.scriptError !== '0') {
+            throw new FMError(res.scriptError, res.httpStatus, res)
         }
+
+        this.modId = +res.modId
+        this._onSave()
+        return this
     }
 
-    protected processPortalData (portalData: ApiPortalData): void {
+    protected processPortalData (portalData: z.infer<typeof ApiPortalData>): void {
         for (const portalName of Object.keys(portalData)) {
             const _portal = new Portal(this, portalName)
             _portal.records = portalData[portalName].map(item => {
@@ -127,8 +131,8 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
     }
 
     /**
-     * Re-fetches the current record from the database server.
-     * Throws an error if commit() has not been called.
+     * Reloads this record from FileMaker.
+     * Throws if this record has not been saved yet.
      *
      * @return {Promise<this>} A Promise that resolves to this RecordBase instance if the record is successfully retrieved.
      * @throws {Error} If commit() has not been called.
@@ -139,57 +143,56 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
             throw new Error('Cannot get this RecordBase until a commit() is done.')
         }
         if (!this.layout.metadata) await this.layout.getLayoutMeta()
-        const res = await this.layout.database._apiRequestJSON<ApiRecordResponseObj>(this.endpoint, {
-            method: 'GET'
+        const res = await this.layout.database.fetchJSON(this.endpoint, {
+            type: ApiRecordResponseObj
         })
 
-        if (res.response && res.messages[0].code === '0') {
-            // console.log(res, res.response.data)
-            this.modId = +res.response.data[0].modId
-            this.processFieldData(res.response.data[0].fieldData)
-            this.portalData = []
-            if (res.response.data[0].portalData) this.processPortalData(res.response.data[0].portalData)
-            return this
-        } else {
-            throw new FMError(res.messages[0].code, res.httpStatus, res)
-        }
+        // console.log(res, res.response.data)
+        this.modId = +res.data[0].modId
+        this.processFieldData(res.data[0].fieldData)
+        this.portalData = []
+        if (res.data[0].portalData) this.processPortalData(res.data[0].portalData)
+        return this
     }
 
+    /** Creates a duplicate of this record in FileMaker. */
     async duplicate (): Promise<LayoutRecord<LAYOUT>> {
         const trace = new Error()
-        const res = await this.layout.database._apiRequestJSON<{ recordId: string, modId: string }>(this.endpoint, {
-            method: 'POST'
+        const res = await this.layout.database.fetchJSON(this.endpoint, {
+            method: 'POST',
+            type: z.object({
+                recordId: z.string(),
+                modId: z.string(),
+                scriptError: z.string().optional()
+            })
         })
-        if (!res.response) {
-            throw new FMError(res.messages[0].code, res.httpStatus, res, trace)
-        } else if (typeof res.response.scriptError !== 'undefined' && res.response.scriptError !== '0') {
-            throw new FMError(res.response.scriptError, res.httpStatus, res, trace)
-        } else if (res.messages[0].code === '0') {
-            const data = this.toObject((a) => true, (a) => true, (a) => false, (a) => false)
-            const _res = new LayoutRecord<LAYOUT>(this.layout, res.response.recordId, res.response.modId, data.fieldData, data.portalData)
-
-            this.emit('duplicated')
-            return _res
-        } else {
-            throw new FMError(res.messages[0].code, res.httpStatus, res, trace)
+        if (typeof res.scriptError !== 'undefined' && res.scriptError !== '0') {
+            throw new FMError(res.scriptError, res.httpStatus, res, trace)
         }
+        const data = this.toObject((a) => true, (a) => true, (a) => false, (a) => false)
+        const _res = new LayoutRecord<LAYOUT>(this.layout, res.recordId, res.modId, data.fieldData, data.portalData)
+
+        this.emit('duplicated')
+        return _res
     }
 
+    /** Deletes this record from FileMaker. */
     async delete (): Promise<void> {
-        const res = await this.layout.database._apiRequestJSON(this.endpoint, {
-            method: 'DELETE'
+        const res = await this.layout.database.fetchJSON(this.endpoint, {
+            method: 'DELETE',
+            type: z.object({
+                scriptError: z.string().optional()
+            }).optional()
         })
-        if (typeof res.response?.scriptError !== 'undefined' && res.response?.scriptError !== '0') {
-            throw new FMError(res.response.scriptError, res.httpStatus, res)
-        } else if (res.messages[0].code === '0') {
-            this.emit('deleted')
-        } else {
-            throw new FMError(res.messages[0].code, res.httpStatus, res)
+        if (typeof res.scriptError !== 'undefined' && res.scriptError !== '0') {
+            throw new FMError(res.scriptError, res.httpStatus, res)
         }
+        this.emit('deleted')
     }
 
-    fieldsToObject (filter = (a: Field<FieldValue>) => a.edited): Omit<ApiRowDataDef, 'portalData'> {
-        const fieldsProcessed: ApiFieldData = {}
+    /** Returns this record's edited fields as a FileMaker API payload. */
+    fieldsToObject (filter = (a: Field<FieldValue>) => a.edited): Omit<z.infer<typeof ApiRowDataDef>, 'portalData'> {
+        const fieldsProcessed: z.infer<typeof ApiFieldData> = {}
         let field: Field<FieldValue>
         for (field of this.fieldsArray.filter(field => filter(field))) {
             let value = field.value as string | number | Date
@@ -219,13 +222,14 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
         return obj
     }
 
+    /** Returns this record and its portal edits as a FileMaker API payload. */
     toObject (
         filter: (a: Field<FieldValue>) => any = (a) => a.edited,
         portalFilter: (a: Portal<any>) => any = (a) => a.records.find(record => record.edited),
         portalRowFilter: (a: PortalRecord<any>) => any = (a) => a.edited,
         portalFieldFilter: (a: Field<FieldValue>) => any = (a) => a.edited
     ) {
-        const obj: ApiRowDataDef = {
+        const obj: z.infer<typeof ApiRowDataDef> = {
             ...this.fieldsToObject(filter),
             portalData: {}
         }

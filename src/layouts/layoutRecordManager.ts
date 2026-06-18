@@ -8,10 +8,9 @@ import {type LayoutBase} from './layoutBase.js'
 import {type GetOperationOptions, RecordGetOperation} from '../records/getOperations/recordGetOperation.js'
 import {type PickPortals, type RecordFetchOptions} from '../types.js'
 import {type ApiFieldData} from '../models/apiResults.js'
+import {type z} from 'zod'
 
-/**
- * Manager class for handling layout records.
- */
+/** Provides the `layout.records.*` methods for a Layout. */
 export class LayoutRecordManager<T extends LayoutInterface> {
     readonly layout: LayoutBase
     constructor (layout: LayoutBase) {
@@ -19,17 +18,15 @@ export class LayoutRecordManager<T extends LayoutInterface> {
     }
 
     /**
-     * Creates a new layout record with the provided options.
+     * Creates a new unsaved record for this layout.
      *
-     * @param {OPTIONS} options - The options for creating the layout record.
-     * @return {Promise<LayoutRecord<PickPortals<T, OPTIONS['portals'][number]>>>}
-     * The newly created layout record.
+     * Set field values, then call `commit()` to save it.
      */
     async create<OPTIONS extends RecordFetchOptions>(options: OPTIONS): Promise<LayoutRecord<
     PickPortals<T, OPTIONS['portals'][number]>
     >> {
         const metadata = await this.layout.getLayoutMeta()
-        const fields: ApiFieldData = {}
+        const fields: z.infer<typeof ApiFieldData> = {}
         for (const _field of metadata.fieldMetaData) {
             fields[_field.name] = ''
         }
@@ -39,11 +36,9 @@ export class LayoutRecordManager<T extends LayoutInterface> {
     }
 
     /**
-     * Retrieves a layout record based on the given recordId.
+     * Returns one record by FileMaker `recordId`.
      *
-     * @param {number} recordId - The identifier of the record to retrieve.
-     *
-     * @returns {Promise<LayoutRecord<PickPortals<T, never>>>} - A Promise that resolves with the retrieved layout record.
+     * Prefer a normal find when you have a business field you can search by.
      */
     async get (recordId: number): Promise<LayoutRecord<
     PickPortals<T, never>
@@ -55,10 +50,7 @@ export class LayoutRecordManager<T extends LayoutInterface> {
     }
 
     /**
-     * Creates a new instance of RecordGetOperation with the given options.
-     *
-     * @param {Array} options - An array of options for the operation.
-     * @return {RecordGetOperation} - A new instance of RecordGetOperation.
+     * Starts a list or find request for this layout.
      */
     list<OPTIONS extends GetOperationOptions<T>>(options: OPTIONS) {
         return new RecordGetOperation<T, OPTIONS>(this.layout, options)

@@ -5,12 +5,13 @@
 import {type Script, type ScriptResult} from '../types.js'
 import {type DatabaseBase} from '../connection/databaseBase.js'
 import {type ApiLayoutMetadata} from '../models/apiResults.js'
+import {type z} from 'zod'
 
 export interface LayoutBase {
     readonly name: string
-    metadata: ApiLayoutMetadata | null
+    metadata: z.infer<typeof ApiLayoutMetadata> | null
     endpoint: string
     runScript: (script: Script) => Promise<ScriptResult>
-    getLayoutMeta: () => Promise<ApiLayoutMetadata>
+    getLayoutMeta: () => Promise<z.infer<typeof ApiLayoutMetadata>>
     database: DatabaseBase
 }

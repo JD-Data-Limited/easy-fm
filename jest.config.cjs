@@ -1,17 +1,26 @@
 module.exports = {
-    preset: 'ts-jest',
     testEnvironment: 'node',
+    setupFiles: ['<rootDir>/jest.setup-env.cjs'],
+    watchman: false,
+    collectCoverageFrom: [
+        'src/**/*.ts',
+        '!src/**/*.d.ts',
+        '!src/bin/**'
+    ],
     moduleNameMapper: {
         '^(.+)\\.js$': '$1'  // Remove .js extension for imports
     },
     moduleFileExtensions: ['ts', 'js', 'json'],
-    extensionsToTreatAsEsm: ['.ts'],
     transform: {
-        '^.+\\.ts$': 'babel-jest',
-        '^.+\\.js$': 'babel-jest',
+        '^.+\\.tsx?$': 'babel-jest',
+        '^.+\\.js$': 'babel-jest'
     },
     testMatch: ['**/__tests__/**/*.test.ts'],  // Adjust this path to match your test folder
-    collectCoverage: true,
     coverageDirectory: 'coverage',
+    coveragePathIgnorePatterns: [
+        '/dist/',
+        '/__tests__/',
+        '/__mocks__/'
+    ],
     coverageReporters: ['text', 'lcov'],
 };

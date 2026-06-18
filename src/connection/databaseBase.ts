@@ -3,17 +3,36 @@
  */
 
 import {type HostBase} from './HostBase.js'
-import {type ApiResults} from '../models/apiResults.js'
-import {type RequestInfo, type RequestInit, type Response} from 'node-fetch'
+import {type z, type ZodType} from 'zod'
 
 export interface DatabaseBase {
     host: HostBase
     readonly name: string
     endpoint: string
-    token: string
 
+    /**
+     * @deprecated login is deprecated and is now handled by newer session management. This function is simply a placeholder.
+     */
+    login: () => Promise<void>
+
+    /**
+     * Immediately closes all open sessions and prevents new ones from being created.
+     */
+    close: () => Promise<void>
+    /**
+     * Immediately closes all open sessions and prevents new ones from being created.
+     * Alias of {@link close}
+     */
+    logout: () => Promise<void>
     // layouts: DatabaseStructure["layouts"]
 
-    _apiRequestJSON: <T = unknown>(url: URL | RequestInfo, options?: RequestInit & { headers?: Record<string, string> } | undefined, autoRelogin?: boolean) => Promise<ApiResults<T>>
-    _apiRequestRaw: (url: URL | RequestInfo, options?: RequestInit & { headers?: Record<string, string>, useCookieJar?: boolean } | undefined) => Promise<Response>
+    fetch: (url: string | URL, options?: RequestInit) => Promise<Response>
+    fetchJSON: <T extends ZodType | null = null>(
+        url: string | URL,
+        options: RequestInit & { type: T }
+    ) => Promise<
+    T extends ZodType
+        ? z.infer<T> & { httpStatus: number }
+        : { httpStatus: number }
+    >
 }
