@@ -33,7 +33,10 @@ jobs:
         uses: actions/checkout@v4
         
       - uses: pnpm/action-setup@v6
-          
+
+      - name: Install dependencies
+        run: pnpm install
+
       - name: Generate docs
         run: pnpx typedoc --out ./web
         
