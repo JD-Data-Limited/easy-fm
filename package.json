@@ -2,13 +2,9 @@
   "name": "@jd-data-limited/easy-fm",
   "version": "4.1.15",
   "dependencies": {
-    "@types/follow-redirects": "^1.14.4",
-    "@types/node": "^22.7.7",
-    "commander": "^14.0.0",
-    "follow-redirects": "^1.15.5",
-    "moment": "^2.29.4",
-    "node-fetch": "^3.3.2",
-    "node-fetch-cookies": "^2.1.1"
+    "commander": "^14.0.3",
+    "moment": "^2.30.1",
+    "zod": "^4.4.3"
   },
   "type": "module",
   "main": "dist/index.js",
@@ -22,7 +18,12 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && jest"
+    "test": "npm run build && jest",
+    "test:coverage": "jest --coverage --testPathIgnorePatterns='/__tests__/database.test.ts$'",
+    "test:integration": "npm run build && jest __tests__/database.test.ts --runInBand",
+    "test:unit": "jest __tests__/query.test.ts __tests__/CookieJar.test.ts --runInBand",
+    "stress:search": "tsx src/bin/stressSearch.ts",
+    "docs:build": "typedoc --out ./docs_out"
   },
   "repository": {
     "type": "git",
@@ -45,31 +46,33 @@
     "url": "https://github.com/JD-Data-Limited/easy-fm/issues"
   },
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=22.22.3"
   },
   "devDependencies": {
-    "@babel/cli": "^7.25.7",
-    "@babel/core": "^7.25.8",
-    "@babel/preset-env": "^7.25.8",
-    "@babel/preset-typescript": "^7.25.7",
-    "@types/btoa": "^1.2.3",
-    "@types/events": "^3.0.0",
-    "@types/inquirer": "^9.0.7",
-    "@types/jest": "^29.5.13",
+    "@babel/cli": "^7.29.7",
+    "@babel/core": "^7.29.7",
+    "@babel/preset-env": "^7.29.7",
+    "@babel/preset-typescript": "^7.29.7",
+    "@types/btoa": "^1.2.5",
+    "@types/events": "^3.0.3",
+    "@types/inquirer": "^9.0.10",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.19.21",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "babel-jest": "^29.7.0",
-    "dotenv": "^16.3.1",
-    "eslint": "^8.57.0",
+    "dotenv": "^16.6.1",
+    "eslint": "^8.57.1",
     "eslint-config-standard-with-typescript": "^43.0.1",
-    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-n": "^16.6.2",
-    "eslint-plugin-promise": "^6.1.1",
-    "inquirer": "^9.2.13",
+    "eslint-plugin-promise": "^6.6.0",
+    "inquirer": "^9.3.8",
     "jest": "^29.7.0",
-    "ts-jest": "^29.2.5",
+    "ts-jest": "^29.4.11",
     "ts-morph": "^21.0.1",
-    "tsx": "^4.19.4",
-    "typescript": "^5.6.3"
+    "tsx": "^4.22.4",
+    "typedoc": "^0.28.19",
+    "typescript": "^5.9.3"
   },
   "bin": {
     "easyfm": "dist/bin/cli.js"

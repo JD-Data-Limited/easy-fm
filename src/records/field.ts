@@ -3,10 +3,19 @@
  */
 
 import {RecordTypes} from '../types.js'
-import {ApiFieldDisplayTypes, type ApiFieldMetadata, ApiFieldResultTypes, ApiFieldTypes} from '../models/apiResults.js'
+import {
+    ApiFieldDisplayTypes,
+    type ApiFieldMetadata,
+    ApiFieldResultTypes,
+    ApiFieldTypes,
+    ApiResults
+} from '../models/apiResults.js'
 import {type LayoutBase} from '../layouts/layoutBase.js'
 import {type Moment} from 'moment'
 import {FMError} from '../FMError.js'
+import {Readable} from 'node:stream'
+import {HttpError} from '../connection/Session.js'
+import {type z} from 'zod'
 
 export type FieldValue = string | number | Moment | Container
 export type Container = null
@@ -16,6 +25,10 @@ export interface Parentable {
     type: RecordTypes
     endpoint: string
     portal?: { name: string }
+}
+
+interface StreamOptions {
+    abortSignal?: AbortSignal
 }
 
 /**
@@ -60,7 +73,7 @@ export class Field<T extends FieldValue> {
         else this._value = content
     }
 
-    get metadata (): ApiFieldMetadata {
+    get metadata (): z.infer<typeof ApiFieldMetadata> {
         if (!this.parent.layout.metadata) {
             // Default to a regular text field
             return {
@@ -76,7 +89,8 @@ export class Field<T extends FieldValue> {
                 notEmpty: false,
                 numeric: false,
                 timeOfDay: false,
-                repetitions: 1,
+                repetitionStart: 1,
+                repetitionEnd: 1,
                 valueList: ''
             }
         }
@@ -95,7 +109,8 @@ export class Field<T extends FieldValue> {
                     notEmpty: false,
                     numeric: false,
                     timeOfDay: false,
-                    repetitions: 1,
+                    repetitionStart: 1,
+                    repetitionEnd: 1,
                     valueList: ''
                 }
         } else {
@@ -112,7 +127,8 @@ export class Field<T extends FieldValue> {
                 notEmpty: false,
                 numeric: false,
                 timeOfDay: false,
-                repetitions: 1,
+                repetitionStart: 1,
+                repetitionEnd: 1,
                 valueList: ''
             }
         }
@@ -151,95 +167,62 @@ export class Field<T extends FieldValue> {
         const form = new FormData()
         form.append('upload', file)
 
-        const res = await this.parent.layout.database._apiRequestRaw(`${this.parent.endpoint}/containers/${this.id}/1`, {
+        const res = await this.parent.layout.database.fetch(`${this.parent.endpoint}/containers/${this.id}/1`, {
             method: 'POST',
-            headers: {
-                // Authorization: 'Bearer ' + this.parent.layout.database.token,
-                // 'Content-Type': 'multipart/form-data'
-            },
             body: form
         })
+
         if (!res.ok) {
-            throw new Error(`Upload failed with HTTP error: ${res.status} (${res.statusText})`)
+            throw await HttpError.new(res)
         }
-        const data: { messages: Array<{ code: string }> } = await res.json() as any
-        if (data.messages[0].code === '0') return
+        const data = ApiResults.parse(await res.json())
+        if (data.messages[0].code === 0) return
         else {
             throw new FMError(data.messages[0].code, res.status, res)
         }
     }
 
-    @containerDownloadFunction
-    async #streamAsync (): Promise<{ data: NodeJS.ReadableStream, mime: string }> {
-        const req = await this.parent.layout.database._apiRequestRaw(this.string, {useCookieJar: true})
+    async #streamAsync (options: StreamOptions = {}): Promise<Response> {
+        const req = await this.parent.layout.database.fetch(this.string, {
+            signal: options.abortSignal ?? null,
+        })
+        // const req = await this.parent.layout.database._apiRequestRaw(this.string, {useCookieJar: true})
         if (!req.ok || !req.body) {
             throw new Error(`HTTP Error: ${req.status} (${req.statusText})`)
         }
-        return {data: req.body, mime: req.headers.get('Content-Type') ?? ''}
+        return req
     }
 
+    async stream (): Promise<{
+        data: Readable
+        mime: string
+    }>
+    /**
+     * @deprecated use webStream instead.
+     * @param webApi
+     */
     async stream () {
-        return await this.#streamAsync()
+        const stream = await this.#streamAsync()
+        if (!stream.body) {
+            throw await HttpError.new(stream)
+        }
+        return {
+            // @ts-expect-error stream types are correct
+            data: Readable.fromWeb(stream.body),
+            mime: stream.headers.get('Content-Type') ?? ''
+        }
     }
 
-    @containerDownloadFunction
+    /**
+     * Returns a readable stream. Use Readable.fromWeb(stream.body) to convert it to a Node.js Readable stream.
+     */
+    async webStream (options: StreamOptions) {
+        return await this.#streamAsync(options)
+    }
+
     async arrayBuffer (): Promise<{ data: ArrayBuffer, mime: string }> {
-        const req = await this.parent.layout.database._apiRequestRaw(this.string, {useCookieJar: true})
-        if (!req.ok) throw new Error(`HTTP Error: ${req.status} (${req.statusText})`)
-        return {data: await req.arrayBuffer(), mime: req.headers.get('Content-Type') ?? ''}
+        const stream = await this.#streamAsync()
+        if (!stream.ok) throw await HttpError.new(stream)
+        return {data: await stream.arrayBuffer(), mime: stream.headers.get('Content-Type') ?? ''}
     }
 }
-
-function containerDownloadFunction<PROPS extends any[], T extends FieldValue, R = unknown> (originalMethod: (...p: PROPS) => Promise<R>, context: ClassMethodDecoratorContext<Field<T>>) {
-    async function replacementMethod (this: Field<T>, ...args: PROPS) {
-        return await ContainerDownloadExecutor.processTask(async () => await originalMethod.call(this, ...args))
-    }
-
-    return replacementMethod
-}
-
-class ContainerDownloadExecutorClass {
-    hasDownloadedFirstContainer: 0 | 1 | 2 = 0
-    waitingFuncs: Array<{
-        func: (() => any)
-        done: ((...args: any[]) => any)
-        err: ((e: any) => any)
-    }> = []
-
-    async processTask<T extends () => Promise<any>>(task: T) {
-        const isFirstTask = this.hasDownloadedFirstContainer === 0
-        if (isFirstTask) {
-            this.hasDownloadedFirstContainer = 1
-            let res
-            try {
-                res = await task()
-            } catch (e) {
-                this.hasDownloadedFirstContainer = 0
-                const nextTask = this.waitingFuncs.splice(0, 1)[0]
-                if (nextTask) {
-                    this.processTask(nextTask.func)
-                        .then(res => nextTask.done(res))
-                        .catch(e => nextTask.err(e))
-                }
-                throw e
-            }
-            this.hasDownloadedFirstContainer = 2
-            for (const task of this.waitingFuncs) {
-                task.func()
-                    .then((res: any) => task.done(res))
-                    .catch((e: any) => task.err(e))
-            }
-            return res
-        } else if (this.hasDownloadedFirstContainer === 1) {
-            return await new Promise((resolve, reject) => {
-                this.waitingFuncs.push({
-                    func: task,
-                    done: resolve,
-                    err: reject
-                })
-            })
-        } else return await task()
-    }
-}
-
-const ContainerDownloadExecutor = new ContainerDownloadExecutorClass()

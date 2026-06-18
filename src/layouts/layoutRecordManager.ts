@@ -8,6 +8,7 @@ import {type LayoutBase} from './layoutBase.js'
 import {type GetOperationOptions, RecordGetOperation} from '../records/getOperations/recordGetOperation.js'
 import {type PickPortals, type RecordFetchOptions} from '../types.js'
 import {type ApiFieldData} from '../models/apiResults.js'
+import {type z} from 'zod'
 
 /**
  * Manager class for handling layout records.
@@ -29,7 +30,7 @@ export class LayoutRecordManager<T extends LayoutInterface> {
     PickPortals<T, OPTIONS['portals'][number]>
     >> {
         const metadata = await this.layout.getLayoutMeta()
-        const fields: ApiFieldData = {}
+        const fields: z.infer<typeof ApiFieldData> = {}
         for (const _field of metadata.fieldMetaData) {
             fields[_field.name] = ''
         }

@@ -4,18 +4,22 @@
 
 import {generateAuthorizationHeaders} from './generateAuthorizationHeaders.js'
 import {FMError} from '../FMError.js'
-import {Database} from './database.js'
+import {type Database} from './database.js'
 import {type HostBase} from './HostBase.js'
 import {
     type databaseOptionsWithExternalSources,
-    type FMHostMetadata,
+    FMHostMetadata,
     type loginOptionsClaris,
     type loginOptionsFileMaker,
     type loginOptionsOAuth
 } from '../types.js'
-import {type ApiResults} from '../models/apiResults.js'
+import {ApiResults} from '../models/apiResults.js'
 import {type DatabaseStructure} from '../databaseStructure.js'
 import {type Moment} from 'moment'
+import z from 'zod'
+import {type DatabaseProtocol} from './Session.js'
+import {DatabaseSessionPool} from './databaseSessionPool.js'
+import {DatabaseConstantSession} from './databaseConstantSession.js'
 
 /**
  * Represents a FileMaker host.
@@ -25,8 +29,8 @@ export default class FMHost implements HostBase {
     readonly hostname: string
     readonly timezoneOffsetFunc: (moment: Moment) => number
     readonly verify: boolean
-    readonly protocol: 'http:' | 'https:'
-    _metadata: FMHostMetadata | null = null
+    readonly protocol: DatabaseProtocol
+    _metadata: z.infer<typeof FMHostMetadata> | null = null
 
     constructor (
         _hostname: string,
@@ -41,7 +45,7 @@ export default class FMHost implements HostBase {
         this.verify = verify
     }
 
-    get metadata (): FMHostMetadata {
+    get metadata (): z.infer<typeof FMHostMetadata> {
         return this._metadata ?? {
             productInfo: {
                 buildDate: new Date(),
@@ -60,7 +64,10 @@ export default class FMHost implements HostBase {
             .replace('yyyy', 'YYYY')
     }
 
-    get timeFormat () { return this.metadata.productInfo.timeFormat }
+    get timeFormat () {
+        return this.metadata.productInfo.timeFormat
+    }
+
     get timeStampFormat () {
         return this.metadata.productInfo.timeStampFormat
             .replace('dd', 'DD')
@@ -84,10 +91,16 @@ export default class FMHost implements HostBase {
             method: 'GET',
             headers
         })
-        const data = await _fetch.json() as ApiResults<{ databases: any }>
+        const data = ApiResults.extend({
+            response: z.object({
+                databases: z.array(z.object({
+                    name: z.string()
+                }))
+            }).optional()
+        }).parse(await _fetch.json())
         // console.log(data.messages[0])
 
-        if (data.messages[0].code === '0' && data.response) {
+        if (data.messages[0].code === 0 && data.response) {
             return data.response.databases
         } else {
             throw new FMError(data.messages[0].code, _fetch.status, data)
@@ -101,8 +114,10 @@ export default class FMHost implements HostBase {
      * @param {databaseOptionsWithExternalSources} data - The options for the database, including external sources.
      * @return {Database<T>} A new Database instance.
      */
-    database<T extends DatabaseStructure>(data: databaseOptionsWithExternalSources) {
-        return new Database<T>(this, data)
+    database<T extends DatabaseStructure>(data: databaseOptionsWithExternalSources): Database<T> {
+        if (data.credentials.method === 'filemaker') return new DatabaseSessionPool(this, data as databaseOptionsWithExternalSources<loginOptionsFileMaker>)
+        // @ts-expect-error types are correct here
+        return new DatabaseConstantSession(this, data)
     }
 
     async getMetadata () {
@@ -111,10 +126,12 @@ export default class FMHost implements HostBase {
         const _fetch = await fetch(`${this.protocol}//${this.hostname}/fmi/data/v2/productInfo`, {
             method: 'GET'
         })
-        const data = await _fetch.json() as ApiResults<FMHostMetadata>
+        const raw = await _fetch.json()
+        console.log(raw)
+        const data = ApiResults.extend({response: FMHostMetadata.optional()}).parse(raw)
         // console.log(data.messages[0])
 
-        if (data.messages[0].code === '0' && data.response) {
+        if (data.messages[0].code === 0 && data.response) {
             this._metadata = data.response
             return data.response
         } else {
