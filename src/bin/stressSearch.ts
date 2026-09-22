@@ -262,7 +262,7 @@ async function main () {
         concurrencyLevels
     })
 
-    const fmHost = new FMHost(host, (moment) => 0 - moment.toDate().getTimezoneOffset(), false)
+    const fmHost = new FMHost(host, false)
 
     const rows: ResultRow[] = []
 

@@ -11,14 +11,15 @@ import {FMError} from '../FMError.js'
 import {type LayoutRecordBase} from './layoutRecordBase.js'
 import {
     type ApiFieldData,
+    ApiFieldMetadata,
     type ApiPortalData,
     ApiRecordResponseObj,
     type ApiRowDataDef
 } from '../models/apiResults.js'
 import {type LayoutBase} from '../layouts/layoutBase.js'
-import moment from 'moment'
-import {type Field, type FieldValue} from './field.js'
 import z from 'zod'
+import {Field} from "./fields/field.js";
+import {ValueFieldBase} from "./fields/valueField.js";
 
 export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAYOUT['fields']> implements LayoutRecordBase {
     portals: LAYOUT['portals'] = {}
@@ -115,6 +116,15 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
         return this
     }
 
+    getFieldMetadata(fieldId: string) {
+        if (!this.layout.metadata) {
+            throw new Error("Field metadata not found. Ensure you run layout.getLayoutMeta() first.")
+        }
+        let result = this.layout.metadata.fieldMetaData.find(i => i.name === fieldId)
+        if (!result) throw new Error("Field metadata not found. Ensure you run layout.getLayoutMeta() first.")
+        return result as z.infer<typeof ApiFieldMetadata>
+    }
+
     protected processPortalData (portalData: z.infer<typeof ApiPortalData>): void {
         for (const portalName of Object.keys(portalData)) {
             const _portal = new Portal(this, portalName)
@@ -191,43 +201,26 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
     }
 
     /** Returns this record's edited fields as a FileMaker API payload. */
-    fieldsToObject (filter = (a: Field<FieldValue>) => a.edited): Omit<z.infer<typeof ApiRowDataDef>, 'portalData'> {
+    fieldsToObject (filter = (a: Field) => a instanceof ValueFieldBase && a.edited): Omit<z.infer<typeof ApiRowDataDef>, 'portalData'> {
         const fieldsProcessed: z.infer<typeof ApiFieldData> = {}
-        let field: Field<FieldValue>
-        for (field of this.fieldsArray.filter(field => filter(field))) {
-            let value = field.value as string | number | Date
-            if (value instanceof Date) {
-                let _value = moment(value)
-                _value = _value
-                    .utcOffset(this.layout.database.host.timezoneOffsetFunc(_value))
 
-                switch (field.metadata.result) {
-                    case 'time':
-                        value = _value.format(this.layout.database.host.timeFormat)
-                        break
-                    case 'date':
-                        value = _value.format(this.layout.database.host.dateFormat)
-                        break
-                    default:
-                        value = _value.format(this.layout.database.host.timeStampFormat)
-                }
-            }
-            fieldsProcessed[field.id] = value
+        for (const field of this.fieldsArray.filter(field => filter(field))) {
+            fieldsProcessed[field.id] = field.serializeRawValue()
         }
-        const obj = {
+
+        return {
             recordId: this.recordId.toString(),
             modId: this.modId.toString(),
             fieldData: fieldsProcessed
         }
-        return obj
     }
 
     /** Returns this record and its portal edits as a FileMaker API payload. */
     toObject (
-        filter: (a: Field<FieldValue>) => any = (a) => a.edited,
+        filter: (a: Field) => any = (a) => a instanceof ValueFieldBase && a.edited,
         portalFilter: (a: Portal<any>) => any = (a) => a.records.find(record => record.edited),
         portalRowFilter: (a: PortalRecord<any>) => any = (a) => a.edited,
-        portalFieldFilter: (a: Field<FieldValue>) => any = (a) => a.edited
+        portalFieldFilter: (a: Field) => any = (a) => a instanceof ValueFieldBase && a.edited
     ) {
         const obj: z.infer<typeof ApiRowDataDef> = {
             ...this.fieldsToObject(filter),

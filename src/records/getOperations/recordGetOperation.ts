@@ -9,6 +9,8 @@ import {LayoutRecord} from '../layoutRecord.js'
 import {ApiRecordResponseObj} from '../../models/apiResults.js'
 import {FMError} from '../../FMError.js'
 import {FindRequestSymbol, type Query} from '../../utils/query.js'
+import {Temporal} from "temporal-polyfill"
+import {temporalToString} from "../../utils/temporal.js";
 
 export type SortOrder = 'ascend' | 'descend'
 /** Raw FileMaker find request strings, already escaped/formatted. */
@@ -158,19 +160,10 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
         for (const key of Object.keys(query)) {
             out[key] = query[key][FindRequestSymbol].map(item => {
                 if (typeof item === 'string') return item
-
                 // Re-write date into correct format
-                return item
-                    .moment
-                    .clone()
-                    .utcOffset(this.layout.database.host.timezoneOffsetFunc(item.moment))
-                    .format(
-                        item.type === 'date'
-                            ? this.layout.database.host.dateFormat
-                            : item.type === 'time'
-                                ? this.layout.database.host.timeFormat
-                                : this.layout.database.host.timeStampFormat
-                    )
+                if (item instanceof Temporal.PlainDateTime) return temporalToString(item, this.layout.database.host.timeStampFormat)
+                if (item instanceof Temporal.PlainDate) return temporalToString(item, this.layout.database.host.dateFormat)
+                if (item instanceof Temporal.PlainTime) return temporalToString(item, this.layout.database.host.timeFormat)
             }).join('')
         }
         return out

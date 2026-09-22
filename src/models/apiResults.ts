@@ -2,7 +2,7 @@
  * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import {z, type ZodType} from 'zod'
+import {z} from 'zod'
 
 export const ApiFieldTypes = {
     NORMAL: 'normal',
@@ -28,6 +28,8 @@ export const ApiFieldResultTypes = {
     TIMESTAMP: 'timeStamp',
     CONTAINER: 'container'
 } as const
+
+export type FieldResultTypes = z.infer<typeof ApiFieldResultTypes>
 
 export const ApiMessage = z.object({
     code: z.coerce.number(),

@@ -3,14 +3,14 @@
  */
 
 import {EventEmitter} from 'events'
-import * as moment from 'moment'
-import {type Moment} from 'moment'
 import {RecordTypes} from '../types.js'
-import {type RecordFieldsMap} from '../layouts/recordFieldsMap.js'
 import {type LayoutBase} from '../layouts/layoutBase.js'
-import {type ApiFieldData} from '../models/apiResults.js'
-import {Field, type FieldValue} from './field.js'
+import {type ApiFieldData, type ApiFieldMetadata} from '../models/apiResults.js'
 import {type z} from 'zod'
+import {RecordFieldsMap} from "../layouts/layoutInterface.js";
+import {Field} from "./fields/field.js";
+import {DateField, NumberField, TextField, TimeField, TimeStampField, ValueFieldBase} from "./fields/valueField.js";
+import {ContainerField} from "./fields/containerField.js";
 
 export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter {
     readonly layout: LayoutBase
@@ -43,43 +43,45 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
      * @returns {boolean} A boolean value indicating whether any of the fields have been edited.
      */
     get edited (): boolean {
-        return !!this.fieldsArray.find(i => i.edited)
+        return !!this.fieldsArray.find(i => i instanceof ValueFieldBase && i.edited)
     }
 
-    get fieldsArray (): Array<Field<FieldValue>> {
+    get fieldsArray (): Array<Field> {
         return Object.values(this.fields)
     }
+
+    abstract getFieldMetadata(fieldId: string): z.infer<typeof ApiFieldMetadata>
 
     protected processFieldData (fieldData: z.infer<typeof ApiFieldData>) {
         const fields: RecordFieldsMap = {}
 
-        for (const key of Object.keys(fieldData)) {
-            const _field = new Field<number | string | Moment>(this, key, fieldData[key])
-            if (fieldData[key]) {
-                if (_field.metadata.result === 'timeStamp') {
-                    let date = moment.default(fieldData[key])
-                    date = date
-                        .utcOffset(this.layout.database.host.timezoneOffsetFunc(date), true)
-                        .local()
-                    _field.set(date)
-                    _field.updateOriginalContents()
-                } else if (_field.metadata.result === 'time') {
-                    let date = moment.default(fieldData[key])
-                    date = date
-                        .utcOffset(this.layout.database.host.timezoneOffsetFunc(date), true)
-                        .local()
-                    _field.set(date)
-                    _field.updateOriginalContents()
-                } else if (_field.metadata.result === 'date') {
-                    let date = moment.default(fieldData[key])
-                    date = date
-                        .utcOffset(this.layout.database.host.timezoneOffsetFunc(date), true)
-                        .local()
-                    _field.set(date)
-                    _field.updateOriginalContents()
-                }
+        for (const [key, value] of Object.entries(fieldData)) {
+            const fieldMeta = this.getFieldMetadata(key)
+            let field: Field
+            switch (fieldMeta.result) {
+            case "text":
+                field = new TextField(this, key, value)
+                break
+            case "number":
+                field = new NumberField(this, key, value)
+                break
+            case "container":
+                field = new ContainerField(this, key, value)
+                break
+            case "timeStamp":
+                field = new TimeStampField(this, key, value)
+                break
+            case "time":
+                field = new TimeField(this, key, value)
+                break
+            case "date":
+                field = new DateField(this, key, value)
+                break
+            default:
+                throw new Error(`Attempted to parse unknown field type: ${fieldMeta.result}`)
             }
-            fields[key] = _field
+
+            fields[key] = field
         }
         this.fields = fields as T
         return fields as T
@@ -87,6 +89,8 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
 
     _onSave () {
         this.emit('saved')
-        for (const field of this.fieldsArray) field.updateOriginalContents()
+        for (const field of this.fieldsArray) {
+            if (field instanceof ValueFieldBase) field.updateOriginalContents()
+        }
     }
 }

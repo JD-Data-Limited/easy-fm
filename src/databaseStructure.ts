@@ -3,8 +3,8 @@
  */
 
 // import * as btoa from "btoa";
-import {type LayoutInterface} from './layouts/layoutInterface.js'
+import {type AsLayoutInterface, type LayoutInterface} from './layouts/layoutInterface.js'
 
 export interface DatabaseStructure {
-    layouts: Record<string, LayoutInterface>
+    layouts: Record<string, AsLayoutInterface<LayoutInterface>>
 }

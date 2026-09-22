@@ -94,7 +94,7 @@ export async function generateTypesCLI () {
             default: true,
             message: "Verify your server's identity",
             when (previousAnswers) {
-                return previousAnswers.hostname.startsWith('https://')
+                return previousAnswers.hostname?.startsWith('https://')
             }
         },
         {
@@ -115,7 +115,7 @@ export async function generateTypesCLI () {
         }
     ])
 
-    const HOST = new FMHost(data.hostname, () => data.timezoneOffset, data.verify)
+    const HOST = new FMHost(data.hostname, data.verify)
     const DATABASE = HOST.database({
         database: data.database,
         credentials: {

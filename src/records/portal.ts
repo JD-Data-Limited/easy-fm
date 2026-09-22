@@ -3,9 +3,9 @@
  */
 
 import {PortalRecord} from './portalRecord.js'
-import {type RecordFieldsMap} from '../layouts/recordFieldsMap.js'
 import {type PortalBase} from './portalBase.js'
 import {type LayoutRecord} from './layoutRecord.js'
+import {RecordFieldsMap} from "../layouts/layoutInterface.js";
 
 /**
  * Represents a portal.

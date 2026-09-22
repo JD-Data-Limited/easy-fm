@@ -15,6 +15,9 @@ module.exports = {
         '^.+\\.tsx?$': 'babel-jest',
         '^.+\\.js$': 'babel-jest'
     },
+    // temporal-polyfill and its temporal-utils dependency are ESM-only, so Jest
+    // must transform them with the rest of the source.
+    transformIgnorePatterns: ['node_modules/(?!.*(?:temporal-polyfill|temporal-utils))'],
     testMatch: ['**/__tests__/**/*.test.ts'],  // Adjust this path to match your test folder
     coverageDirectory: 'coverage',
     coveragePathIgnorePatterns: [

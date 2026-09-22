@@ -5,9 +5,11 @@
 import {RecordBase} from './recordBase.js'
 import {type extraBodyOptions, RecordTypes} from '../types.js'
 
-import {type RecordFieldsMap} from '../layouts/recordFieldsMap.js'
 import {type PortalBase} from './portalBase.js'
-import {type Field, type FieldValue} from './field.js'
+import z from "zod";
+import {ApiFieldMetadata} from "../models/apiResults.js";
+import {RecordFieldsMap} from "../layouts/layoutInterface.js";
+import {Field} from "./fields/field.js";
 
 /**
  * Represents a PortalRecord, which is a record in a portal within a parent record.
@@ -37,7 +39,16 @@ export class PortalRecord<T extends RecordFieldsMap> extends RecordBase<T> {
         return await this.portal.record.commit(extraBody)
     }
 
-    toObject (fieldFilter: (a: Field<FieldValue>) => boolean): {
+    getFieldMetadata(fieldId: string) {
+        if (!this.layout.metadata) {
+            throw new Error("Field metadata not found. Ensure you run layout.getLayoutMeta() first.")
+        }
+        let result = this.layout.metadata.portalMetaData[this.portal.name || '__portal not attached'].find(i => i.name === fieldId)
+        if (!result) throw new Error("Field metadata not found. Ensure you run layout.getLayoutMeta() first.")
+        return result as z.infer<typeof ApiFieldMetadata>
+    }
+
+    toObject (fieldFilter: (a: Field) => boolean): {
         modId?: string
         recordId?: string
     } & Record<string, string> {

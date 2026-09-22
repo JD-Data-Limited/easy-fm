@@ -67,7 +67,7 @@ console.log(records[0].portals.Notes.records[0].fields.Note.value)
 
 - `LayoutInterface`
 - `Portal`
-- `Field`
+- `BaseField`
 - `PickPortals`
 - `RecordFieldsMap`
 

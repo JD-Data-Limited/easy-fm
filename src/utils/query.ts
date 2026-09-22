@@ -2,15 +2,11 @@
  * Copyright (c) 2024. See LICENSE file for more information
  */
 
-import moment, {type Moment} from 'moment'
+import {Temporal} from 'temporal-polyfill'
 
 export const FindRequestSymbol = Symbol('easyfm-findrequest')
 const SPECIAL_CHARACTERS = ['\\', '=', '<', '≤', '≥', '>', '…', '...', '//', '@', '#', '*', '"', '~']
-/** Represents a date, time, or timestamp value passed into `query(...)`. */
-export interface TimestampType {
-    type: 'date' | 'time' | 'timestamp'
-    moment: Moment
-}
+export type TimestampType = Temporal.PlainDate | Temporal.PlainTime | Temporal.PlainDateTime
 type QueryParameter = string | number | TimestampType
 /** Represents a FileMaker find value produced by `query(...)`. */
 export interface Query { [FindRequestSymbol]: Array<string | TimestampType> }
@@ -38,29 +34,3 @@ export function query (strings: TemplateStringsArray, ...args: QueryParameter[])
     }).flat(1)
     return {[FindRequestSymbol]: query}
 }
-
-/** Marks a value as a FileMaker date for use inside `query(...)`. */
-export function asDate (date: Date | Moment): TimestampType {
-    return {
-        type: 'date',
-        moment: moment(date)
-    }
-}
-
-/** Marks a value as a FileMaker time for use inside `query(...)`. */
-export function asTime (date: Date | Moment): TimestampType {
-    return {
-        type: 'time',
-        moment: moment(date)
-    }
-}
-
-/** Marks a value as a FileMaker timestamp for use inside `query(...)`. */
-export function asTimestamp (date: Date | Moment): TimestampType {
-    return {
-        type: 'timestamp',
-        moment: moment(date)
-    }
-}
-
-query

@@ -18,7 +18,7 @@ export {RecordBase} from './records/recordBase.js'
 /** Record returned from a layout. Supports fetch, commit, duplicate, and delete. */
 export {LayoutRecord} from './records/layoutRecord.js'
 /** Type helpers for describing typed layouts and portals. */
-export {type LayoutInterface, type PortalInterface} from './layouts/layoutInterface.js'
+export {type LayoutInterface, type PortalInterface, type LayoutInterfaceSimplified, type RecordFieldsMap} from './layouts/layoutInterface.js'
 /** Record returned from a portal row. */
 export {PortalRecord} from './records/portalRecord.js'
 /** Wrapper around portal rows included in a layout record. */
@@ -27,12 +27,21 @@ export {Portal} from './records/portal.js'
 export {type FindRequest, type FindRequestRaw, RecordGetOperation} from './records/getOperations/recordGetOperation.js'
 /** Entry point for `layout.records.*` operations. */
 export {LayoutRecordManager} from './layouts/layoutRecordManager.js'
-/** Type alias for map of fields on a typed record. */
-export {type RecordFieldsMap} from './layouts/recordFieldsMap.js'
 /** Helpers for safe FileMaker find query construction and date/time formatting. */
-export {asDate, asTime, asTimestamp, query, queryEscape} from './utils/query.js'
+export {query, queryEscape} from './utils/query.js'
+/** Conversion helpers for FileMaker-formatted Temporal values. */
+export * from './records/fields/valueField.js'
+export * from './records/fields/containerField.js'
+export {type Field} from './records/fields/field.js'
+
+export {
+    stringToTemporal,
+    temporalToString,
+    type TemporalValue,
+    type TemporalValueType
+} from './utils/temporal.js'
 /** Field wrapper used for reading, editing, and container access. */
-export {type Container, Field} from './records/field.js'
+export {type BaseField} from './records/fields/baseField.js'
 
 /** Default export. Represents FileMaker host/server. */
 export default FMHost

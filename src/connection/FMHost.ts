@@ -15,7 +15,6 @@ import {
 } from '../types.js'
 import {ApiResults} from '../models/apiResults.js'
 import {type DatabaseStructure} from '../databaseStructure.js'
-import {type Moment} from 'moment'
 import z from 'zod'
 import {type DatabaseProtocol} from './Session.js'
 import {DatabaseSessionPool} from './databaseSessionPool.js'
@@ -26,21 +25,18 @@ import {DatabaseConstantSession} from './databaseConstantSession.js'
  */
 export default class FMHost implements HostBase {
     readonly hostname: string
-    readonly timezoneOffsetFunc: (moment: Moment) => number
     readonly verify: boolean
     readonly protocol: DatabaseProtocol
     _metadata: z.infer<typeof FMHostMetadata> | null = null
 
     constructor (
         _hostname: string,
-        timezoneOffset = (moment: Moment) => 0 - (new Date()).getTimezoneOffset(),
         verify = true
     ) {
         if (!(/^https?:\/\//).test(_hostname)) throw new Error('hostname MUST begin with either http:// or https://')
         const url = new URL(_hostname)
         this.protocol = url.protocol as ('http:' | 'https:')
         this.hostname = url.hostname
-        this.timezoneOffsetFunc = timezoneOffset
         this.verify = verify
     }
 
