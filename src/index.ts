@@ -32,7 +32,7 @@ export {type FindRequest, type FindRequestRaw, RecordGetOperation} from './recor
 /** Entry point for `layout.records.*` operations. */
 export {LayoutRecordManager} from './layouts/layoutRecordManager.js'
 /** Helpers for safe FileMaker find query construction and date/time formatting. */
-export {query, queryEscape} from './utils/query.js'
+export {asDate, asTime, asTimestamp, query, queryEscape} from './utils/query.js'
 /** Conversion helpers for FileMaker-formatted Temporal values. */
 export * from './records/fields/valueField.js'
 export * from './records/fields/containerField.js'

@@ -57,6 +57,8 @@ for (const record of records) {
 
 ## Documentation
 
+> Updating from v4 to v5? Check the guide here; [`docs/upgrade-to-v5.md`](./docs/upgrade-to-v5.md)
+
 Start here:
 
 - [`docs/getting-started.md`](./docs/getting-started.md): first connection, first find, closing sessions
