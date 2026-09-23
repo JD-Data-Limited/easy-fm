@@ -5,3 +5,6 @@ src
 coverage
 __mocks__
 __test__
+stressTest.sh
+docs
+docs_out

@@ -23,7 +23,7 @@ npm install @jd-data-limited/easy-fm
 ## Quick Start
 
 ```ts
-import FMHost from "@jd-data-limited/easy-fm"
+import {FMHost} from "@jd-data-limited/easy-fm"
 
 const host = new FMHost("https://example.com")
 
@@ -69,7 +69,6 @@ Task guides:
 - [`docs/working-with-records.md`](./docs/working-with-records.md): list, create, update, duplicate, delete, portal rows
 - [`docs/query-recipes.md`](./docs/query-recipes.md): find requests, sorting, paging, script hooks
 - [`docs/authentication-and-sessions.md`](./docs/authentication-and-sessions.md): auth modes, pooling, lifecycle
-- [`docs/timezones.md`](./docs/timezones.md): date, time, and timestamp behavior
 - [`docs/typescript-layouts.md`](./docs/typescript-layouts.md): typed layouts and stronger autocomplete
 - [`docs/testGuide.md`](./docs/testGuide.md): local test commands
 

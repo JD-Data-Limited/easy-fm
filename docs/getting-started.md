@@ -5,7 +5,7 @@ This guide gets `easy-fm` from install to first successful read.
 ## 1. Create A Host
 
 ```ts
-import FMHost from "@jd-data-limited/easy-fm"
+import {FMHost} from "@jd-data-limited/easy-fm"
 
 const host = new FMHost("https://example.com")
 ```
