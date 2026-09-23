@@ -45,14 +45,15 @@ you need to update your code.
 ## Session Pooling
 
 EasyFM v5 introduces session pooling. Session pooling allows you to make use of multiple asynchronous FileMaker Data API
-sessions to retreive data. In situations where you're dispatching a lot of queries in rapid succession, this can improve
+sessions to retrieve data. In situations where you're dispatching a lot of queries in rapid succession, this can improve
 speeds.
 
 Session pooling is enabled by default for username/password connections. No changes required.
 
 This new feature is only available for connections that use username/password authentication, and requires no syntax
 change from v4. EasyFM defaults to a session pool size of 8, though this can be adjusted by defining `sessionPoolSize`
-in your connection credentials.
+in your connection credentials. A session pool size of 8 means EasyFM can manage *up to* 8 FileMaker Data API sessions
+at any given time.
 
 ```typescript
 import {FMHost} from "@jd-data-limited/easy-fm"
@@ -74,9 +75,11 @@ As a part of this, `database.login()` has been deprecated. You do not need to re
 `database.login()` immediately. The method remains available for compatibility, but no longer establishes a FileMaker
 session. New code should omit the call.
 
+As previously, sessions are handled automatically by EasyFM.
+
 ## Data Types
 
-To improve your abiity to catch errors early, understand the funcitonal differences between each field type, and to
+To improve your ability to catch errors early, understand the functional differences between each field type, and to
 unlock flexibility, we've changed how fields are handled and how you define layout schema.
 
 **Previously in v4,** all fields were classified under the generic `Field<DATA_TYPE>` class. This meant that every field
@@ -92,10 +95,10 @@ class that extends from `BaseField`. This includes:
 - `DateField` extends `ValueField` extends `BaseField`
 - `ContainerField` extends `BaseField`
 
-> `ValueField` refers to fields with values that are directly read/writable and do not require and specialised
+> `ValueField` refers to fields with values that are directly read/writable and do not require any specialised
 > operations.
 
-Field itself has been re-purposed and is now a union-type of all of these top-level classes.
+`Field` is now a union of the concrete field types rather than a generic field class.
 
 ### What does this mean?
 
@@ -198,7 +201,7 @@ EasyFM making assumptions about the timezone in which it should be interpreted.
 
 ### What does this mean for your code?
 
-- `FMHost` no longer allows you to define timezone-conversion function in its constructor
+- `FMHost` no longer allows you to define a timezone-conversion function in its constructor
 - Time, date, and timestamp fields that were previously represented with `Field<Date>` are now represented with:
     - `TimeStampField`
     - `TimeField`
