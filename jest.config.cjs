@@ -12,7 +12,12 @@ module.exports = {
     },
     moduleFileExtensions: ['ts', 'js', 'json'],
     transform: {
-        '^.+\\.tsx?$': 'babel-jest',
+        '^.+\\.tsx?$': ['babel-jest', {
+            presets: [
+                ['@babel/preset-env', {targets: {node: 'current'}, modules: 'commonjs'}],
+                '@babel/preset-typescript'
+            ]
+        }],
         '^.+\\.js$': 'babel-jest'
     },
     // temporal-polyfill and its temporal-utils dependency are ESM-only, so Jest

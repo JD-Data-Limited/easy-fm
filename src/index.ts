@@ -18,7 +18,11 @@ export {RecordBase} from './records/recordBase.js'
 /** Record returned from a layout. Supports fetch, commit, duplicate, and delete. */
 export {LayoutRecord} from './records/layoutRecord.js'
 /** Type helpers for describing typed layouts and portals. */
-export {type LayoutInterface, type PortalInterface, type LayoutInterfaceSimplified, type RecordFieldsMap} from './layouts/layoutInterface.js'
+export {
+    type LayoutInterface,
+    type PortalInterface,
+    type RecordFieldsMap
+} from './layouts/layoutInterface.js'
 /** Record returned from a portal row. */
 export {PortalRecord} from './records/portalRecord.js'
 /** Wrapper around portal rows included in a layout record. */
@@ -47,5 +51,5 @@ export {type BaseField} from './records/fields/baseField.js'
 export default FMHost
 export {
     /** Namespace re-export of library public types. */
-    type TYPES
+        type TYPES
 }

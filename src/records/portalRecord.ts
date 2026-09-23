@@ -43,7 +43,10 @@ export class PortalRecord<T extends RecordFieldsMap> extends RecordBase<T> {
         if (!this.layout.metadata) {
             throw new Error("Field metadata not found. Ensure you run layout.getLayoutMeta() first.")
         }
-        let result = this.layout.metadata.portalMetaData[this.portal.name || '__portal not attached'].find(i => i.name === fieldId)
+        const portalMetadata = this.portal
+            ? this.layout.metadata.portalMetaData[this.portal.name] ?? []
+            : Object.values(this.layout.metadata.portalMetaData).flat()
+        const result = portalMetadata.find(i => i.name === fieldId)
         if (!result) throw new Error("Field metadata not found. Ensure you run layout.getLayoutMeta() first.")
         return result as z.infer<typeof ApiFieldMetadata>
     }

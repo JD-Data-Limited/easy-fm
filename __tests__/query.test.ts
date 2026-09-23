@@ -3,9 +3,8 @@
  */
 
 import {equal} from 'node:assert'
-import moment from 'moment'
-import {asDate, asTime, asTimestamp, query, queryEscape} from '../src/utils/query.js'
-import {FindRequestSymbol} from '../src/utils/query.js'
+import {Temporal} from 'temporal-polyfill'
+import {FindRequestSymbol, query, queryEscape} from '../src/utils/query.js'
 
 describe('Query utilities', () => {
     it('Escapes interpolated wildcard characters', () => {
@@ -19,24 +18,21 @@ describe('Query utilities', () => {
     })
 
     it('Builds date query tokens', () => {
-        const value = asDate(moment('2024-01-02T03:04:05Z'))
+        const value = Temporal.PlainDate.from('2024-01-02')
         const result = query`=${value}`
         equal(result[FindRequestSymbol][1], value)
-        equal(value.type, 'date')
     })
 
     it('Builds time query tokens', () => {
-        const value = asTime(moment('2024-01-02T03:04:05Z'))
+        const value = Temporal.PlainTime.from('03:04:05')
         const result = query`=${value}`
         equal(result[FindRequestSymbol][1], value)
-        equal(value.type, 'time')
     })
 
     it('Builds timestamp query tokens', () => {
-        const value = asTimestamp(moment('2024-01-02T03:04:05Z'))
+        const value = Temporal.PlainDateTime.from('2024-01-02T03:04:05')
         const result = query`=${value}`
         equal(result[FindRequestSymbol][1], value)
-        equal(value.type, 'timestamp')
     })
 
     it('Escapes explicit query strings', () => {

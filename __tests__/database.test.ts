@@ -19,18 +19,18 @@ describe('Database interactions', () => {
     let testLayout: Layout<DatabaseSchema['layouts']['EasyFMBenchmark']>
     const testField = 'OneVeryLongField'
     type TestRecord = LayoutRecord<
-    PickPortals<DatabaseSchema['layouts']['EasyFMBenchmark'], never>
+        PickPortals<DatabaseSchema['layouts']['EasyFMBenchmark'], never>
     >
-    const createdRecordIds = new Set<number>()
+    const createdRecordIds: Set<number> = new Set()
 
-    async function createTestRecord (): Promise<TestRecord> {
+    async function createTestRecord(): Promise<TestRecord> {
         const record = await testLayout.records.create({portals: []})
         await record.commit()
         createdRecordIds.add(record.recordId)
         return record
     }
 
-    async function deleteTestRecord (record: TestRecord | undefined) {
+    async function deleteTestRecord(record: TestRecord | undefined) {
         if (!record || record.recordId < 0 || !createdRecordIds.has(record.recordId)) return
         createdRecordIds.delete(record.recordId)
         await record.delete()
@@ -119,6 +119,7 @@ describe('Database interactions', () => {
     it('Fetch a single record', async () => {
         const record = await createTestRecord()
         await record.get()
+        console.log(record.fields["Date"])
         await deleteTestRecord(record)
     })
 
@@ -194,7 +195,7 @@ describe('Database interactions', () => {
     describe('Containers', () => {
         let record: TestRecord | undefined
 
-        function getRecord () {
+        function getRecord() {
             if (!record) throw new Error('Container test record was not created')
             return record
         }

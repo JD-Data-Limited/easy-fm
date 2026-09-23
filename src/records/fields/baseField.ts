@@ -35,6 +35,14 @@ export abstract class BaseField<
     id: string
     protected _value: T
 
+    /**
+     * @internal
+     * Use `layout.records.create()` instead to create a new LayoutRecord, as this may be safer.
+     * @param record
+     * @param id
+     * @param value
+     * @protected
+     */
     protected constructor(record: Parentable, id: string, value: RawValueData) {
         this.parent = record
         this.id = id

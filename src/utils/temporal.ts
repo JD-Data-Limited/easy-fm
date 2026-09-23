@@ -20,6 +20,10 @@ const TOKEN_PATTERNS: Record<FormatToken, string> = {
     ss: '\\d{2}'
 }
 
+function normalizeFormat(format: string): string {
+    return format.replace(/YYYY/g, 'yyyy').replace(/DD/g, 'dd')
+}
+
 function pad(value: number, length = 2): string {
     return value.toString().padStart(length, '0')
 }
@@ -58,6 +62,7 @@ function parserFor(format: string): { pattern: RegExp, tokens: FormatToken[] } {
 
 /** Formats a Temporal value using the supplied token-based format. */
 export function temporalToString(value: TemporalValue, format: string): string {
+    format = normalizeFormat(format)
     const values: Partial<Record<FormatToken, string>> = {}
 
     if (value instanceof Temporal.PlainDateTime) {
@@ -82,8 +87,10 @@ export function temporalToString(value: TemporalValue, format: string): string {
 export function stringToTemporal(value: string, type: 'date', format: string): Temporal.PlainDate
 export function stringToTemporal(value: string, type: 'time', format: string): Temporal.PlainTime
 export function stringToTemporal(value: string, type: 'timestamp', format: string): Temporal.PlainDateTime
+export function stringToTemporal(value: string, type: TemporalValueType, format: string): TemporalValue
 /** Parses a Temporal value using the supplied token-based format. */
 export function stringToTemporal(value: string, type: TemporalValueType, format: string): TemporalValue {
+    format = normalizeFormat(format)
     const {pattern, tokens} = parserFor(format)
     const match = pattern.exec(value)
     if (!match) return invalidTemporalString(value, format)

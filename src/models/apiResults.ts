@@ -91,7 +91,7 @@ export const ApiScriptResult = z.object({
 
 export const ApiFieldData = z.record(
     z.string(),
-    z.union([z.string(), z.number()])
+    z.union([z.string(), z.number(), z.null()])
 )
 
 export const ApiResultSetObj = z.object({

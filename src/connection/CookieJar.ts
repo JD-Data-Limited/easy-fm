@@ -15,7 +15,7 @@ interface Cookie {
 }
 
 export class CookieJar {
-    readonly #cookies = new Map<string, Cookie>()
+    readonly #cookies: Map<string, Cookie> = new Map()
 
     static #normalizeDomain (domain: string) {
         return domain.trim().replace(/^\./, '').replace(/^www\./, '').toLowerCase()
@@ -41,7 +41,7 @@ export class CookieJar {
         if (separatorIndex === -1) return
         const name = nameValue.slice(0, separatorIndex)
         const value = nameValue.slice(separatorIndex + 1)
-        const cookieMap = new Map<string, string>()
+        const cookieMap: Map<string, string> = new Map()
         for (const attribute of attributes) {
             const index = attribute.indexOf('=')
             if (index === -1) {
@@ -86,7 +86,7 @@ export class CookieJar {
      */
     getCookies (url: URL): Map<string, string> {
         const domain = CookieJar.#normalizeDomain(url.hostname)
-        const result = new Map<string, string>()
+        const result: Map<string, string> = new Map()
         const now = Date.now()
         for (const [name, cookie] of this.#cookies) {
             if (cookie.expires !== null && cookie.expires < now) {

@@ -17,13 +17,13 @@ export class Layout<T extends LayoutInterface> implements LayoutBase {
     readonly records = new LayoutRecordManager<T>(this)
     metadata: z.infer<typeof ApiLayoutMetadata> | null = null
 
-    constructor (database: DatabaseBase, name: string) {
+    constructor(database: DatabaseBase, name: string) {
         this.database = database
         this.name = name
     }
 
     /** Base endpoint for this layout on FileMaker Data API. */
-    get endpoint () {
+    get endpoint() {
         return `${this.database.endpoint}/layouts/${this.name}`
     }
 
@@ -32,7 +32,7 @@ export class Layout<T extends LayoutInterface> implements LayoutBase {
      * @param {Script} script - The script to be executed.
      * @returns {Promise<ScriptResult>} - A promise that resolves to the script result or rejects with an error.
      */
-    async runScript (script: Script): Promise<ScriptResult> {
+    async runScript(script: Script): Promise<ScriptResult> {
         let url = `${this.endpoint}/script/${encodeURIComponent(script.name)}`
         if (script.parameter) url += '?script.param=' + encodeURIComponent(script.parameter)
         const res = await this.database.fetchJSON(url, {
@@ -52,7 +52,7 @@ export class Layout<T extends LayoutInterface> implements LayoutBase {
      * @returns {Promise<ApiLayoutMetadata>} The layout metadata.
      * @throws {FMError} If an error occurs during the API request.
      */
-    public async getLayoutMeta (): Promise<z.infer<typeof ApiLayoutMetadata>> {
+    public async getLayoutMeta(): Promise<z.infer<typeof ApiLayoutMetadata>> {
         if (this.metadata) {
             return this.metadata
         }

@@ -3,20 +3,14 @@
  */
 
 import {Temporal} from 'temporal-polyfill'
-import {
-    stringToTemporal,
-    TEMPORAL_DATE_FORMAT,
-    TEMPORAL_TIME_FORMAT,
-    TEMPORAL_TIMESTAMP_FORMAT,
-    temporalToString
-} from '../src/utils/temporal.js'
+import {stringToTemporal, temporalToString} from '../src/utils/temporal.js'
 
 describe('Temporal conversion utilities', () => {
     describe('temporalToString', () => {
         it.each([
-            [Temporal.PlainDate.from('2026-09-02'), TEMPORAL_DATE_FORMAT, '09/02/2026'],
-            [Temporal.PlainTime.from('04:05:06'), TEMPORAL_TIME_FORMAT, '04:05:06'],
-            [Temporal.PlainDateTime.from('2026-09-02T04:05:06'), TEMPORAL_TIMESTAMP_FORMAT, '09/02/2026 04:05:06']
+            [Temporal.PlainDate.from('2026-09-02'), 'MM/dd/yyyy', '09/02/2026'],
+            [Temporal.PlainTime.from('04:05:06'), 'HH:mm:ss', '04:05:06'],
+            [Temporal.PlainDateTime.from('2026-09-02T04:05:06'), 'MM/dd/yyyy HH:mm:ss', '09/02/2026 04:05:06']
         ])('formats %s using %s', (value, format, expected) => {
             expect(temporalToString(value, format)).toBe(expected)
         })
@@ -96,6 +90,6 @@ describe('Temporal conversion utilities', () => {
         [Temporal.PlainDateTime.from('1999-12-31T23:59:58'), 'ss:mm:HH dd/MM/yyyy', 'timestamp' as const]
     ])('round-trips %s with dynamic format %s', (value, format, type) => {
         const formatted = temporalToString(value, format)
-        expect(stringToTemporal(formatted, type, format).equals(value)).toBe(true)
+        expect(stringToTemporal(formatted, type, format).toString()).toBe(value.toString())
     })
 })

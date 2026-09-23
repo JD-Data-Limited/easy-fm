@@ -29,7 +29,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
         layout: LayoutBase,
         recordId: number | string,
         modId = recordId,
-        fieldData: Record<string, string | number> = {},
+        fieldData: z.infer<typeof ApiFieldData> = {},
         portalData: z.infer<typeof ApiPortalData> | null = null, portalsToInclude: Array<keyof LAYOUT['portals']> = []) {
         super(layout, parseInt(recordId as string), parseInt(modId as string), fieldData)
         this.portalsToInclude = portalsToInclude
@@ -89,6 +89,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
             }
             this.recordId = parseInt(res.recordId)
             this.modId = parseInt(res.modId)
+            this._onSave()
             return this
         }
 

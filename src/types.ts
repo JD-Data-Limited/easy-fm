@@ -8,7 +8,10 @@ import {type FMError} from './FMError.js'
 import {type LayoutInterface} from './layouts/layoutInterface.js'
 import z from "zod"
 
-export type PickPortals<LAYOUT extends LayoutInterface, PORTALS extends string | number | symbol = ''> =
+export type PickPortals<
+    LAYOUT extends LayoutInterface,
+    PORTALS extends keyof LAYOUT['portals'] = never
+> =
     Omit<LAYOUT, 'portals'> & { portals: Pick<LAYOUT['portals'], PORTALS> }
 
 /** Shared database connection options. */
