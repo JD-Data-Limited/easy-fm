@@ -4,11 +4,6 @@
 
 It helps you connect Node.js code to FileMaker Server or FileMaker Cloud so you can fetch records, run finds, edit data, work with portals, and run scripts using a typed JavaScript or TypeScript API.
 
-## Repository layout
-
-This repository uses a pnpm workspace. The publishable package lives in
-`packages/easy-fm`; root scripts delegate to that workspace package.
-
 ## Requirements
 
 - Node.js `22+`

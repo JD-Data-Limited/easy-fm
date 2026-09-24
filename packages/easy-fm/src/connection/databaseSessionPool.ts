@@ -1,10 +1,7 @@
 import {Database} from './database.js'
 import type {DatabaseStructure} from '../databaseStructure.js'
 import {HttpError, session, type Session} from './Session.js'
-import {
-    type databaseOptionsWithExternalSources,
-    type loginOptionsFileMaker
-} from '../types.js'
+import {type databaseOptionsWithExternalSources, type loginOptionsFileMaker} from '../types.js'
 import type FMHost from './FMHost.js'
 import {generateAuthorizationHeaders} from './generateAuthorizationHeaders.js'
 import {FMError} from '../FMError.js'

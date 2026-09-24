@@ -1,7 +1,9 @@
 /.env
 /.idea
-/node_modules
+node_modules/
 /dist
 /coverage
+/packages/*/dist/
+/packages/*/coverage/
 stressTest.sh
 /docs_out

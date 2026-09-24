@@ -1,9 +1,4 @@
-import FMHost, {
-    asDate,
-    queryEscape,
-    stringToTemporal,
-    temporalToString
-} from '../dist/index.js'
+import FMHost, {asDate, queryEscape, stringToTemporal, temporalToString} from '../dist/index.js'
 
 export interface RuntimeSmokeResult {
     date: string

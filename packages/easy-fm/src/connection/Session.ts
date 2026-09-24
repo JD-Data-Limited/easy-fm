@@ -3,7 +3,6 @@
 import {CookieJar} from './CookieJar.js'
 import {ApiResults} from '../models/apiResults.js'
 import {z} from 'zod'
-import {addHeaders} from '../utils/addHeaders.js'
 
 export type DatabaseProtocol = 'http:' | 'https:'
 export type DatabaseEndpoint = `${DatabaseProtocol}//${string}/fmi/data/v2/databases/${string}`
