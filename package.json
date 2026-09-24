@@ -23,6 +23,10 @@
     "test:coverage": "jest --coverage --testPathIgnorePatterns='/__tests__/database.test.ts$'",
     "test:integration": "npm run build && jest __tests__/database.test.ts --runInBand",
     "test:unit": "jest __tests__/query.test.ts __tests__/CookieJar.test.ts --runInBand",
+    "test:runtime": "pnpm build && pnpm test:runtime:bun && pnpm test:runtime:deno && pnpm test:runtime:workers",
+    "test:runtime:bun": "bun test ./runtime-tests/bun.test.ts",
+    "test:runtime:deno": "deno test --no-check --allow-read --node-modules-dir=manual ./runtime-tests/deno.test.ts",
+    "test:runtime:workers": "vitest run --config ./runtime-tests/workers/vitest.config.ts",
     "stress:search": "tsx src/bin/stressSearch.ts",
     "docs:build": "typedoc --options ./docs/theme.json"
   },
@@ -54,6 +58,7 @@
     "@babel/core": "^8.0.6",
     "@babel/preset-env": "^8.0.6",
     "@babel/preset-typescript": "^8.0.1",
+    "@cloudflare/vitest-plugin": "^1.2.2",
     "@types/btoa": "^1.2.5",
     "@types/events": "^3.0.3",
     "@types/inquirer": "^9.0.10",
@@ -73,7 +78,8 @@
     "ts-morph": "^28.0.0",
     "tsx": "^4.23.15",
     "typedoc": "^0.28.20",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.11"
   },
   "bin": {
     "easyfm": "dist/bin/cli.js"

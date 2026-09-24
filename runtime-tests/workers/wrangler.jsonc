@@ -1,0 +1,6 @@
+{
+  "name": "easy-fm-runtime-test",
+  "main": "./worker.ts",
+  "compatibility_date": "2026-09-24",
+  "compatibility_flags": ["nodejs_compat"]
+}

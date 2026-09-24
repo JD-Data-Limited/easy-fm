@@ -2,7 +2,7 @@
  * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import {EventEmitter} from 'events'
+import {EventEmitter} from 'node:events'
 import {RecordTypes} from '../types.js'
 import {type LayoutBase} from '../layouts/layoutBase.js'
 import {type ApiFieldData, type ApiFieldMetadata} from '../models/apiResults.js'
