@@ -62,7 +62,7 @@ export class TimeStampField extends ValueFieldBase<Temporal.PlainDateTime | null
         if (value === '' || value === null) return null
         if (typeof value !== 'string') throw new Error("Received an invalid value for a temporal field.")
         try {
-            return stringToTemporal(value, 'timestamp', this.parent.layout.database.host.timeStampFormat)
+            return stringToTemporal(value, 'timestamp', this.parent.layout.database.timeStampFormat)
         } catch {
             return Temporal.PlainDateTime.from(value)
         }
@@ -70,7 +70,7 @@ export class TimeStampField extends ValueFieldBase<Temporal.PlainDateTime | null
 
     override serializeRawValue(): RawValueData {
         if (this._value === null) return ''
-        return temporalToString(this._value, this.parent.layout.database.host.timeStampFormat)
+        return temporalToString(this._value, this.parent.layout.database.timeStampFormat)
     }
 }
 
@@ -79,7 +79,7 @@ export class DateField extends ValueFieldBase<Temporal.PlainDate | null, 'date'>
         if (value === '' || value === null) return null
         if (typeof value !== 'string') throw new Error("Received an invalid value for a temporal field.")
         try {
-            return stringToTemporal(value, 'date', this.parent.layout.database.host.dateFormat)
+            return stringToTemporal(value, 'date', this.parent.layout.database.dateFormat)
         } catch {
             return Temporal.PlainDate.from(value)
         }
@@ -87,7 +87,7 @@ export class DateField extends ValueFieldBase<Temporal.PlainDate | null, 'date'>
 
     override serializeRawValue(): RawValueData {
         if (this._value === null) return ''
-        return temporalToString(this._value, this.parent.layout.database.host.dateFormat)
+        return temporalToString(this._value, this.parent.layout.database.dateFormat)
     }
 }
 
@@ -96,7 +96,7 @@ export class TimeField extends ValueFieldBase<Temporal.PlainTime | null, 'time'>
         if (value === '' || value === null) return null
         if (typeof value !== 'string') throw new Error("Received an invalid value for a temporal field.")
         try {
-            return stringToTemporal(value, 'time', this.parent.layout.database.host.timeFormat)
+            return stringToTemporal(value, 'time', this.parent.layout.database.timeFormat)
         } catch {
             return Temporal.PlainTime.from(value)
         }
@@ -104,7 +104,7 @@ export class TimeField extends ValueFieldBase<Temporal.PlainTime | null, 'time'>
 
     override serializeRawValue(): RawValueData {
         if (this._value === null) return ''
-        return temporalToString(this._value, this.parent.layout.database.host.timeFormat)
+        return temporalToString(this._value, this.parent.layout.database.timeFormat)
     }
 }
 

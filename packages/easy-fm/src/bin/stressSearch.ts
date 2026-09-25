@@ -5,7 +5,7 @@
 
 import {Command, Option} from 'commander'
 import {config} from 'dotenv'
-import FMHost, {query} from '../index.js'
+import {DataApiProvider, Database, query} from '../index.js'
 
 config()
 
@@ -262,11 +262,10 @@ async function main () {
         concurrencyLevels
     })
 
-    const fmHost = new FMHost(host, false)
-
     const rows: ResultRow[] = []
 
-    const connection = fmHost.database({
+    const connection = Database.create({provider: new DataApiProvider({
+        hostname: host,
         database,
         credentials: {
             method: 'filemaker',
@@ -275,7 +274,7 @@ async function main () {
         },
         externalSources: [],
         debug: options.debug
-    })
+    }), debug: options.debug})
 
     try {
         const layout = connection.layout(options.layout)

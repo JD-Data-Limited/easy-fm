@@ -5,7 +5,9 @@
 ## Minimal Example
 
 ```ts
-import FMHost, {
+import {
+  Database,
+  DataApiProvider,
   type Field,
   type LayoutInterface,
   type Portal
@@ -24,16 +26,13 @@ interface ContactsLayout extends LayoutInterface {
   }
 }
 
-const host = new FMHost("https://example.com")
-
-const database = host.database({
-  database: "Contacts",
-  credentials: {
-    method: "filemaker",
-    username: "api-user",
-    password: "secret"
-  },
-  externalSources: []
+const database = Database.create({
+  provider: new DataApiProvider({
+    hostname: "https://example.com",
+    database: "Contacts",
+    credentials: {method: "filemaker", username: "api-user", password: "secret"},
+    externalSources: []
+  })
 })
 
 const layout = database.layout<ContactsLayout>("Contacts_API")

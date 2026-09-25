@@ -1,4 +1,4 @@
-import FMHost, {asDate, queryEscape, stringToTemporal, temporalToString} from '../dist/index.js'
+import {asDate, DataApiProvider, Database, queryEscape, stringToTemporal, temporalToString} from '../dist/index.js'
 
 export interface RuntimeSmokeResult {
     date: string
@@ -13,8 +13,9 @@ export interface RuntimeSmokeResult {
  * runtime can load the package's current lifecycle implementation.
  */
 export async function runRuntimeSmokeTest (): Promise<RuntimeSmokeResult> {
-    const host = new FMHost('https://runtime-test.example.com')
-    const database = host.database({
+    const hostname = 'runtime-test.example.com'
+    const database = Database.create({provider: new DataApiProvider({
+        hostname: `https://${hostname}`,
         database: 'RuntimeTest',
         credentials: {
             method: 'filemaker',
@@ -22,7 +23,7 @@ export async function runRuntimeSmokeTest (): Promise<RuntimeSmokeResult> {
             password: 'runtime-test-password'
         },
         externalSources: []
-    })
+    })})
 
     await database.close()
 
@@ -32,6 +33,6 @@ export async function runRuntimeSmokeTest (): Promise<RuntimeSmokeResult> {
         date: asDate(new Date(2026, 8, 23)).toString(),
         escapedQuery: queryEscape('*'),
         formattedDate: temporalToString(date, 'yyyy-MM-dd'),
-        hostname: host.hostname
+        hostname
     }
 }

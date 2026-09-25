@@ -23,18 +23,19 @@ npm install @jd-data-limited/easy-fm
 ## Quick Start
 
 ```ts
-import {FMHost} from "@jd-data-limited/easy-fm"
+import {Database, DataApiProvider} from "@jd-data-limited/easy-fm"
 
-const host = new FMHost("https://example.com")
-
-const database = host.database({
-  database: "Contacts",
-  credentials: {
-    method: "filemaker",
-    username: "api-user",
-    password: "secret"
-  },
-  externalSources: []
+const database = Database.create({
+  provider: new DataApiProvider({
+    hostname: "https://example.com",
+    database: "Contacts",
+    credentials: {
+      method: "filemaker",
+      username: "api-user",
+      password: "secret"
+    },
+    externalSources: []
+  })
 })
 
 const layout = database.layout("Contacts_API")
@@ -69,6 +70,7 @@ Task guides:
 - [`docs/working-with-records.md`](./docs/working-with-records.md): list, create, update, duplicate, delete, portal rows
 - [`docs/query-recipes.md`](./docs/query-recipes.md): find requests, sorting, paging, script hooks
 - [`docs/authentication-and-sessions.md`](./docs/authentication-and-sessions.md): auth modes, pooling, lifecycle
+- [`docs/provider-api.md`](./docs/provider-api.md): custom transports and provider sessions
 - [`docs/typescript-layouts.md`](./docs/typescript-layouts.md): typed layouts and stronger autocomplete
 - [`docs/testGuide.md`](./docs/testGuide.md): local test commands
 

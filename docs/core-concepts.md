@@ -6,23 +6,28 @@ This guide explains FileMaker ideas `easy-fm` builds on.
 
 Request flow usually looks like this:
 
-`FMHost` -> `Database` -> `Layout` -> `Record`
+`DatabaseProvider` -> `Database` -> `Layout` -> `Record`
 
 And sometimes:
 
 `LayoutRecord` -> `Portal` -> `PortalRecord`
 
-## Host
+## Provider
 
-`FMHost` represents FileMaker Server or FileMaker Cloud base address.
+`DataApiProvider` represents a FileMaker Data API connection. Custom providers can implement other transports.
 
 Example:
 
 ```ts
-const host = new FMHost("https://example.com")
+const provider = new DataApiProvider({
+  hostname: "https://example.com",
+  database: "Contacts",
+  credentials: {method: "filemaker", username: "api-user", password: "secret"},
+  externalSources: []
+})
 ```
 
-Host also owns timezone formatting rules used when date/time values are sent to FileMaker.
+Provider owns formatting rules and translates semantic database operations to its transport.
 
 ## Database
 
@@ -31,15 +36,7 @@ Host also owns timezone formatting rules used when date/time values are sent to 
 Example:
 
 ```ts
-const database = host.database({
-  database: "Contacts",
-  credentials: {
-    method: "filemaker",
-    username: "api-user",
-    password: "secret"
-  },
-  externalSources: []
-})
+const database = Database.create({provider})
 ```
 
 Database object handles session management, requests, layout caching, and helper methods like `script()`.

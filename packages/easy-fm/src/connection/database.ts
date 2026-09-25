@@ -1,170 +1,251 @@
-/*
- * Copyright (c) 2023-2024. See LICENSE file for more information
- */
-
-import {FMError} from '../FMError.js'
-import {type LayoutInterface} from '../layouts/layoutInterface.js'
 import {Layout} from '../layouts/layout.js'
-import {type databaseOptionsWithExternalSources, type Script} from '../types.js'
-import {type HostBase} from './HostBase.js'
-import {type DatabaseBase} from './databaseBase.js'
-import {ApiLayout, ApiResults} from '../models/apiResults.js'
-import {type DatabaseStructure} from '../databaseStructure.js'
-import {type DatabaseEndpoint, type Session} from './Session.js'
-import {z, type ZodType} from 'zod'
-import {addHeaders} from '../utils/addHeaders.js'
-import process from 'node:process'
+import type {LayoutInterface} from '../layouts/layoutInterface.js'
+import type {DatabaseStructure} from '../databaseStructure.js'
+import type {Script} from '../types.js'
+import type {DatabaseBase} from './databaseBase.js'
+import {
+    ContainerSessionAffinityError,
+    type DatabaseOperation,
+    type DatabaseOperationResult,
+    type DatabaseOperationType,
+    type DatabaseProvider,
+    type ProviderConnection,
+    type ProviderSession,
+    ProviderSessionExpiredError,
+    type SessionBinding
+} from './databaseProvider.js'
 
-/**
- * Represents a database connection.
- * @template T - The structure of the database.
- */
-export abstract class Database<T extends DatabaseStructure> implements DatabaseBase {
-    readonly host: HostBase
+export interface DatabaseOptions {
+    provider: DatabaseProvider,
+    name?: string,
+    debug?: boolean
+}
+
+interface ActiveSession {
+    readonly binding: SessionBinding,
+    readonly session: ProviderSession,
+    busy: boolean,
+    valid: boolean
+}
+
+interface QueueJob<T = unknown> {
+    preferred?: SessionBinding,
+    run: (active: ActiveSession) => Promise<T>,
+    resolve: (value: T) => void,
+    reject: (reason?: unknown) => void
+}
+
+export class Database<T extends DatabaseStructure> implements DatabaseBase {
     readonly name: string
     readonly debug: boolean
-    readonly #layoutCache = new Map<string, Layout<any>>()
-    protected canOpenNewConnections = true
-    /**
-     * Used during events where the application must logout
-     * @private
-     */
-    protected abortController = new AbortController()
+    readonly #provider: DatabaseProvider
+    readonly #layoutCache = new Map()
+    readonly #abortController = new AbortController()
+    readonly #sessions: ActiveSession[] = []
+    readonly #closingSessions: Set<Promise<void>> = new Set()
+    readonly #queue: Array<QueueJob<any>> = []
+    #connectionPromise?: Promise<ProviderConnection>
+    #closed = false
+    #draining = false
 
-    protected constructor (host: HostBase, conn: databaseOptionsWithExternalSources<unknown>) {
-        this.host = host
-        this.name = conn.database
-        this.debug = conn.debug ?? false
-        process.on('SIGINT', () => { void this.close() })
-        process.on('SIGTERM', () => { void this.close() })
-        process.on('beforeExit', () => { void this.close() })
+    private constructor(options: DatabaseOptions) {
+        this.#provider = options.provider;
+        this.name = options.name ?? options.provider.name ?? '';
+        this.debug = options.debug ?? false
     }
 
-    async login () {
-        await Promise.resolve()
+    static create<T extends DatabaseStructure = DatabaseStructure>(options: DatabaseOptions): Database<T> {
+        return new Database<T>(options)
     }
 
-    async logout () {
-        await this.close()
+    async #connection(): Promise<ProviderConnection> {
+        if (this.#closed) throw new Error('Database is closed')
+        this.#connectionPromise ??= this.#provider.connect({signal: this.#abortController.signal, debug: this.debug})
+        return await this.#connectionPromise
     }
 
-    async close () {
-        this.canOpenNewConnections = false
-        if (!this.abortController.signal.aborted) this.abortController.abort('Closing connection')
+    async connect(): Promise<void> {
+        await this.#connection()
     }
 
-    async [Symbol.asyncDispose] () {
-        await this.close()
+    get dateFormat() {
+        return this.#formatting('dateFormat', 'MM/DD/YYYY')
     }
 
-    /**
-     * The inheriting database class must implement this method to provide a session object.
-     * @param callback
-     * @protected
-     */
-    protected abstract withSession<T> (callback: (session: Session) => Promise<T>): Promise<T>
-
-    /**
-     * Returns the endpoint URL for the database connection.
-     *
-     * @returns {string} The endpoint URL.
-     */
-    get endpoint (): DatabaseEndpoint {
-        return `${this.host.protocol}//${this.host.hostname}/fmi/data/v2/databases/${this.name}` as const
+    get timeFormat() {
+        return this.#formatting('timeFormat', 'HH:mm:ss')
     }
 
-    /**
-     * Uses an available session to run a fetch
-     * @param url
-     * @param options
-     */
-    async fetch (url: string | URL, options?: RequestInit): Promise<Response> {
-        return await this.withSession(async session => await session.fetch(url, options))
+    get timeStampFormat() {
+        return this.#formatting('timeStampFormat', 'MM/DD/YYYY HH:mm:ss')
     }
 
-    /**
-     * Uses an available session to run a fetch on a FileMaker Data API JSON endpoint. Also applies JSON/Zod type enforcement on result.
-     */
-    async fetchJSON<T extends ZodType | null = null>(
-        url: string | URL,
-        options: RequestInit & { type: T }
-    ): Promise<T extends ZodType ? z.infer<T> & { httpStatus: number } : { httpStatus: number }> {
-        const _options = options ?? {}
-        addHeaders(_options, {
-            'Content-Type': 'application/json'
+    #formatting(key: 'dateFormat' | 'timeFormat' | 'timeStampFormat', fallback: string) {
+        return this.#provider.formatting[key] ?? fallback
+    }
+
+    async #openSession(): Promise<ActiveSession> {
+        const connection = await this.#connection()
+        const session = await connection.openSession(this.#abortController.signal)
+        if (this.#closed) {
+            await session.close()
+            throw new Error('Database is closed')
+        }
+        const active: ActiveSession = {binding: {id: Symbol('provider-session')}, session, busy: false, valid: true}
+        this.#sessions.push(active)
+        return active
+    }
+
+    async #schedule<T>(run: (active: ActiveSession) => Promise<T>, preferred?: SessionBinding): Promise<T> {
+        if (this.#closed) throw new Error('Database is closed')
+        return await new Promise<T>((resolve, reject) => {
+            this.#queue.push({preferred, run, resolve, reject});
+            void this.#drain()
         })
-        const res = await this.fetch(url, _options)
-        const rawData = await res.json()
-        if (this.debug) console.log(rawData.response)
-        if (options.type !== null) {
-            const data = ApiResults.extend({response: options.type.optional()})
-                .parse(rawData)
-            if (data.messages[0].code !== 0) {
-                throw new FMError(data.messages[0].code, res.status, data)
-            }
-            return data.response
-                // @ts-expect-error is correct
-                ? {
-                    ...data.response,
-                    httpStatus: res.status
+    }
+
+    async #drain() {
+        if (this.#draining || this.#closed || this.#queue.length === 0) return
+        this.#draining = true
+        try {
+            const connection = await this.#connection().catch(error => {
+                for (const job of this.#queue.splice(0)) job.reject(error);
+                return undefined
+            })
+            if (!connection) return
+            for (let index = 0; index < this.#queue.length;) {
+                const job = this.#queue[index]
+                let active = job.preferred
+                    ? this.#sessions.find(item => item.binding.id === job.preferred?.id && item.valid && !item.busy)
+                    : this.#sessions.find(item => item.valid && !item.busy)
+                if (!active && job.preferred) {
+                    if (!this.#sessions.some(item => item.binding.id === job.preferred?.id && item.valid)) {
+                        this.#queue.splice(index, 1);
+                        job.reject(new ContainerSessionAffinityError());
+                        continue
+                    }
+                    index++;
+                    continue
                 }
-                // @ts-expect-error is correct
-                : { httpStatus: res.status }
-        }
-
-        const data = ApiResults.parse(rawData)
-        if (data.messages[0].code !== 0) {
-            throw new FMError(data.messages[0].code, res.status, data)
-        }
-
-        // @ts-expect-error is correct
-        return {
-            httpStatus: res.status
+                if (!active && !job.preferred && this.#sessions.filter(item => item.valid).length < Math.max(1, connection.maxSessions)) {
+                    try {
+                        active = await this.#openSession()
+                    } catch (error) {
+                        this.#queue.splice(index, 1);
+                        job.reject(error);
+                        continue
+                    }
+                }
+                if (!active) {
+                    index++;
+                    continue
+                }
+                this.#queue.splice(index, 1);
+                active.busy = true
+                void job.run(active).then(job.resolve, job.reject).finally(() => {
+                    active!.busy = false;
+                    void this.#drain()
+                })
+            }
+        } finally {
+            this.#draining = false
         }
     }
 
-    /**
-     * Retrieves a list of layouts in the current FileMaker database.
-     *
-     * @returns {Promise<Layout[]>} A promise that resolves to an array of Layout objects.
-     * @throws {FMError} If there was an error retrieving the layouts.
-     */
-    async listLayouts (page: number = 0) {
-        const res = await this.fetchJSON(`${this.endpoint}/layouts?page=${encodeURIComponent(page)}`, {
-            type: z.object({layouts: z.array(ApiLayout)})
-        })
-
-        const cycleLayoutNames = (layouts: Array<z.infer<typeof ApiLayout>>) => {
-            let names: string[] = []
-            for (const layout of layouts) {
-                if (layout.folderLayoutNames) names = names.concat(cycleLayoutNames(layout.folderLayoutNames))
-                else names.push(layout.name)
+    async execute<K extends DatabaseOperationType>(operation: DatabaseOperation<K>): Promise<{
+        value: DatabaseOperationResult<K>,
+        binding: SessionBinding
+    }> {
+        const attempt = async () => await this.#schedule(async active => {
+            try {
+                return {value: await active.session.execute(operation), binding: active.binding}
+            } catch (error) {
+                if (error instanceof ProviderSessionExpiredError) this.#invalidate(active);
+                throw error
             }
-            return names
+        })
+        try {
+            return await attempt()
+        } catch (error) {
+            if (error instanceof ProviderSessionExpiredError && isReadOnly(operation.type)) return await attempt();
+            throw error
         }
-        return cycleLayoutNames(res.layouts).map(layout => new Layout(this, layout))
+    }
+
+    async fetchContainer(reference: string, binding: SessionBinding, signal?: AbortSignal): Promise<Response> {
+        return await this.#schedule(async active => {
+            try {
+                return await active.session.fetchContainer(reference, signal)
+            } catch (error) {
+                if (error instanceof ProviderSessionExpiredError) {
+                    this.#invalidate(active);
+                    throw new ContainerSessionAffinityError(undefined, {cause: error})
+                }
+                throw error
+            }
+        }, binding)
+    }
+
+    #invalidate(active: ActiveSession) {
+        if (!active.valid) return
+        active.valid = false
+        const index = this.#sessions.indexOf(active)
+        if (index >= 0) this.#sessions.splice(index, 1)
+        const closing = active.session.close().catch(() => {
+        })
+        this.#closingSessions.add(closing)
+        void closing.finally(() => this.#closingSessions.delete(closing))
+    }
+
+    async login() {
+        await this.connect()
+    }
+
+    async logout() {
+        await this.close()
+    }
+
+    async close() {
+        if (this.#closed) return
+        this.#closed = true;
+        this.#abortController.abort('Closing database')
+        for (const job of this.#queue.splice(0)) job.reject(new Error('Database is closed'))
+        const connection = await this.#connectionPromise?.catch(() => undefined)
+        await Promise.allSettled([...this.#closingSessions, ...this.#sessions.map(active => active.session.close())]);
+        this.#sessions.splice(0)
+        if (connection?.close) await connection.close()
+    }
+
+    async [Symbol.asyncDispose]() {
+        await this.close()
+    }
+
+    async listLayouts(page = 0) {
+        const {value} = await this.execute({type: 'layout.list', page});
+        return value.map(name => new Layout(this, name))
     }
 
     layout<R extends keyof T['layouts']>(name: R): Layout<T['layouts'][R]>
     layout<R extends LayoutInterface>(name: string): Layout<R>
-    /**
-     * Returns a FileMaker Layout object by name.
-     */
-    layout (name: string): Layout<any> {
-        let layout = this.#layoutCache.get(name)
-        if (layout) return layout
-        layout = new Layout<LayoutInterface>(this, name)
-        this.#layoutCache.set(name, layout)
+    layout(name: string): Layout<any> {
+        let layout = this.#layoutCache.get(name);
+        if (!layout) {
+            layout = new Layout<LayoutInterface>(this, name);
+            this.#layoutCache.set(name, layout)
+        }
+
         return layout
     }
 
-    /** Clears any Layout objects previously returned by `database.layout(...)`. */
-    clearLayoutCache () {
+    clearLayoutCache() {
         this.#layoutCache.clear()
     }
 
-    /** Creates a script reference you can pass to read and write helpers. */
-    script (name: string, parameter = ''): Script {
-        return ({name, parameter} satisfies Script)
+    script(name: string, parameter = ''): Script {
+        return {name, parameter}
     }
+}
+
+function isReadOnly(type: DatabaseOperationType) {
+    return type === 'layout.list' || type === 'layout.metadata' || type === 'record.list' || type === 'record.get'
 }

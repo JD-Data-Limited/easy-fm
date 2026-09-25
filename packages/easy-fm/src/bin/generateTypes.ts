@@ -4,7 +4,8 @@
 
 import {type ApiFieldMetadata, ApiFieldResultTypes} from '../models/apiResults.js'
 import inquirer from 'inquirer'
-import FMHost from '../connection/FMHost.js'
+import {Database} from '../connection/database.js'
+import {DataApiProvider} from '../connection/DataApiProvider.js'
 import * as fs from 'node:fs'
 import z from "zod";
 
@@ -115,8 +116,9 @@ export async function generateTypesCLI () {
         }
     ])
 
-    const HOST = new FMHost(data.hostname, data.verify)
-    const DATABASE = HOST.database({
+    const DATABASE = Database.create({provider: new DataApiProvider({
+        hostname: data.hostname,
+        verify: data.verify,
         database: data.database,
         credentials: {
             method: 'filemaker',
@@ -124,14 +126,14 @@ export async function generateTypesCLI () {
             password: data.password
         },
         externalSources: []
-    })
+    })})
 
     // await DATABASE.login()
     // Create file write stream
     const stream = fs.createWriteStream('./types.ts')
     const layouts = await DATABASE.listLayouts()
 
-    stream.write('import FMHost, {Container, FieldBase, LayoutInterface, Portal} from "@jd-data-limited/easy-fm";\n')
+    stream.write('import {Database, DataApiProvider, ContainerField, BaseField, LayoutInterface, Portal} from "@jd-data-limited/easy-fm";\n')
     stream.write('// ' + layouts.length + ' layouts found\n\n')
 
     const layoutInterfaces = new Map<string, {
@@ -166,14 +168,11 @@ export async function generateTypesCLI () {
     for (const layout of layoutInterfaces) {
         layoutInterfaceLinks.push([
             `${JSON.stringify(layout[0])}: ${layout[1].interfaceName}`,
-            `${sub(camelToSnakeCase(layout[0]).toUpperCase().replace(' ', '_'))}: HOST.getLayout<${layout[1].interfaceName}>(${JSON.stringify(layout[0])})`
+            `${sub(camelToSnakeCase(layout[0]).toUpperCase().replace(' ', '_'))}: DATABASE.layout<${layout[1].interfaceName}>(${JSON.stringify(layout[0])})`
         ])
     }
 
-    stream.write(safeStringInjection`const HOST = new FMHost(${data.hostname}, ${data.timezoneOffset}, ${data.verify});`)
-    stream.write(`HOST.database<{layouts:{${
-        layoutInterfaceLinks.map(i => i[0]).join(',')
-    }}}>();`)
+    stream.write(`const DATABASE = Database.create<{layouts:{${layoutInterfaceLinks.map(i => i[0]).join(',')}}}>({provider: new DataApiProvider({hostname: ${JSON.stringify(data.hostname)}, database: ${JSON.stringify(data.database)}, credentials: {method: 'filemaker', username: ${JSON.stringify(data.username)}, password: ${JSON.stringify(data.password)}}, externalSources: []})});`)
 
     stream.write('\n\n')
     stream.write(`const LAYOUTS = {${

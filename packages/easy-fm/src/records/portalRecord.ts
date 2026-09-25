@@ -10,6 +10,8 @@ import z from "zod";
 import {ApiFieldMetadata} from "../models/apiResults.js";
 import {RecordFieldsMap} from "../layouts/layoutInterface.js";
 import {Field} from "./fields/field.js";
+import {ContainerField} from './fields/containerField.js'
+import {type SessionBinding} from '../connection/databaseProvider.js'
 
 /**
  * Represents a PortalRecord, which is a record in a portal within a parent record.
@@ -19,9 +21,18 @@ export class PortalRecord<T extends RecordFieldsMap> extends RecordBase<T> {
     readonly portal: PortalBase<T>
     readonly type = RecordTypes.PORTAL
 
-    constructor (record: RecordBase<any>, portal: PortalBase<any>, recordId: number, modId = recordId, fieldData = {}) {
-        super(record.layout, recordId, modId, fieldData)
+    constructor (record: RecordBase<any>, portal: PortalBase<any>, recordId: number, modId = recordId, fieldData = {}, sessionBinding?: SessionBinding) {
+        super(record.layout, recordId, modId, fieldData, sessionBinding)
         this.portal = portal
+    }
+
+    async refreshContainer (fieldId: string): Promise<ContainerField> {
+        await this.portal.record.get({[this.portal.name]: {offset: 1, limit: Math.max(1, this.portal.records.length)}})
+        const portal = this.portal.record.portalsArray.find(item => item.name === this.portal.name)
+        const record = portal?.records.find(item => item.recordId === this.recordId)
+        const field = record?.fields[fieldId]
+        if (!(field instanceof ContainerField)) throw new Error(`Container field ${fieldId} was not returned while refreshing record`)
+        return field
     }
 
     _onSave () {

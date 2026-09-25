@@ -6,6 +6,7 @@ import {RecordTypes} from '../../types.js'
 import {type ApiFieldMetadata, FieldResultTypes} from '../../models/apiResults.js'
 import {type LayoutBase} from '../../layouts/layoutBase.js'
 import {type z} from 'zod'
+import {type SessionBinding} from '../../connection/databaseProvider.js'
 
 export type ContainerValue = null
 /**
@@ -16,9 +17,11 @@ export type RawValueData = string | number | null
 export interface Parentable {
     layout: LayoutBase
     type: RecordTypes
-    endpoint: string
+    recordId: number
+    sessionBinding?: SessionBinding
     portal?: { name: string },
     getFieldMetadata(fieldId: string): z.infer<typeof ApiFieldMetadata>
+    refreshContainer(fieldId: string): Promise<import('./containerField.js').ContainerField>
 }
 
 /**

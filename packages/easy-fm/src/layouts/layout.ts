@@ -8,7 +8,7 @@ import {type LayoutInterface} from './layoutInterface.js'
 import {FMError} from '../FMError.js'
 import {type LayoutBase} from './layoutBase.js'
 import {type DatabaseBase} from '../connection/databaseBase.js'
-import {ApiLayoutMetadata, ApiScriptResult} from '../models/apiResults.js'
+import {ApiLayoutMetadata} from '../models/apiResults.js'
 import {type z} from 'zod'
 
 export class Layout<T extends LayoutInterface> implements LayoutBase {
@@ -22,26 +22,16 @@ export class Layout<T extends LayoutInterface> implements LayoutBase {
         this.name = name
     }
 
-    /** Base endpoint for this layout on FileMaker Data API. */
-    get endpoint() {
-        return `${this.database.endpoint}/layouts/${this.name}`
-    }
-
     /**
      * Executes a FileMaker script on this layout asynchronously and returns the result.
      * @param {Script} script - The script to be executed.
      * @returns {Promise<ScriptResult>} - A promise that resolves to the script result or rejects with an error.
      */
     async runScript(script: Script): Promise<ScriptResult> {
-        let url = `${this.endpoint}/script/${encodeURIComponent(script.name)}`
-        if (script.parameter) url += '?script.param=' + encodeURIComponent(script.parameter)
-        const res = await this.database.fetchJSON(url, {
-            type: ApiScriptResult,
-            method: 'GET'
-        })
-        const error = parseInt(res.scriptError)
+        const {value: res} = await this.database.execute({type: 'script.run', layout: this.name, script: script.name, parameter: script.parameter || undefined})
+        const error = res.scriptError ?? 0
         return {
-            scriptError: error ? new FMError(error, 200, res) : undefined,
+            scriptError: error ? new FMError(error, res.status ?? 200, res) : undefined,
             scriptResult: res.scriptResult
         }
     }
@@ -57,8 +47,8 @@ export class Layout<T extends LayoutInterface> implements LayoutBase {
             return this.metadata
         }
 
-        const res = await this.database.fetchJSON(this.endpoint, {type: ApiLayoutMetadata})
-        this.metadata = res
+        const {value: res} = await this.database.execute({type: 'layout.metadata', layout: this.name})
+        this.metadata = ApiLayoutMetadata.parse(res)
         return this.metadata
     }
 }

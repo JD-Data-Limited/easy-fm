@@ -11,6 +11,7 @@ import {RecordFieldsMap} from "../layouts/layoutInterface.js";
 import {Field} from "./fields/field.js";
 import {DateField, NumberField, TextField, TimeField, TimeStampField, ValueFieldBase} from "./fields/valueField.js";
 import {ContainerField} from "./fields/containerField.js";
+import {type SessionBinding} from '../connection/databaseProvider.js'
 
 export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter {
     readonly layout: LayoutBase
@@ -24,17 +25,15 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
      */
     fields: T
     protected portalData: any[] = []
+    sessionBinding?: SessionBinding
 
-    protected constructor (layout: LayoutBase, recordId: number, modId = recordId, fieldData: z.infer<typeof ApiFieldData>) {
+    protected constructor (layout: LayoutBase, recordId: number, modId = recordId, fieldData: z.infer<typeof ApiFieldData>, sessionBinding?: SessionBinding) {
         super()
         this.layout = layout
         this.recordId = recordId
         this.modId = modId
+        this.sessionBinding = sessionBinding
         this.fields = this.processFieldData(fieldData)
-    }
-
-    get endpoint (): string {
-        return `${this.layout.endpoint}/records/${this.recordId}`
     }
 
     /**
@@ -51,6 +50,7 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
     }
 
     abstract getFieldMetadata(fieldId: string): z.infer<typeof ApiFieldMetadata>
+    abstract refreshContainer(fieldId: string): Promise<ContainerField>
 
     protected processFieldData (fieldData: z.infer<typeof ApiFieldData>) {
         const fields: RecordFieldsMap = {}

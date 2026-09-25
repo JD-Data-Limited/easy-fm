@@ -1,4 +1,5 @@
-import FMHost from "../connection/FMHost.js";
+import {Database} from '../connection/database.js'
+import {DataApiProvider} from '../connection/DataApiProvider.js'
 import * as fs from "node:fs";
 
 const DATABASE_HOST = process?.env.FM_DB_HOST ?? 'http://localhost'
@@ -16,8 +17,8 @@ const FIELD_TYPE_MAP = {
 }
 
 export async function generateClient() {
-    const HOST = new FMHost(DATABASE_HOST, false)
-    const DATABASE = HOST.database({
+    const DATABASE = Database.create({provider: new DataApiProvider({
+        hostname: DATABASE_HOST,
         database: 'EasyFMBenchmark',
         credentials: {
             method: 'filemaker',
@@ -26,7 +27,7 @@ export async function generateClient() {
         },
         externalSources: [],
         debug: true
-    })
+    }), debug: true})
 
     const LAYOUTS = await DATABASE.listLayouts()
     const schema = await Promise.all(LAYOUTS.map(async layout => {
@@ -50,7 +51,7 @@ export async function generateClient() {
         return `${JSON.stringify(layout.layout.name)}: {${layout.fieldTypesMap.join(",")}}`
     })}}`
 
-    fs.writeFileSync("./easyFMClient.ts", `import {FMHost, DatabaseSchema as __DatabaseSchema} from "@jd-data-limited/easy-fm"
+    fs.writeFileSync("./easyFMClient.ts", `import {Database, DataApiProvider, DatabaseSchema as __DatabaseSchema} from "@jd-data-limited/easy-fm"
 
 ${typeScriptSchema}`)
 }

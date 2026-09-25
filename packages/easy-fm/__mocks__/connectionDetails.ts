@@ -2,9 +2,10 @@
  * Copyright (c) 2023. See LICENSE file for more information
  */
 
-import FMHost, {
+import {
     ContainerField,
-    type Database,
+    DataApiProvider,
+    Database,
     DateField,
     type LayoutInterface,
     type Portal,
@@ -20,8 +21,6 @@ export const DATABASE_HOST = process?.env.FM_DB_HOST ?? 'http://localhost'
 export const DATABASE_NAME = process.env.FM_DB_NAME ?? 'EasyFMBenchmark.fmp12'
 export const DATABASE_ACCOUNT = process.env.FM_DB_ACCOUNT ?? 'Admin'
 export const DATABASE_PASSWORD = process.env.FM_DB_PASSWORD ?? 'Admin'
-
-export const HOST = new FMHost(DATABASE_HOST, false)
 
 export interface EasyFMBenchmarkLayout extends LayoutInterface {
     fields: {
@@ -59,7 +58,8 @@ console.log({
     externalSources: [],
     debug: true
 })
-export const DATABASE = HOST.database({
+export const DATABASE = Database.create<DatabaseSchema>({provider: new DataApiProvider({
+    hostname: DATABASE_HOST,
     database: 'EasyFMBenchmark',
     credentials: {
         method: 'filemaker',
@@ -68,4 +68,4 @@ export const DATABASE = HOST.database({
     },
     externalSources: [],
     debug: true
-}) as Database<DatabaseSchema>
+}), debug: true})

@@ -3,14 +3,14 @@
  */
 
 import {equal, notEqual} from 'node:assert'
-import {DATABASE, type DatabaseSchema, HOST} from '../__mocks__/connectionDetails.js'
+import {DATABASE, type DatabaseSchema} from '../__mocks__/connectionDetails.js'
 import {type Layout, type LayoutRecord, type PickPortals, query} from '../dist/index.js'
 import {Readable} from 'node:stream'
 import {finished} from 'node:stream/promises'
 
-describe('Fetch host data', () => {
-    it('Able to get host metadata', async () => {
-        await HOST.getMetadata()
+describe('Connect provider', () => {
+    it('Able to connect and get formatting metadata', async () => {
+        await DATABASE.connect()
     })
 })
 

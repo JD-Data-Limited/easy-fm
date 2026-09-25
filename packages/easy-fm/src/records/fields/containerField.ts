@@ -1,95 +1,43 @@
-import {BaseField, Parentable, RawValueData} from "./baseField.js";
-import {FMError} from '../../FMError.js'
 import {Readable} from 'node:stream'
-import {HttpError} from '../../connection/Session.js'
-import {ApiResults} from "../../models/apiResults.js";
-
-interface StreamOptions {
-    abortSignal?: AbortSignal
-}
+import {BaseField, type Parentable, type RawValueData} from './baseField.js'
+import {type ContainerDownloadOptions, ContainerSessionAffinityError} from '../../connection/databaseProvider.js'
 
 export class ContainerField extends BaseField<string, 'container'> {
-    static firstContainerDownload: Promise<any> | null = null
+    constructor (record: Parentable, id: string, value: RawValueData) { super(record, id, value) }
 
-    constructor(record: Parentable, id: string, value: RawValueData) {
-        super(record, id, value);
+    async upload (file: File): Promise<void> {
+        if (this.metadata.result !== 'container') throw new Error(`Cannot upload a file to the field; ${this.id} (not a container field)`)
+        if (this.parent.recordId === -1) throw new Error('Cannot upload to an unsaved record')
+        await this.parent.layout.database.execute({type: 'container.upload', layout: this.parent.layout.name, recordId: this.parent.recordId, field: this.id, file})
     }
 
-    /**
-     * Uploads a file to the container field.
-     *
-     * @param {Buffer} file - The file content as a buffer.
-     *
-     * @throws {Error} - Cannot upload a file to the field if it's not a container field.
-     * @throws {Error} - Upload failed with HTTP error.
-     *
-     * @returns {Promise<void>} - A promise that resolves when the file is successfully uploaded.
-     */
-    async upload(file: File): Promise<void> {
-        if (this.metadata.result !== 'container') {
-            throw new Error('Cannot upload a file to the field; ' + this.id + ' (not a container field)')
-        }
-        const form = new FormData()
-        form.append('upload', file)
-
-        const res = await this.parent.layout.database.fetch(`${this.parent.endpoint}/containers/${this.id}/1`, {
-            method: 'POST',
-            body: form
-        })
-
-        if (!res.ok) {
-            throw await HttpError.new(res)
-        }
-        const data = ApiResults.parse(await res.json())
-        if (data.messages[0].code === 0) return
-        else {
-            throw new FMError(data.messages[0].code, res.status, res)
+    async #response (options: ContainerDownloadOptions = {}): Promise<Response> {
+        if (!this.value) throw new Error(`Container field ${this.id} is empty`)
+        const binding = this.parent.sessionBinding
+        if (!binding) throw new ContainerSessionAffinityError('Container has no originating provider session')
+        try {
+            const response = await this.parent.layout.database.fetchContainer(this.value, binding, options.signal)
+            if (!response.ok || !response.body) throw new Error(`Container response failed: ${response.status} (${response.statusText})`)
+            return response
+        } catch (error) {
+            if (!(error instanceof ContainerSessionAffinityError) || !options.refreshOnSessionLoss) throw error
+            const refreshed = await this.parent.refreshContainer(this.id)
+            this.updateFromRawValue(refreshed.value)
+            this.parent.sessionBinding = refreshed.parent.sessionBinding
+            return await this.#response({...options, refreshOnSessionLoss: false})
         }
     }
 
-    async #streamAsync(options: StreamOptions = {}): Promise<Response> {
-
-
-        const req = await this.parent.layout.database.fetch(this.value, {
-            signal: options.abortSignal ?? null
-        })
-        // const req = await this.parent.layout.database._apiRequestRaw(this.string, {useCookieJar: true})
-        if (!req.ok || !req.body) {
-            throw new Error(`HTTP Error: ${req.status} (${req.statusText})`)
-        }
-        return req
+    /** @deprecated Use webStream instead. */
+    async stream (options: ContainerDownloadOptions = {}): Promise<{data: Readable, mime: string}> {
+        const response = await this.#response(options)
+        return {data: Readable.fromWeb(response.body! as any), mime: response.headers.get('Content-Type') ?? ''}
     }
 
-    async stream(): Promise<{
-        data: Readable
-        mime: string
-    }>
-    /**
-     * @deprecated use webStream instead.
-     */
-    async stream() {
-        const stream = await this.#streamAsync()
-        if (!stream.body) {
-            throw await HttpError.new(stream)
-        }
-        return {
-            // @ts-expect-error stream types are correct
-            data: Readable.fromWeb(stream.body),
-            mime: stream.headers.get('Content-Type') ?? ''
-        }
-    }
+    async webStream (options: ContainerDownloadOptions = {}) { return await this.#response(options) }
 
-    /**
-     * Returns the container download as a Web `Response`.
-     */
-    async webStream(options: StreamOptions) {
-        return await this.#streamAsync(options)
-    }
-
-    /** Downloads the full container contents into memory. */
-    async arrayBuffer(): Promise<{ data: ArrayBuffer, mime: string }> {
-        const stream = await this.#streamAsync()
-        if (!stream.ok) throw await HttpError.new(stream)
-        return {data: await stream.arrayBuffer(), mime: stream.headers.get('Content-Type') ?? ''}
+    async arrayBuffer (options: ContainerDownloadOptions = {}): Promise<{data: ArrayBuffer, mime: string}> {
+        const response = await this.#response(options)
+        return {data: await response.arrayBuffer(), mime: response.headers.get('Content-Type') ?? ''}
     }
 }

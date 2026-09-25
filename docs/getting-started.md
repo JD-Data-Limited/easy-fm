@@ -2,27 +2,22 @@
 
 This guide gets `easy-fm` from install to first successful read.
 
-## 1. Create A Host
+## 1. Create A Database
 
 ```ts
-import {FMHost} from "@jd-data-limited/easy-fm"
+import {Database, DataApiProvider} from "@jd-data-limited/easy-fm"
 
-const host = new FMHost("https://example.com")
-```
-
-`FMHost` represents your FileMaker Server or FileMaker Cloud base address.
-
-## 2. Open A Database
-
-```ts
-const database = host.database({
-  database: "Contacts",
-  credentials: {
-    method: "filemaker",
-    username: process.env.FM_USERNAME!,
-    password: process.env.FM_PASSWORD!
-  },
-  externalSources: []
+const database = Database.create({
+  provider: new DataApiProvider({
+    hostname: "https://example.com",
+    database: "Contacts",
+    credentials: {
+      method: "filemaker",
+      username: process.env.FM_USERNAME!,
+      password: process.env.FM_PASSWORD!
+    },
+    externalSources: []
+  })
 })
 ```
 
@@ -30,7 +25,7 @@ Most projects start with `method: "filemaker"`.
 
 If you need other auth modes, read [`authentication-and-sessions.md`](./authentication-and-sessions.md).
 
-## 3. Pick A Layout
+## 2. Pick A Layout
 
 ```ts
 const contacts = database.layout("Contacts_API")
@@ -40,7 +35,7 @@ This matters because FileMaker Data API works through layouts, not directly thro
 
 If a field is not available on the layout, you usually cannot read or write it through that layout.
 
-## 4. Read Records
+## 3. Read Records
 
 ```ts
 const records = await contacts.records.list({
@@ -57,7 +52,7 @@ for (const record of records) {
 }
 ```
 
-## 5. Run A Find
+## 4. Run A Find
 
 ```ts
 import {query as q} from "@jd-data-limited/easy-fm"
@@ -78,7 +73,7 @@ const records = await contacts.records.list({
 
 `query` handles FileMaker escaping rules for you.
 
-## 6. Update A Record
+## 5. Update A Record
 
 ```ts
 const record = records[0]
@@ -88,7 +83,7 @@ await record.commit()
 
 Changes are local until `commit()` runs.
 
-## 7. Close Sessions
+## 6. Close Sessions
 
 ```ts
 await database.close()

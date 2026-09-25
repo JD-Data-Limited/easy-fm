@@ -2,7 +2,6 @@
  * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import FMHost from './connection/FMHost.js'
 import type * as TYPES from './types.js'
 
 /** Error type returned for FileMaker Data API failures. */
@@ -47,8 +46,20 @@ export {
 /** Field wrapper used for reading, editing, and container access. */
 export {type BaseField} from './records/fields/baseField.js'
 
-/** Default export. Represents FileMaker host/server. */
-export default FMHost
+export {DataApiProvider, type DataApiProviderOptions} from './connection/DataApiProvider.js'
+export {
+    type DatabaseProvider,
+    type ProviderConnection,
+    type ProviderSession,
+    type ProviderContext,
+    type DatabaseFormatting,
+    type DatabaseOperation,
+    type DatabaseOperationResult,
+    type DatabaseOperationType,
+    type ContainerDownloadOptions,
+    ProviderSessionExpiredError,
+    ContainerSessionAffinityError
+} from './connection/databaseProvider.js'
 export {
     /** Namespace re-export of library public types. */
         type TYPES

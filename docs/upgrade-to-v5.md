@@ -1,208 +1,217 @@
 # Upgrading from v4 to v5
 
-EasyFM v5 changes session management, field types, and date/time values. This guide explains what changed and shows how
-to update an application written for v4.
+Easy FM v5 contains several re-designs that are intended to bring power to your workflow.
+
+Particularly this includes:
+
+- First class support for multiple transports and providers.
+- Improved date, time, and timestamp handling via the JavaScript Temporal API
+- Support for automatic multi-session handling
+- 
 
 ## Migration checklist
 
 1. Upgrade to Node.js 22.22.3 or later.
-2. Remove calls to `database.login()` that you use to establish or test a connection.
-3. Replace generic `Field<T>` declarations with the corresponding concrete field types.
-4. Replace Moment or `Date` field values with Temporal values.
-5. Remove the timezone conversion callback from the `FMHost` constructor.
-6. Update code that downloads containers if you want to use the standard Fetch API `Response`.
-7. Check that every external data source uses FileMaker username/password authentication.
+2. Replace `FMHost` with `Database.create()` and `DataApiProvider`.
+3. Use `database.connect()` only when eager connection validation is required.
+4. Replace generic `Field<T>` declarations with concrete field classes.
+5. Replace Moment or `Date` field values with Temporal values.
+6. Update container download options and handle session affinity where necessary.
+7. Check external-source authentication and session-pool limits.
+8. Custom transports must implement the new semantic provider interfaces.
 
-## Runtime requirement
+## Database construction
 
-EasyFM v5 requires Node.js 22.22.3 or later. EasyFM uses `temporal-polyfill` on supported Node.js versions, so you do
-not need Node.js 26's native Temporal implementation.
+`FMHost`, `HostBase`, raw database endpoints, `fetch()`, and `fetchJSON()` have been removed. Create a database synchronously with a provider:
 
-## Sessions and authentication
-
-### Explicit login calls are no longer needed
-
-In v4, `database.login()` opened a FileMaker Data API session. In v5, sessions are created automatically when they are
-needed and `database.login()` is a deprecated no-op.
-
-```typescript
+```ts
 // v4
-await database.login()
-const records = await database.layout("Contacts").records.list({
-    portals: {},
-    limit: 10
-}).fetch()
-
-// v5
-const records = await database.layout("Contacts").records.list({
-    portals: {},
-    limit: 10
-}).fetch()
-```
-
-Existing calls to `database.login()` will still resolve, but they no longer authenticate or validate the supplied
-credentials. Authentication errors are reported by the first operation that needs a session.
-
-### Username/password connections use a session pool
-
-Connections that use `method: "filemaker"` create sessions on demand. Each concurrent operation uses an available
-session. If every session is busy and the pool has reached its limit, the operation waits for a session to become
-available.
-
-The default pool size is 8. If your application needs a different limit, set `sessionPoolSize` to a positive integer:
-
-```typescript
 import FMHost from "@jd-data-limited/easy-fm"
 
-const host = new FMHost("https://<your-server-address>")
+const host = new FMHost("https://example.com")
 const database = host.database({
-    database: "your_database.fmp12",
-    credentials: {
-        method: "filemaker",
-        username: "<username>",
-        password: "<password>",
-        sessionPoolSize: 8
-    },
-    externalSources: []
+  database: "Contacts",
+  credentials: {
+    method: "filemaker",
+    username: "api-user",
+    password: "secret"
+  },
+  externalSources: []
 })
 ```
 
-OAuth, Claris, and existing-token connections continue to use one long-lived session rather than a pool.
+```ts
+// v5
+import {Database, DataApiProvider} from "@jd-data-limited/easy-fm"
 
-### Close the database when finished
+const database = Database.create({
+  provider: new DataApiProvider({
+    hostname: "https://example.com",
+    database: "Contacts",
+    credentials: {
+      method: "filemaker",
+      username: "api-user",
+      password: "secret"
+    },
+    externalSources: []
+  })
+})
+```
 
-`database.close()` aborts active requests, logs out every open session, and prevents that `Database` instance from
-opening another session. `database.logout()` is now an alias for `database.close()`.
+`Database.create()` is synchronous and does not perform network work. Provider connection and session creation happen lazily on the first operation.
 
-```typescript
+To validate configuration eagerly:
+
+```ts
+await database.connect()
+```
+
+`login()` remains an alias for `connect()`. Normal application code does not need either call before its first operation.
+
+## Providers and transports
+
+Database operations are now transport-neutral semantic commands. Layouts and records no longer construct HTTP paths or `RequestInit` values.
+
+The built-in `DataApiProvider` translates these commands to FileMaker Data API HTTP. Custom integrations implement:
+
+- `DatabaseProvider`
+- `ProviderConnection`
+- `ProviderSession`
+
+Set `ProviderConnection.maxSessions` to `1` for a single-session provider or a larger value for bounded pooling. Core owns session allocation, queuing, reuse, retry policy, and shutdown.
+
+See [provider-api.md](./provider-api.md) for the complete custom-provider contract.
+
+## Sessions and authentication
+
+### FileMaker username/password
+
+`method: "filemaker"` opens sessions on demand. Core runs one operation at a time on each session and opens up to `sessionPoolSize` sessions. Default is 8.
+
+```ts
+const provider = new DataApiProvider({
+  hostname: "https://example.com",
+  database: "Contacts",
+  credentials: {
+    method: "filemaker",
+    username: "api-user",
+    password: "secret",
+    sessionPoolSize: 4
+  },
+  externalSources: []
+})
+```
+
+OAuth, Claris, and supplied-token credentials use one serialized session.
+
+### Retry behavior
+
+When a provider throws `ProviderSessionExpiredError`, EasyFM retries these read-only operations once on a replacement session:
+
+- layout listing
+- layout metadata
+- record listing and finds
+- fetching one record
+
+EasyFM never automatically replays scripts, creates, updates, duplicates, deletes, or uploads. This avoids repeating side effects.
+
+### Closing
+
+```ts
 try {
-    // Use the database.
+  // Use database.
 } finally {
-    await database.close()
+  await database.close()
 }
 ```
 
-After a `Database` instance has been closed, you can create a new instance when you need to make more requests.
+`close()` rejects queued work, aborts active work, closes every session, closes provider connection, and prevents future operations. `logout()` remains an alias for `close()`.
+
+## Container downloads and session affinity
+
+FileMaker container references are tied to the session that returned them. V5 stores that session binding with each record and always routes a container download through the same provider session. It never substitutes another pooled session.
+
+Provider method `fetchContainer()` must return a Web `Response`. Its underlying transport may be HTTP or custom. Provider remains responsible for authorization, cookie jars, redirects, and FileMaker Data API cookie behavior.
+
+```ts
+const response = await record.fields.photo.webStream()
+const contentType = response.headers.get("Content-Type")
+const body = response.body
+```
+
+Download methods accept:
+
+```ts
+interface ContainerDownloadOptions {
+  signal?: AbortSignal
+  refreshOnSessionLoss?: boolean
+}
+```
+
+If original session is unavailable, download throws `ContainerSessionAffinityError`. Opt into one record refetch and one retry when suitable:
+
+```ts
+const result = await record.fields.photo.arrayBuffer({
+  signal: controller.signal,
+  refreshOnSessionLoss: true
+})
+```
+
+`stream()` remains deprecated and returns a Node.js `Readable` plus MIME type. `webStream()` returns `Response`; `arrayBuffer()` returns buffered data plus MIME type.
 
 ## Field types
 
-V4 used one generic `Field<T>` class for every FileMaker field. V5 uses a separate class for each result type, so the
-available values and operations are represented more accurately.
+V4 used generic `Field<T>`. V5 uses concrete classes:
 
-| v4 layout declaration | v5 layout declaration | v5 `.value` type |
+| v4 declaration | v5 declaration | v5 `.value` type |
 |---|---|---|
 | `Field<string>` | `TextField` | `string` |
 | `Field<number>` | `NumberField` | `number \| null` |
-| `Field<Moment>` for a timestamp | `TimeStampField` | `Temporal.PlainDateTime \| null` |
-| `Field<Moment>` for a time | `TimeField` | `Temporal.PlainTime \| null` |
-| `Field<Moment>` for a date | `DateField` | `Temporal.PlainDate \| null` |
-| `Field<Container>` | `ContainerField` | container URL |
+| `Field<Moment>` timestamp | `TimeStampField` | `Temporal.PlainDateTime \| null` |
+| `Field<Moment>` time | `TimeField` | `Temporal.PlainTime \| null` |
+| `Field<Moment>` date | `DateField` | `Temporal.PlainDate \| null` |
+| `Field<Container>` | `ContainerField` | container reference string |
 
-`BaseField` is the shared abstract base class. `ValueField` and `Field` are unions of their concrete field types; they
-are not replacements for the old generic `Field<T>` declaration.
+Example:
 
-### Updating layout interfaces
-
-```typescript
-// v4
-import {
-    type Container,
-    type Field,
-    type LayoutInterface
-} from "@jd-data-limited/easy-fm"
-import {type Moment} from "moment"
-
-interface ContactsLayout extends LayoutInterface {
-    fields: {
-        name: Field<string>
-        balance: Field<number>
-        birthDate: Field<Moment>
-        preferredTime: Field<Moment>
-        updatedAt: Field<Moment>
-        photo: Field<Container>
-    }
-    portals: {
-        Notes: {
-            "Notes::text": Field<string>
-            "Notes::createdAt": Field<Moment>
-        }
-    }
-}
-```
-
-```typescript
-// v5
-import {
-    type ContainerField,
-    type DateField,
-    type LayoutInterface,
-    type NumberField,
-    type TextField,
-    type TimeField,
-    type TimeStampField
+```ts
+import type {
+  ContainerField,
+  DateField,
+  LayoutInterface,
+  NumberField,
+  TextField,
+  TimeField,
+  TimeStampField
 } from "@jd-data-limited/easy-fm"
 
 interface ContactsLayout extends LayoutInterface {
-    fields: {
-        name: TextField
-        balance: NumberField
-        birthDate: DateField
-        preferredTime: TimeField
-        updatedAt: TimeStampField
-        photo: ContainerField
-    }
-    portals: {
-        Notes: {
-            "Notes::text": TextField
-            "Notes::createdAt": TimeStampField
-        }
-    }
+  fields: {
+    name: TextField
+    balance: NumberField
+    birthDate: DateField
+    preferredTime: TimeField
+    updatedAt: TimeStampField
+    photo: ContainerField
+  }
+  portals: {}
 }
+
+const contacts = database.layout<ContactsLayout>("Contacts_API")
 ```
 
-### Calculation and summary fields are read-only
+`BaseField` is shared abstract base. `Field` and `ValueField` are unions, not replacements for old generic declaration. Calculation and summary fields reject modification before a request is sent.
 
-Calculation and summary fields are now treated as read-only. If your application calls `.set(...)` or assigns to
-`.value` on one of these fields, EasyFM raises an error before sending a write request to FileMaker.
+## Temporal values
 
-When updating this code, write to the underlying writable fields instead. FileMaker will then update the calculated or
-summarised value as usual.
+FileMaker values do not include time zones. V5 maps them to:
 
-## Temporal date and time values
+- date → `Temporal.PlainDate`
+- time → `Temporal.PlainTime`
+- timestamp → `Temporal.PlainDateTime`
+- empty temporal field → `null`
 
-FileMaker dates, times, and timestamps do not include a time zone. V5 therefore represents them with Temporal's plain
-types:
-
-- Date fields use `Temporal.PlainDate`.
-- Time fields use `Temporal.PlainTime`.
-- Timestamp fields use `Temporal.PlainDateTime`.
-
-These types preserve the value returned by FileMaker without treating it as an instant or applying an implicit timezone
-conversion. Empty temporal fields have a value of `null`.
-
-### The `FMHost` timezone callback has been removed
-
-The `FMHost` constructor now accepts only the server URL and the optional TLS verification flag.
-
-```typescript
-// v4
-const host = new FMHost(serverUrl, timezoneOffsetForServer, false)
-
-// v5
-const host = new FMHost(serverUrl, false)
-```
-
-This is because V5 no longer performs automatic timezone conversion. This is intended such that the data you receive
-from EasyFM is true to the database, and to allow you to implement your own conversion logic.
-
-This should simplify and make timezone conversion and handling clearer.
-
-### Create and assign values
-
-EasyFM uses the classes provided by `temporal-polyfill`. If your application constructs Temporal values, add that package
-as a direct dependency and import `Temporal` from it:
-
-```typescript
+```ts
 import {Temporal} from "temporal-polyfill"
 
 record.fields.birthDate.value = Temporal.PlainDate.from("2026-09-23")
@@ -210,97 +219,43 @@ record.fields.preferredTime.value = Temporal.PlainTime.from("14:30:00")
 record.fields.updatedAt.value = Temporal.PlainDateTime.from("2026-09-23T14:30:00")
 ```
 
-To clear a date, time, timestamp, or number field, assign `null`.
+No automatic timezone conversion occurs. Apply a zone explicitly when a timestamp represents an instant:
 
-### Convert a timestamp to an instant
-
-A `Temporal.PlainDateTime` has no time zone. If a FileMaker timestamp represents a real instant in your application, you
-can apply the correct time zone explicitly. Because an empty timestamp field has a value of `null`, check the value first:
-
-```typescript
+```ts
 const timestamp = record.fields.updatedAt.value
-
 if (timestamp !== null) {
-    const instant = timestamp
-        .toZonedDateTime("Pacific/Auckland", {disambiguation: "reject"})
-        .toInstant()
-
-    console.log(instant.toString())
+  const instant = timestamp
+    .toZonedDateTime("Pacific/Auckland", {disambiguation: "reject"})
+    .toInstant()
 }
 ```
 
-The `disambiguation` option controls what happens when daylight-saving changes make a local time ambiguous or invalid.
-The example uses `"reject"` so that the application can handle this case instead of silently adjusting the value.
-
-### Update date and time queries
-
-`asDate`, `asTime`, and `asTimestamp` remain available for compatibility, but are deprecated. They convert a JavaScript
-`Date` or a legacy Moment-like value into the corresponding Temporal type.
-
-For new code, construct the required Temporal type directly:
-
-```typescript
-import {query} from "@jd-data-limited/easy-fm"
-import {Temporal} from "temporal-polyfill"
-
-const startDate = Temporal.PlainDate.from("2026-09-01")
-const request = {
-    birthDate: query`>=${startDate}`
-}
-```
-
-The compatibility helpers use the JavaScript `Date` object's local calendar and clock fields. They do not convert from
-UTC or apply a FileMaker server timezone.
-
-## Container downloads
-
-`ContainerField.webStream()` returns a standard Fetch API `Response`. It accepts an options object, where an
-`abortSignal` can be provided when a download needs to be cancellable.
-
-```typescript
-const response = await record.fields.photo.webStream({})
-const contentType = response.headers.get("Content-Type")
-const body = response.body
-```
-
-`ContainerField.stream()` is deprecated but remains available. It returns the v4-style Node.js stream and MIME type:
-
-```typescript
-const {data, mime} = await record.fields.photo.stream()
-```
-
-`arrayBuffer()` continues to download the complete container into memory.
-
-## Response validation
-
-V5 validates FileMaker Data API response shapes with Zod. A malformed or unexpected response that v4 may have accepted
-can now throw a `ZodError`. `FMError` continues to represent a valid FileMaker error response. A `ZodError` instead
-indicates that the response did not have the expected shape, which may point to a server, proxy, or compatibility issue.
+`asDate`, `asTime`, and `asTimestamp` remain deprecated compatibility helpers. New code should construct Temporal values directly.
 
 ## External data sources
 
-External data sources are supported only when the main database connection uses `method: "filemaker"`. Every external
-source must also use FileMaker username/password credentials.
+External sources remain available only with `filemaker` credentials:
 
-```typescript
-const database = host.database({
+```ts
+const database = Database.create({
+  provider: new DataApiProvider({
+    hostname: "https://example.com",
     database: "Main.fmp12",
     credentials: {
-        method: "filemaker",
-        username: "main-user",
-        password: "<password>"
+      method: "filemaker",
+      username: "main-user",
+      password: "secret"
     },
-    externalSources: [
-        {
-            database: "Related.fmp12",
-            credentials: {
-                method: "filemaker",
-                username: "related-user",
-                password: "<password>"
-            }
-        }
-    ]
+    externalSources: [{
+      database: "Related.fmp12",
+      credentials: {
+        method: "filemaker",
+        username: "related-user",
+        password: "secret"
+      }
+    }]
+  })
 })
 ```
 
-For OAuth, Claris, and existing-token connections, leave `externalSources` empty.
+For OAuth, Claris, and token credentials, use an empty `externalSources` array.

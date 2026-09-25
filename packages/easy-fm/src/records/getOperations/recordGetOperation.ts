@@ -6,7 +6,6 @@ import {type LayoutInterface} from '../../layouts/layoutInterface.js'
 import {type PickPortals, type ScriptRequestData} from '../../types.js'
 import {type LayoutBase} from '../../layouts/layoutBase.js'
 import {LayoutRecord} from '../layoutRecord.js'
-import {ApiRecordResponseObj} from '../../models/apiResults.js'
 import {FMError} from '../../FMError.js'
 import {FindRequestSymbol, type Query} from '../../utils/query.js'
 import {Temporal} from "temporal-polyfill"
@@ -161,9 +160,9 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
             out[key] = query[key][FindRequestSymbol].map(item => {
                 if (typeof item === 'string') return item
                 // Re-write date into correct format
-                if (item instanceof Temporal.PlainDateTime) return temporalToString(item, this.layout.database.host.timeStampFormat)
-                if (item instanceof Temporal.PlainDate) return temporalToString(item, this.layout.database.host.dateFormat)
-                if (item instanceof Temporal.PlainTime) return temporalToString(item, this.layout.database.host.timeFormat)
+                if (item instanceof Temporal.PlainDateTime) return temporalToString(item, this.layout.database.timeStampFormat)
+                if (item instanceof Temporal.PlainDate) return temporalToString(item, this.layout.database.dateFormat)
+                if (item instanceof Temporal.PlainTime) return temporalToString(item, this.layout.database.timeFormat)
             }).join('')
         }
         return out
@@ -195,25 +194,20 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
     >>> {
         await this.layout.getLayoutMeta()
 
-        const isFind = this.isFindRequest
-        let endpoint = this.layout.endpoint + (isFind ? '/_find' : '/records')
-        if (!isFind) endpoint += '?' + new URLSearchParams(this.generateParamsURL(offset, limit)).toString()
-        const reqData = {
-            // port: 443,
-            method: isFind ? 'POST' : 'GET',
-            type: ApiRecordResponseObj,
-            body: isFind ? JSON.stringify(this.generateParamsBody(offset, limit)) : undefined
-        }
-
         try {
-            const res = await this.layout.database.fetchJSON(
-                endpoint,
-                reqData
-            )
-            // console.log("RESOLVING")
+            const portals: Record<string, {limit: number, offset: number}> = {}
+            for (const [name, paging] of Object.entries(this.portals)) if (paging) portals[name] = paging
+            const scripts: Record<string, {name: string, parameter: string}> = {}
+            for (const [name, script] of Object.entries(this.scriptData)) if (script) scripts[name] = {name: script.name, parameter: script.parameter ?? ''}
+            const {value: res, binding} = await this.layout.database.execute({
+                type: 'record.list',
+                layout: this.layout.name,
+                query: this.requests.map(request => ({fields: request.req, omit: request.omit ?? false})),
+                options: {limit, offset, sort: this.sortData, portals, scripts}
+            })
             if (!this.layout.metadata) await this.layout.getLayoutMeta()
-            return res.data.map(item => {
-                return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData)
+            return res.map(item => {
+                return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData, [], binding)
             })
         } catch (e) {
             if (e instanceof FMError) {

@@ -37,26 +37,13 @@ const fieldMetadata = (name: string, result: 'date' | 'time' | 'timeStamp') => (
 })
 
 function createLayout () {
-    const fetchJSON = jest.fn() as jest.Mock<Promise<any>, [string, any?]>
-    fetchJSON.mockResolvedValue({
-        data: [],
-        dataInfo: {
-            database: 'Test',
-            layout: 'Test',
-            table: 'Test',
-            totalRecordCount: 0,
-            foundCount: 0,
-            returnedCount: 0
-        }
-    })
+    const execute = jest.fn() as jest.Mock<Promise<any>, [any]>
+    execute.mockResolvedValue({value: [], binding: {id: Symbol('test')}})
     const database: any = {
-        endpoint: '',
-        host: {
-            dateFormat: 'dd-MM-yyyy',
-            timeFormat: 'ss.mm.HH',
-            timeStampFormat: 'yyyy[MM][dd] HH|mm|ss'
-        },
-        fetchJSON
+        dateFormat: 'dd-MM-yyyy',
+        timeFormat: 'ss.mm.HH',
+        timeStampFormat: 'yyyy[MM][dd] HH|mm|ss',
+        execute
     }
     const layout = new Layout(database, 'Test') as Layout<SimulatedLayout>
     layout.metadata = {
@@ -67,14 +54,14 @@ function createLayout () {
             ],
             portalMetaData: {}
     }
-    return {layout, fetchJSON}
+    return {layout, execute}
 }
 
 describe('Temporal record behavior', () => {
     it('deserializes fetched date, time, and timestamp fields', async () => {
-        const {layout, fetchJSON} = createLayout()
-        fetchJSON.mockResolvedValueOnce({
-            data: [{
+        const {layout, execute} = createLayout()
+        execute.mockResolvedValueOnce({
+            value: [{
                 recordId: '10',
                 modId: '3',
                 fieldData: {
@@ -84,22 +71,12 @@ describe('Temporal record behavior', () => {
                 },
                 portalData: {}
             }],
-            dataInfo: {
-                database: 'Test',
-                layout: 'Test',
-                table: 'Test',
-                totalRecordCount: 1,
-                foundCount: 1,
-                returnedCount: 1
-            }
+            binding: {id: Symbol('test')}
         })
         const records = await layout.records.list({portals: {}, limit: 1}).fetch()
         const [record] = records
 
-        expect(fetchJSON).toHaveBeenCalledWith(expect.stringMatching(/^\/layouts\/Test\/records\?/), expect.objectContaining({
-            method: 'GET',
-            type: expect.anything()
-        }))
+        expect(execute).toHaveBeenCalledWith(expect.objectContaining({type: 'record.list', layout: 'Test'}))
         expect(record).toBeDefined()
 
         expect(record.fields.Date).toBeInstanceOf(DateField)
@@ -116,8 +93,8 @@ describe('Temporal record behavior', () => {
     })
 
     it('serializes date, time, and timestamp fields when committing a record', async () => {
-        const {layout, fetchJSON} = createLayout()
-        fetchJSON.mockResolvedValueOnce({recordId: '10', modId: '3'})
+        const {layout, execute} = createLayout()
+        execute.mockResolvedValueOnce({value: {recordId: '10', modId: '3'}, binding: {id: Symbol('test')}})
         const record = await layout.records.create({portals: []})
 
         record.fields.Date.set(Temporal.PlainDate.from('2030-12-31'))
@@ -127,11 +104,10 @@ describe('Temporal record behavior', () => {
         expect(record.edited).toBe(true)
         await record.commit()
 
-        expect(fetchJSON).toHaveBeenCalledTimes(1)
-        const [url, options] = fetchJSON.mock.calls[0]
-        expect(url).toBe('/layouts/Test/records')
-        expect(options.method).toBe('POST')
-        expect(JSON.parse(options.body)).toEqual({
+        expect(execute).toHaveBeenCalledTimes(1)
+        const [operation] = execute.mock.calls[0]
+        expect(operation.type).toBe('record.create')
+        expect(operation.body).toEqual({
             fieldData: {
                 Date: '31-12-2030',
                 Time: '57.58.23',
@@ -157,7 +133,7 @@ describe('Temporal record behavior', () => {
     })
 
     it('formats Temporal find parameters in the request body using host formats', async () => {
-        const {layout, fetchJSON} = createLayout()
+        const {layout, execute} = createLayout()
         const operation = new RecordGetOperation(layout, {portals: {}})
             .addRequest({
                 Date: query`=${Temporal.PlainDate.from('2030-12-31')}`,
@@ -167,14 +143,15 @@ describe('Temporal record behavior', () => {
 
         await operation.fetch()
 
-        expect(fetchJSON).toHaveBeenCalledTimes(1)
-        const [, options] = fetchJSON.mock.calls[0]
-        expect(JSON.parse(options.body)).toMatchObject({
-            query: [{
+        expect(execute).toHaveBeenCalledTimes(1)
+        const [request] = execute.mock.calls[0]
+        expect(request).toMatchObject({
+            type: 'record.list',
+            query: [{fields: {
                 Date: '=31-12-2030',
                 Time: '>57.58.23',
                 Timestamp: '<=2031[01][02] 03|04|05'
-            }]
+            }}]
         })
     })
 })

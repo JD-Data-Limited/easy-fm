@@ -1332,7 +1332,7 @@ var Field = (() => {
       }
       const data = await res.json();
       if (data.messages[0].code === "0")
-        return;
+
       else {
         throw new FMError(data.messages[0].code, res.status, res);
       }
