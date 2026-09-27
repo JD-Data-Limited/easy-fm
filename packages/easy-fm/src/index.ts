@@ -8,6 +8,7 @@ import type * as TYPES from './types.js'
 export {FMError} from './FMError.js'
 /** Utility type for narrowing portal data on typed layouts. */
 export {type PickPortals} from './types.js'
+export {type DatabaseStructure} from './databaseStructure.js'
 /** Base database connection abstraction used by all auth modes. */
 export {Database} from './connection/database.js'
 /** Layout-scoped API wrapper for metadata, scripts, and record operations. */
@@ -45,6 +46,7 @@ export {
 } from './utils/temporal.js'
 /** Field wrapper used for reading, editing, and container access. */
 export {type BaseField} from './records/fields/baseField.js'
+export {SchemaDriftError, withSchemaValidation, type DatabaseRuntimeSchema, type LayoutRuntimeSchema, type ReadonlyField} from './schema.js'
 
 export {DataApiProvider, type DataApiProviderOptions} from './connection/DataApiProvider.js'
 export {

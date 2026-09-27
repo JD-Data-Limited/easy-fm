@@ -1,4 +1,4 @@
-import { FMHost, TextField, DateField, TimeField, TimeStampField, ContainerField } from "@jd-data-limited/easy-fm";
+import { ContainerField, DateField, FMHost, TextField, TimeField, TimeStampField } from "@jd-data-limited/easy-fm";
 const HOST = new FMHost();
 const DATABASE = HOST.database < {
     "EasyFMBenchmark": {

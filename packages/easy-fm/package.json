@@ -8,6 +8,18 @@
   },
   "type": "module",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./typegen": {
+      "types": "./dist/typegen/index.d.ts",
+      "import": "./dist/typegen/index.js"
+    }
+  },
   "module": "es2022",
   "homepage": "https://jd-data.com/project/easyfm/",
   "url": "https://github.com/JD-Data-Limited/easy-fm",

@@ -46,7 +46,9 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
     }
 
     get fieldsArray (): Array<Field> {
-        return Object.values(this.fields)
+        // Generated layout types may expose a narrower read-only view, while
+        // runtime records always contain concrete Field instances.
+        return Object.values(this.fields) as Array<Field>
     }
 
     abstract getFieldMetadata(fieldId: string): z.infer<typeof ApiFieldMetadata>

@@ -4,8 +4,8 @@
  */
 
 import {Command} from 'commander'
-import {generateTypesCLI} from './generateTypes.js'
-import {generateClient} from "./generateClient.js";
+import {pathToFileURL} from 'node:url'
+import {resolve} from 'node:path'
 
 const program = new Command()
 
@@ -14,16 +14,16 @@ program
     .description('A NodeJS wrapper for the FileMaker Data CLI')
 
 program
-    .command("generate")
-    .action(async () => {
-        await generateClient()
-    })
-
-program
-    .command('generate-types')
-    .description('Automatically generate layout interfaces from your database')
-    .action(async () => {
-        await generateTypesCLI()
+    .command('typegen')
+    .description('Generate a typed, runtime-validated EasyFM client')
+    .option('-c, --config <path>', 'config module', 'easyfm.config.js')
+    .action(async ({config}: {config: string}) => {
+        const [{generate}, loaded] = await Promise.all([
+            import('../typegen/index.js'),
+            import(pathToFileURL(resolve(config)).href)
+        ])
+        const result = await generate(loaded.default)
+        console.log(`Generated ${result.layouts} layouts in ${result.output}`)
     })
 
 program.parse(process.argv)

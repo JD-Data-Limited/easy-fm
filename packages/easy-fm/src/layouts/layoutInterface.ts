@@ -3,13 +3,13 @@
  */
 
 import {type Portal} from '../records/portal.js'
-import {type Field} from '../records/fields/field.js'
 
 export interface LayoutInterface {
     fields: RecordFieldsMap
     portals: PortalInterface
 }
 
-export type RecordFieldsMap = Record<string, Field>
+/** Public field views, including generated read-only views, satisfy this shape. */
+export type RecordFieldsMap = Record<string, {readonly value: unknown}>
 
 export type PortalInterface = Record<string | number | symbol, Portal<RecordFieldsMap>>
