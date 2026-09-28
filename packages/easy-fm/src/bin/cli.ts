@@ -40,7 +40,10 @@ program
         const typegen = await import('../typegen/index.js')
         if (await typegen.ensureZodInstalled(dirname(configPath))) console.log(chalk.green('Installed Zod for generated runtime validation.'))
         const loaded = await import(pathToFileURL(configPath).href)
-        const result = await typegen.generate(loaded.default)
+        const result = await typegen.generate({...loaded.default, onDiagnostic: (diagnostic: {database: string, layout?: string, portal?: string, message: string}) => {
+            const location = [diagnostic.database, diagnostic.layout, diagnostic.portal].filter(Boolean).join('/')
+            console.warn(chalk.yellow(`Warning [${location}]: ${diagnostic.message}`))
+        }})
         console.log(chalk.green(`Generated ${result.layouts} layouts in ${result.output}`))
     })
 

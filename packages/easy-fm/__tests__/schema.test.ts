@@ -66,4 +66,13 @@ describe('generated schema validation', () => {
         const session = await connection.openSession(new AbortController().signal)
         await expect(session.execute({type: 'layout.metadata', layout: 'People'})).rejects.toMatchObject({name: 'SchemaDriftError', phase: 'metadata'})
     })
+
+    it('strips inaccessible metadata and record placeholders before validation', async () => {
+        const raw = provider({name: 'Ada', '<No Access>': ''})
+        const wrapped = withSchemaValidation(raw, {validator: zodValidator, layouts: {People: {record: recordSchema}}})
+        const connection = await wrapped.connect({signal: new AbortController().signal, debug: false})
+        const session = await connection.openSession(new AbortController().signal)
+        const record = await session.execute({type: 'record.get', layout: 'People', recordId: 1, options: {scripts: {}, portals: {}}})
+        expect(record.fieldData).toEqual({name: 'Ada'})
+    })
 })

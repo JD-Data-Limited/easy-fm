@@ -9,6 +9,7 @@ import type {
     ProviderSession
 } from './connection/databaseProvider.js'
 import type {Field} from './records/fields/field.js'
+import {stripInaccessibleFieldData, stripInaccessibleMetadata} from './models/apiResults.js'
 
 export type ReadonlyField<T extends Field> = T extends Field ? Omit<T, 'set' | 'upload' | 'value'> & {readonly value: T['value']} : never
 export interface ValidationIssue {path: PropertyKey[], message: string, code?: string}
@@ -53,14 +54,21 @@ export function withSchemaValidation (provider: DatabaseProvider, schema: Databa
         return {formatting: connection.formatting, maxSessions: connection.maxSessions, close: connection.close?.bind(connection), async openSession (signal): Promise<ProviderSession> {
             const session = await connection.openSession(signal)
             return {close: session.close.bind(session), fetchContainer: session.fetchContainer.bind(session), async execute<K extends DatabaseOperationType> (operation: DatabaseOperation<K>): Promise<DatabaseOperationResult<K>> {
-                const result = await session.execute(operation)
-                if (operation.type === 'layout.metadata') validateMetadata(schema, operation.layout, result)
-                if (operation.type === 'record.get') validateRecord(schema, operation.layout, result as ProviderRecord)
-                if (operation.type === 'record.list') for (const record of result as ProviderRecord[]) validateRecord(schema, operation.layout, record)
+                let result = await session.execute(operation)
+                if (operation.type === 'layout.metadata') {
+                    result = stripInaccessibleMetadata(result as any) as DatabaseOperationResult<K>
+                    validateMetadata(schema, operation.layout, result)
+                }
+                if (operation.type === 'record.get') { result = stripRecord(result as ProviderRecord) as DatabaseOperationResult<K>; validateRecord(schema, operation.layout, result as ProviderRecord) }
+                if (operation.type === 'record.list') { result = (result as ProviderRecord[]).map(stripRecord) as DatabaseOperationResult<K>; for (const record of result as ProviderRecord[]) validateRecord(schema, operation.layout, record) }
                 return result
             }}
         }}
     }}
+}
+
+function stripRecord (record: ProviderRecord): ProviderRecord {
+    return {...record, fieldData: stripInaccessibleFieldData(record.fieldData), portalData: record.portalData && Object.fromEntries(Object.entries(record.portalData).map(([name, rows]) => [name, rows.map(row => stripInaccessibleFieldData(row))]))}
 }
 
 function validateRecord (schema: DatabaseRuntimeSchema, layout: string, record: ProviderRecord) {

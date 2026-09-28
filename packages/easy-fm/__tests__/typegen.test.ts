@@ -69,4 +69,16 @@ describe('typegen', () => {
             expect(manifest.databases.stock).toMatchObject({provider: 'custom', transports: ['odata']})
         } finally { await rm(root, {recursive: true, force: true}) }
     })
+
+    it('reports source warnings with database context', async () => {
+        const root = await mkdtemp(join(tmpdir(), 'easyfm-warning-'))
+        const warnings: Array<{database: string, message: string}> = []
+        try {
+            const result = await generate({output: join(root, 'generated'), onDiagnostic: warning => warnings.push(warning), databases: {
+                crm: {source: {async introspect () { return {version: 1, layouts: [], diagnostics: [{level: 'warning', layout: 'People', message: 'Field "<No Access>" was excluded.'}]}}}}
+            }})
+            expect(warnings).toEqual([{level: 'warning', database: 'crm', layout: 'People', message: 'Field "<No Access>" was excluded.'}])
+            expect(result.diagnostics).toEqual(warnings)
+        } finally { await rm(root, {recursive: true, force: true}) }
+    })
 })

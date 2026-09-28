@@ -12,9 +12,11 @@ import {zodTypegenValidator} from './zod.js'
 
 interface GeneratedDatabase {key: string, config: TypegenDatabaseConfig, schema: TypegenSchema, validator: TypegenValidator}
 
-export async function generate (config: TypegenConfig): Promise<{output: string, layouts: number, databases: number}> {
+export async function generate (config: TypegenConfig): Promise<{output: string, layouts: number, databases: number, diagnostics: Array<import('./types.js').TypegenDiagnostic & {database: string}>}> {
+    const diagnostics: Array<import('./types.js').TypegenDiagnostic & {database: string}> = []
     const databases = await Promise.all(databaseEntries(config).map(async ([key, databaseConfig]) => {
         const discovered = await databaseConfig.source.introspect()
+        for (const diagnostic of discovered.diagnostics ?? []) { const item = {...diagnostic, database: key}; diagnostics.push(item); (config.onDiagnostic ?? defaultDiagnosticReporter)(item) }
         const selected = databaseConfig.layouts ? discovered.layouts.filter(layout => databaseConfig.layouts!.includes(layout.name)) : discovered.layouts
         const missing = databaseConfig.layouts?.filter(name => !selected.some(layout => layout.name === name)) ?? []
         if (missing.length) throw new Error(`Layouts not found in database ${key}: ${missing.join(', ')}`)
@@ -26,8 +28,10 @@ export async function generate (config: TypegenConfig): Promise<{output: string,
     const manifest = {version: 1, databases: Object.fromEntries(databases.map(db => [db.key, {...db.schema, provider: db.config.provider, transports: db.config.transports ?? ['data-api', 'odata']}]))}
     await writeFile(resolve(temporary, 'schema.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
     await mkdir(dirname(output), {recursive: true}); await rm(output, {recursive: true, force: true}); await rename(temporary, output)
-    return {output, databases: databases.length, layouts: databases.reduce((sum, db) => sum + db.schema.layouts.length, 0)}
+    return {output, databases: databases.length, layouts: databases.reduce((sum, db) => sum + db.schema.layouts.length, 0), diagnostics}
 }
+
+function defaultDiagnosticReporter (diagnostic: import('./types.js').TypegenDiagnostic & {database: string}) { console.warn(`[easyfm:typegen] warning [${diagnostic.database}${diagnostic.layout ? `/${diagnostic.layout}` : ''}${diagnostic.portal ? `/${diagnostic.portal}` : ''}]: ${diagnostic.message}`) }
 
 function databaseEntries (config: TypegenConfig): Array<[string, TypegenDatabaseConfig]> {
     if (config.databases && Object.keys(config.databases).length) return Object.entries(config.databases)

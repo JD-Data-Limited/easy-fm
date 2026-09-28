@@ -15,7 +15,8 @@ export interface TypegenLayout {
     portals: Record<string, TypegenField[]>
 }
 
-export interface TypegenSchema {version: 1, layouts: TypegenLayout[]}
+export interface TypegenDiagnostic {level: 'warning', message: string, layout?: string, portal?: string}
+export interface TypegenSchema {version: 1, layouts: TypegenLayout[], diagnostics?: TypegenDiagnostic[]}
 export type TypegenTransport = 'data-api' | 'odata'
 
 export interface SchemaSource {
@@ -41,6 +42,7 @@ export interface TypegenConfig {
     /** Defaults to the built-in strict Zod validator. */
     validator?: TypegenValidator
     databases?: Record<string, TypegenDatabaseConfig>
+    onDiagnostic?: (diagnostic: TypegenDiagnostic & {database: string}) => void
 }
 
 export interface TypegenDatabaseConfig {

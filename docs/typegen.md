@@ -59,6 +59,10 @@ Implement `TypegenValidator` to target another validator. Runtime adapters imple
 
 Validation happens at two boundaries. Layout metadata comparison is an early structural warning. Separately, each complete canonical provider record is checked by a strict generated Zod schema before EasyFM constructs `LayoutRecord` or field objects. This validates `recordId`, `modId`, exact `fieldData` keys and values, `portalData`, and portal rows. Portal selection remains optional because queries may request only a subset. Both paths throw `SchemaDriftError` with `phase`, layout, record, and normalized issue paths.
 
+FileMaker may return `<No Access>` metadata with `type: "invalid"` and `result: "invalid"`. EasyFM accepts these placeholders, removes them from runtime metadata and record data, and excludes them from generated interfaces and Zod schemas. They therefore do not create false schema-drift errors.
+
+Typegen prints a warning for every excluded inaccessible field, including database, layout, and portal context. Programmatic callers may provide `onDiagnostic`; all diagnostics are also returned from `generate()`.
+
 Calculation and summary fields use `ReadonlyField<T>` in generated interfaces. Runtime checks remain in place because JavaScript and type casts can bypass generated TypeScript types.
 
 Custom metadata providers implement `SchemaSource` and can generate the same client without using FileMaker Data API.

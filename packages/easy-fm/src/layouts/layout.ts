@@ -8,7 +8,7 @@ import {type LayoutInterface} from './layoutInterface.js'
 import {FMError} from '../FMError.js'
 import {type LayoutBase} from './layoutBase.js'
 import {type DatabaseBase} from '../connection/databaseBase.js'
-import {ApiLayoutMetadata} from '../models/apiResults.js'
+import {ApiLayoutMetadata, stripInaccessibleMetadata} from '../models/apiResults.js'
 import {type z} from 'zod'
 
 export class Layout<T extends LayoutInterface> implements LayoutBase {
@@ -48,7 +48,7 @@ export class Layout<T extends LayoutInterface> implements LayoutBase {
         }
 
         const {value: res} = await this.database.execute({type: 'layout.metadata', layout: this.name})
-        this.metadata = ApiLayoutMetadata.parse(res)
+        this.metadata = stripInaccessibleMetadata(ApiLayoutMetadata.parse(res))
         return this.metadata
     }
 }

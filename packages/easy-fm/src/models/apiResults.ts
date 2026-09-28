@@ -13,6 +13,7 @@ export const ApiFieldTypes = {
 export const ApiFieldDisplayTypes = {
     EDIT_TEXT: 'editText',
     POPUP_LIST: 'popupList',
+    POPUP_MENU: 'popupMenu',
     CHECKBOX: 'checkBox',
     RADIO_BUTTONS: 'radioButtons',
     SELECTION_LIST: 'selectionList',
@@ -53,9 +54,9 @@ export const ApiLayout: z.ZodType<{
 
 export const ApiFieldMetadata = z.object({
     name: z.string(),
-    type: z.enum(ApiFieldTypes),
+    type: z.union([z.enum(ApiFieldTypes), z.literal('invalid')]),
     displayType: z.enum(ApiFieldDisplayTypes),
-    result: z.enum(ApiFieldResultTypes),
+    result: z.union([z.enum(ApiFieldResultTypes), z.literal('invalid')]),
     global: z.boolean(),
     autoEnter: z.boolean(),
     fourDigitYear: z.boolean(),
@@ -74,7 +75,7 @@ export const ApiValueList = z.object({
     type: z.string(),
     values: z.array(z.object({
         value: z.string(),
-        displayName: z.string()
+        displayName: z.string().optional()
     }))
 })
 
@@ -83,6 +84,29 @@ export const ApiLayoutMetadata = z.object({
     portalMetaData: z.record(z.string(), z.array(ApiFieldMetadata)),
     valueLists: z.array(ApiValueList).optional()
 })
+
+export type ApiLayoutMetadataValue = z.infer<typeof ApiLayoutMetadata>
+
+export function isAccessibleFieldMetadata (field: z.infer<typeof ApiFieldMetadata>): field is z.infer<typeof ApiFieldMetadata> & {
+    type: z.infer<typeof ApiFieldTypes>, result: z.infer<typeof ApiFieldResultTypes>
+} {
+    return field.type !== 'invalid' && field.result !== 'invalid' && field.name !== '<No Access>'
+}
+
+/** Removes FileMaker metadata placeholders for fields unavailable to the current account. */
+export function stripInaccessibleMetadata (metadata: ApiLayoutMetadataValue): ApiLayoutMetadataValue {
+    return {
+        ...metadata,
+        fieldMetaData: metadata.fieldMetaData.filter(isAccessibleFieldMetadata),
+        portalMetaData: Object.fromEntries(Object.entries(metadata.portalMetaData).map(([name, fields]) => [name, fields.filter(isAccessibleFieldMetadata)]))
+    }
+}
+
+/** Removes inaccessible placeholder values before strict generated validation. */
+export function stripInaccessibleFieldData<T extends Record<string, unknown>> (fields: T): T {
+    if (!Object.hasOwn(fields, '<No Access>')) return fields
+    const result = {...fields}; delete result['<No Access>']; return result
+}
 
 export const ApiScriptResult = z.object({
     scriptError: z.string(),

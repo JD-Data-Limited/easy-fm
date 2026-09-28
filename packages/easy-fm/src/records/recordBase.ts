@@ -5,7 +5,7 @@
 import {EventEmitter} from 'node:events'
 import {RecordTypes} from '../types.js'
 import {type LayoutBase} from '../layouts/layoutBase.js'
-import {type ApiFieldData, type ApiFieldMetadata} from '../models/apiResults.js'
+import {type ApiFieldData, type ApiFieldMetadata, stripInaccessibleFieldData} from '../models/apiResults.js'
 import {type z} from 'zod'
 import {RecordFieldsMap} from "../layouts/layoutInterface.js";
 import {Field} from "./fields/field.js";
@@ -57,7 +57,7 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
     protected processFieldData (fieldData: z.infer<typeof ApiFieldData>) {
         const fields: RecordFieldsMap = {}
 
-        for (const [key, value] of Object.entries(fieldData)) {
+        for (const [key, value] of Object.entries(stripInaccessibleFieldData(fieldData))) {
             const fieldMeta = this.getFieldMetadata(key)
             let field: Field
             switch (fieldMeta.result) {
