@@ -62,3 +62,25 @@ Validation happens at two boundaries. Layout metadata comparison is an early str
 Calculation and summary fields use `ReadonlyField<T>` in generated interfaces. Runtime checks remain in place because JavaScript and type casts can bypass generated TypeScript types.
 
 Custom metadata providers implement `SchemaSource` and can generate the same client without using FileMaker Data API.
+
+Multiple databases may use different metadata sources, providers, and transports:
+
+```ts
+export default defineTypegenConfig({
+    output: './src/easyfm-generated',
+    databases: {
+        crm: {
+            provider: 'data-api/odata',
+            transports: ['data-api', 'odata'],
+            source: dataApiSchemaSource(crmOptions)
+        },
+        inventory: {
+            provider: 'custom-provider',
+            transports: ['odata'],
+            source: customSchemaSource(inventoryOptions)
+        }
+    }
+})
+```
+
+Pass one runtime provider per database: `createEasyFMClient({crm: crmProvider, inventory: inventoryProvider})`. Returned layouts are namespaced under `client.crm` and `client.inventory`; databases therefore have independent sessions and may contain layouts with the same name.

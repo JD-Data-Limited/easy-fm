@@ -10,6 +10,7 @@ export interface DataApiInitAnswers {
     password: string
     output: string
 }
+export interface MultiDatabaseInitAnswers {output: string, databases: Array<DataApiInitAnswers & {key: string}>}
 
 export async function configExists (path: string) {
     try { await readFile(path); return true } catch (error) {
@@ -28,6 +29,19 @@ export async function writeDataApiInitialization (config: string, answers: DataA
     try { await file.writeFile(renderConfig(answers), 'utf8') } finally { await file.close() }
     await updateEnvironment(envPath, {FM_HOST: answers.hostname, FM_DATABASE: answers.database, FM_USERNAME: answers.username, FM_PASSWORD: answers.password})
     await ensureEnvironmentIgnored(directory)
+}
+
+export async function writeMultiDatabaseInitialization (config: string, answers: MultiDatabaseInitAnswers) {
+    const configPath = resolve(config); const directory = dirname(configPath)
+    await mkdir(directory, {recursive: true})
+    const file = await open(configPath, 'wx')
+    try { await file.writeFile(renderMultiConfig(answers), 'utf8') } finally { await file.close() }
+    const environment: Record<string, string> = {}
+    for (const db of answers.databases) {
+        const prefix = envPrefix(db.key)
+        Object.assign(environment, {[`${prefix}_HOST`]: db.hostname, [`${prefix}_DATABASE`]: db.database, [`${prefix}_USERNAME`]: db.username, [`${prefix}_PASSWORD`]: db.password})
+    }
+    await updateEnvironment(resolve(directory, '.env'), environment); await ensureEnvironmentIgnored(directory)
 }
 
 export async function readEnvironment (path: string): Promise<Record<string, string>> {
@@ -62,6 +76,17 @@ export default defineTypegenConfig({
 })
 `
 }
+
+function renderMultiConfig (answers: MultiDatabaseInitAnswers) {
+    const databases = answers.databases.map(db => {
+        const prefix = envPrefix(db.key)
+        const transports = db.transports === 'both' ? ['data-api', 'odata'] : [db.transports]
+        return `${JSON.stringify(db.key)}: {provider: 'data-api/odata', transports: ${JSON.stringify(transports)}, source: dataApiSchemaSource({hostname: required('${prefix}_HOST'), database: required('${prefix}_DATABASE'), credentials: {method: 'filemaker', username: required('${prefix}_USERNAME'), password: required('${prefix}_PASSWORD')}, externalSources: []})}`
+    }).join(',\n        ')
+    return `import {dataApiSchemaSource, defineTypegenConfig, zodTypegenValidator} from '@jd-data-limited/easy-fm/typegen'\n\nfunction required(name) { const value = process.env[name]; if (!value) throw new Error(\`Missing required environment variable \${name}\`); return value }\n\nexport default defineTypegenConfig({output: ${JSON.stringify(answers.output)}, validator: zodTypegenValidator(), databases: {\n        ${databases}\n    }})\n`
+}
+
+function envPrefix (key: string) { return `FM_${key.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}` }
 
 async function updateEnvironment (path: string, values: Record<string, string>) {
     let contents = ''

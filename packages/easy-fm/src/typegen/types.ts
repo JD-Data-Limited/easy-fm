@@ -31,13 +31,23 @@ export interface TypegenValidator {
 }
 
 export interface TypegenConfig {
-    source: SchemaSource
     output: string
+    /** Single-database shorthand. */
+    source?: SchemaSource
     /** Placeholder describing intended runtime transports. */
     transports?: TypegenTransport[]
     /** Restrict output to these FileMaker layout names. */
     layouts?: string[]
     /** Defaults to the built-in strict Zod validator. */
+    validator?: TypegenValidator
+    databases?: Record<string, TypegenDatabaseConfig>
+}
+
+export interface TypegenDatabaseConfig {
+    source: SchemaSource
+    provider?: string
+    transports?: TypegenTransport[]
+    layouts?: string[]
     validator?: TypegenValidator
 }
 

@@ -26,13 +26,13 @@ describe('typegen', () => {
             const client = await readFile(join(output, 'client.ts'), 'utf8')
             const manifest = await readFile(join(output, 'schema.json'), 'utf8')
             expect(client).toContain('"Display Name": ReadonlyField<TextField>')
-            expect(client).toContain('createEasyFMClient (provider: DatabaseProvider)')
-            expect(client).toContain('withSchemaValidation(provider, easyFMSchema)')
+            expect(client).toContain('createEasyFMClient (providers: {database: DatabaseProvider})')
+            expect(client).toContain('withSchemaValidation(provider, easyFMSchemas.database)')
             expect(client).toContain('validator: zodValidator')
             expect(client).toContain('record: z.object({recordId: z.string(), modId: z.string(), fieldData:')
             expect(client).toContain('metadata: {fields:')
             expect(client).not.toContain('DataApiProvider')
-            expect(JSON.parse(manifest).transports).toEqual(['data-api', 'odata'])
+            expect(JSON.parse(manifest).databases.database.transports).toEqual(['data-api', 'odata'])
         } finally {
             await rm(root, {recursive: true, force: true})
         }
@@ -49,6 +49,24 @@ describe('typegen', () => {
             const client = await readFile(join(root, 'generated', 'client.ts'), 'utf8')
             expect(client).toContain("import {custom} from './custom.js'")
             expect(client).toContain('validator: custom')
+        } finally { await rm(root, {recursive: true, force: true}) }
+    })
+
+    it('namespaces layouts and providers for multiple databases', async () => {
+        const root = await mkdtemp(join(tmpdir(), 'easyfm-multi-db-'))
+        const source = (name: string) => ({async introspect () { return {version: 1 as const, layouts: [{name, fields: [], portals: {}}]} }})
+        try {
+            await generate({output: join(root, 'generated'), databases: {
+                crm: {source: source('People'), provider: 'data-api/odata', transports: ['data-api', 'odata']},
+                stock: {source: source('People'), provider: 'custom', transports: ['odata']}
+            }})
+            const client = await readFile(join(root, 'generated', 'client.ts'), 'utf8')
+            const manifest = JSON.parse(await readFile(join(root, 'generated', 'schema.json'), 'utf8'))
+            expect(client).toContain('crm: DatabaseProvider')
+            expect(client).toContain('stock: DatabaseProvider')
+            expect(client).toContain('crm: createCrmClient(providers.crm)')
+            expect(client).toContain('stock: createStockClient(providers.stock)')
+            expect(manifest.databases.stock).toMatchObject({provider: 'custom', transports: ['odata']})
         } finally { await rm(root, {recursive: true, force: true}) }
     })
 })

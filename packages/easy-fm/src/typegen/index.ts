@@ -1,6 +1,6 @@
 export {generate} from './generate.js'
 export {dataApiSchemaSource} from './dataApiSchemaSource.js'
 export {zodTypegenValidator} from './zod.js'
-export {configExists, readEnvironment, writeDataApiInitialization, type DataApiInitAnswers} from './init.js'
+export {configExists, readEnvironment, writeDataApiInitialization, writeMultiDatabaseInitialization, type DataApiInitAnswers, type MultiDatabaseInitAnswers} from './init.js'
 export {ensureZodInstalled, getZodInstallPlan, type InstallPlan} from './dependencies.js'
-export {defineTypegenConfig, type SchemaSource, type TypegenConfig, type TypegenField, type TypegenLayout, type TypegenSchema, type TypegenTransport, type TypegenValidator} from './types.js'
+export {defineTypegenConfig, type SchemaSource, type TypegenConfig, type TypegenDatabaseConfig, type TypegenField, type TypegenLayout, type TypegenSchema, type TypegenTransport, type TypegenValidator} from './types.js'
