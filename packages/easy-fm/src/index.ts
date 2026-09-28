@@ -46,7 +46,7 @@ export {
 } from './utils/temporal.js'
 /** Field wrapper used for reading, editing, and container access. */
 export {type BaseField} from './records/fields/baseField.js'
-export {SchemaDriftError, withSchemaValidation, type DatabaseRuntimeSchema, type LayoutRuntimeSchema, type ReadonlyField} from './schema.js'
+export {SchemaDriftError, withSchemaValidation, zodValidator, type DatabaseRuntimeSchema, type LayoutRuntimeSchema, type ReadonlyField, type RuntimeValidator, type ValidationIssue, type ValidationResult} from './schema.js'
 
 export {DataApiProvider, type DataApiProviderOptions} from './connection/DataApiProvider.js'
 export {
