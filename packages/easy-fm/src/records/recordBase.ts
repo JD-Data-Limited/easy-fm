@@ -58,6 +58,7 @@ export abstract class RecordBase<T extends RecordFieldsMap> extends EventEmitter
         const fields: RecordFieldsMap = {}
 
         for (const [key, value] of Object.entries(stripInaccessibleFieldData(fieldData))) {
+            if (key.includes('<No Access>')) continue
             const fieldMeta = this.getFieldMetadata(key)
             let field: Field
             switch (fieldMeta.result) {

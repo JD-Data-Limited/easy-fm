@@ -28,7 +28,7 @@ export function dataApiSchemaSource (options: DataApiProviderOptions): SchemaSou
     }
 }
 
-function isInaccessible (field: Parameters<typeof isAccessibleFieldMetadata>[0]) { return field.type === 'invalid' || field.result === 'invalid' || field.name === '<No Access>' }
+function isInaccessible (field: Parameters<typeof isAccessibleFieldMetadata>[0]) { return field.type === 'invalid' || field.result === 'invalid' || field.name.includes('<No Access>') }
 
 function toField (field: Parameters<typeof isAccessibleFieldMetadata>[0]): TypegenField {
     if (!isAccessibleFieldMetadata(field)) throw new Error('Cannot generate an inaccessible field')

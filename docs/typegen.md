@@ -12,6 +12,8 @@ This asks for provider (`Data API/OData`), transports (`Data API`, `OData`, or `
 
 `easyfm typegen` automatically launches the same setup when its config does not exist, then continues generation.
 
+On first generation, initialized projects also receive `src/easyfm.ts`: a ready-to-import client with all configured Data API providers wired to their database-scoped environment variables. This user-owned file is created exclusively and never overwritten. Every typegen run prints an import/use sample; custom providers without a runtime descriptor receive the factory sample instead.
+
 Before generation, typegen checks the owning project's `package.json` for Zod. If missing, it detects pnpm, npm, Yarn, or Bun and installs `zod@^4.6.5`. Existing dependency declarations are left untouched.
 
 Generated configuration resembles:
@@ -41,7 +43,7 @@ Then run:
 easyfm typegen
 ```
 
-Typegen writes `client.ts` and a provider-neutral `schema.json`. Generated clients accept any `DatabaseProvider`. Results from `record.get` and `record.list` are checked with strict Zod schemas before EasyFM constructs records; mismatch throws `SchemaDriftError`.
+Typegen writes a provider-neutral `client.js`, a declaration-only `client.d.ts`, and `schema.json`. Generated clients accept any `DatabaseProvider`. The declaration file exposes explicit database, layout, and field interfaces for editor completion without making the editor analyse the runtime Zod schemas. Results from `record.get` and `record.list` are checked with strict Zod schemas before EasyFM constructs records; mismatch throws `SchemaDriftError`.
 
 Zod is the default, but validation generation is pluggable:
 

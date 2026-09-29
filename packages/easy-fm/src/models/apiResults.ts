@@ -90,7 +90,7 @@ export type ApiLayoutMetadataValue = z.infer<typeof ApiLayoutMetadata>
 export function isAccessibleFieldMetadata (field: z.infer<typeof ApiFieldMetadata>): field is z.infer<typeof ApiFieldMetadata> & {
     type: z.infer<typeof ApiFieldTypes>, result: z.infer<typeof ApiFieldResultTypes>
 } {
-    return field.type !== 'invalid' && field.result !== 'invalid' && field.name !== '<No Access>'
+    return field.type !== 'invalid' && field.result !== 'invalid' && !field.name.includes('<No Access>')
 }
 
 /** Removes FileMaker metadata placeholders for fields unavailable to the current account. */
@@ -104,8 +104,11 @@ export function stripInaccessibleMetadata (metadata: ApiLayoutMetadataValue): Ap
 
 /** Removes inaccessible placeholder values before strict generated validation. */
 export function stripInaccessibleFieldData<T extends Record<string, unknown>> (fields: T): T {
-    if (!Object.hasOwn(fields, '<No Access>')) return fields
-    const result = {...fields}; delete result['<No Access>']; return result
+    const inaccessible = Object.keys(fields).filter(name => name.includes('<No Access>'))
+    if (!inaccessible.length) return fields
+    const result = {...fields}
+    for (const name of inaccessible) delete result[name]
+    return result
 }
 
 export const ApiScriptResult = z.object({

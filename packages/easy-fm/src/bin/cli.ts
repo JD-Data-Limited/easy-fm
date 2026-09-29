@@ -45,6 +45,9 @@ program
             console.warn(chalk.yellow(`Warning [${location}]: ${diagnostic.message}`))
         }})
         console.log(chalk.green(`Generated ${result.layouts} layouts in ${result.output}`))
+        if (result.entrypoint?.created) console.log(chalk.green(`Created ready-to-use client entrypoint: ${result.entrypoint.path}`))
+        else if (result.entrypoint) console.log(chalk.dim(`Kept existing client entrypoint: ${result.entrypoint.path}`))
+        console.log(chalk.cyan(`\nUse it like this:\n${result.sample}`))
     })
 
 program.parse(process.argv)

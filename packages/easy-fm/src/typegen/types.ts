@@ -33,6 +33,9 @@ export interface TypegenValidator {
 
 export interface TypegenConfig {
     output: string
+    /** User-owned runtime entrypoint. Created once and never overwritten. */
+    entrypoint?: string
+    runtime?: DataApiRuntimeDescriptor
     /** Single-database shorthand. */
     source?: SchemaSource
     /** Placeholder describing intended runtime transports. */
@@ -51,6 +54,15 @@ export interface TypegenDatabaseConfig {
     transports?: TypegenTransport[]
     layouts?: string[]
     validator?: TypegenValidator
+    runtime?: DataApiRuntimeDescriptor
+}
+
+export interface DataApiRuntimeDescriptor {
+    provider: 'data-api'
+    hostnameEnv: string
+    databaseEnv: string
+    usernameEnv: string
+    passwordEnv: string
 }
 
 export function defineTypegenConfig (config: TypegenConfig): TypegenConfig { return config }
