@@ -2,53 +2,70 @@
  * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import type * as TYPES from './types.js'
+import type * as TYPES from './types.js';
 
 /** Error type returned for FileMaker Data API failures. */
-export {FMError} from './FMError.js'
+export { FMError } from './FMError.js';
 /** Utility type for narrowing portal data on typed layouts. */
-export {type PickPortals} from './types.js'
-export {type DatabaseStructure} from './databaseStructure.js'
+export { type PickPortals } from './types.js';
+export { type DatabaseStructure } from './databaseStructure.js';
 /** Base database connection abstraction used by all auth modes. */
-export {Database} from './connection/database.js'
+export { Database } from './connection/database.js';
 /** Layout-scoped API wrapper for metadata, scripts, and record operations. */
-export {Layout} from './layouts/layout.js'
+export { Layout } from './layouts/layout.js';
 /** Base record implementation shared by layout and portal records. */
-export {RecordBase} from './records/recordBase.js'
+export { RecordBase } from './records/recordBase.js';
 /** Record returned from a layout. Supports fetch, commit, duplicate, and delete. */
-export {LayoutRecord} from './records/layoutRecord.js'
+export { LayoutRecord } from './records/layoutRecord.js';
 /** Type helpers for describing typed layouts and portals. */
 export {
     type LayoutInterface,
     type PortalInterface,
-    type RecordFieldsMap
-} from './layouts/layoutInterface.js'
+    type RecordFieldsMap,
+} from './layouts/layoutInterface.js';
 /** Record returned from a portal row. */
-export {PortalRecord} from './records/portalRecord.js'
+export { PortalRecord } from './records/portalRecord.js';
 /** Wrapper around portal rows included in a layout record. */
-export {Portal} from './records/portal.js'
+export { Portal } from './records/portal.js';
 /** Types and builder used for list/find record operations. */
-export {type FindRequest, type FindRequestRaw, RecordGetOperation} from './records/getOperations/recordGetOperation.js'
+export {
+    type FindRequest,
+    type FindRequestRaw,
+    RecordGetOperation,
+} from './records/getOperations/recordGetOperation.js';
 /** Entry point for `layout.records.*` operations. */
-export {LayoutRecordManager} from './layouts/layoutRecordManager.js'
+export { LayoutRecordManager } from './layouts/layoutRecordManager.js';
 /** Helpers for safe FileMaker find query construction and date/time formatting. */
-export {asDate, asTime, asTimestamp, query, queryEscape} from './utils/query.js'
+export { asDate, asTime, asTimestamp, query, queryEscape } from './utils/query.js';
 /** Conversion helpers for FileMaker-formatted Temporal values. */
-export * from './records/fields/valueField.js'
-export * from './records/fields/containerField.js'
-export {type Field} from './records/fields/field.js'
+export * from './records/fields/valueField.js';
+export * from './records/fields/containerField.js';
+export { type Field } from './records/fields/field.js';
 
 export {
     stringToTemporal,
     temporalToString,
     type TemporalValue,
-    type TemporalValueType
-} from './utils/temporal.js'
+    type TemporalValueType,
+} from './utils/temporal.js';
 /** Field wrapper used for reading, editing, and container access. */
-export {type BaseField} from './records/fields/baseField.js'
-export {SchemaDriftError, withSchemaValidation, zodValidator, type DatabaseRuntimeSchema, type LayoutRuntimeSchema, type ReadonlyField, type RuntimeValidator, type ValidationIssue, type ValidationResult} from './schema.js'
+export { type BaseField } from './records/fields/baseField.js';
+export {
+    SchemaDriftError,
+    withSchemaValidation,
+    zodValidator,
+    type DatabaseRuntimeSchema,
+    type LayoutRuntimeSchema,
+    type ReadonlyField,
+    type RuntimeValidator,
+    type ValidationIssue,
+    type ValidationResult,
+} from './schema.js';
 
-export {DataApiProvider, type DataApiProviderOptions} from './connection/DataApiProvider.js'
+export {
+    DataApiProvider,
+    type DataApiProviderOptions,
+} from './connection/DataApiProvider.js';
 export {
     type DatabaseProvider,
     type ProviderConnection,
@@ -60,9 +77,9 @@ export {
     type DatabaseOperationType,
     type ContainerDownloadOptions,
     ProviderSessionExpiredError,
-    ContainerSessionAffinityError
-} from './connection/databaseProvider.js'
+    ContainerSessionAffinityError,
+} from './connection/databaseProvider.js';
 export {
     /** Namespace re-export of library public types. */
-        type TYPES
-}
+    type TYPES,
+};

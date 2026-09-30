@@ -2,41 +2,53 @@
  * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import {type extraBodyOptions} from '../types.js'
-import {RecordBase} from './recordBase.js'
-import {PortalRecord} from './portalRecord.js'
-import {Portal} from './portal.js'
-import {type LayoutInterface} from '../layouts/layoutInterface.js'
-import {FMError} from '../FMError.js'
-import {type LayoutRecordBase} from './layoutRecordBase.js'
-import {type ApiFieldData, ApiFieldMetadata, type ApiPortalData, type ApiRowDataDef} from '../models/apiResults.js'
-import {type LayoutBase} from '../layouts/layoutBase.js'
-import z from 'zod'
-import {Field} from "./fields/field.js";
-import {ValueFieldBase} from "./fields/valueField.js";
-import {ContainerField} from './fields/containerField.js'
-import {type SessionBinding} from '../connection/databaseProvider.js'
+import {type extraBodyOptions} from '../types.js';
+import {RecordBase} from './recordBase.js';
+import {PortalRecord} from './portalRecord.js';
+import {Portal} from './portal.js';
+import {type LayoutInterface} from '../layouts/layoutInterface.js';
+import {FMError} from '../FMError.js';
+import {type LayoutRecordBase} from './layoutRecordBase.js';
+import {type ApiFieldData, ApiFieldMetadata, type ApiPortalData, type ApiRowDataDef,} from '../models/apiResults.js';
+import {type LayoutBase} from '../layouts/layoutBase.js';
+import z from 'zod';
+import {Field} from './fields/field.js';
+import {ValueFieldBase} from './fields/valueField.js';
+import {ContainerField} from './fields/containerField.js';
+import {type SessionBinding} from '../connection/databaseProvider.js';
 
-export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAYOUT['fields']> implements LayoutRecordBase {
-    portals: LAYOUT['portals'] = {}
-    private readonly portalsToInclude: Array<string | number | symbol>
+export class LayoutRecord<LAYOUT extends LayoutInterface>
+    extends RecordBase<LAYOUT['fields']>
+    implements LayoutRecordBase
+{
+    portals: LAYOUT['portals'] = {};
+    private readonly portalsToInclude: Array<string | number | symbol>;
 
-    constructor (
+    constructor(
         layout: LayoutBase,
         recordId: number | string,
         modId = recordId,
         fieldData: z.infer<typeof ApiFieldData> = {},
-        portalData: z.infer<typeof ApiPortalData> | null = null, portalsToInclude: Array<keyof LAYOUT['portals']> = [], sessionBinding?: SessionBinding) {
-        super(layout, parseInt(recordId as string), parseInt(modId as string), fieldData, sessionBinding)
-        this.portalsToInclude = portalsToInclude
+        portalData: z.infer<typeof ApiPortalData> | null = null,
+        portalsToInclude: Array<keyof LAYOUT['portals']> = [],
+        sessionBinding?: SessionBinding,
+    ) {
+        super(
+            layout,
+            parseInt(recordId as string),
+            parseInt(modId as string),
+            fieldData,
+            sessionBinding,
+        );
+        this.portalsToInclude = portalsToInclude;
         if (portalData) {
-            this.processPortalData(portalData)
+            this.processPortalData(portalData);
         }
     }
 
     /** Returns all loaded portals on this record as an array. */
-    get portalsArray (): Array<Portal<any>> {
-        return Object.values(this.portals)
+    get portalsArray(): Array<Portal<any>> {
+        return Object.values(this.portals);
     }
 
     /**
@@ -45,63 +57,91 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
      * @returns {Promise<this>} - A promise that resolves with the modified object.
      * @throws {FMError} - If an error occurs during the commit process.
      */
-    async commit (extraBody: extraBodyOptions = {}): Promise<this> {
-        const data: any = this.toObject()
-        delete data.recordId
-        delete data.modId
+    async commit(extraBody: extraBodyOptions = {}): Promise<this> {
+        const data: any = this.toObject();
+        delete data.recordId;
+        delete data.modId;
 
-        if (extraBody.options) data.options = extraBody.options
-        if (extraBody.deleteRelatedRecords) data.deleteRelatedRecords = extraBody.deleteRelatedRecords
-        const options = operationOptions(extraBody)
+        if (extraBody.options) {
+            data.options = extraBody.options;
+        }
+        if (extraBody.deleteRelatedRecords) {
+            data.deleteRelatedRecords = extraBody.deleteRelatedRecords;
+        }
+        const options = operationOptions(extraBody);
 
         if (this.recordId === -1) {
             // This is a new LayoutRecord
-            const {value: res, binding} = await this.layout.database.execute({type: 'record.create', layout: this.layout.name, body: data, options})
+            const { value: res, binding } = await this.layout.database.execute({
+                type: 'record.create',
+                layout: this.layout.name,
+                body: data,
+                options,
+            });
 
             if (res.scriptError) {
-                throw new FMError(res.scriptError, res.status ?? 200, res)
+                throw new FMError(res.scriptError, res.status ?? 200, res);
             }
-            this.recordId = parseInt(res.recordId)
-            this.modId = parseInt(res.modId)
-            this.sessionBinding = binding
-            this._onSave()
-            return this
+            this.recordId = parseInt(res.recordId);
+            this.modId = parseInt(res.modId);
+            this.sessionBinding = binding;
+            this._onSave();
+            return this;
         }
 
         // for (let item of Object.keys(data)) extraBody[item] = data[item]
-        const {value: res, binding} = await this.layout.database.execute({type: 'record.update', layout: this.layout.name, recordId: this.recordId, body: data, options})
+        const { value: res, binding } = await this.layout.database.execute({
+            type: 'record.update',
+            layout: this.layout.name,
+            recordId: this.recordId,
+            body: data,
+            options,
+        });
 
         if (res.scriptError) {
-            throw new FMError(res.scriptError, res.status ?? 200, res)
+            throw new FMError(res.scriptError, res.status ?? 200, res);
         }
 
-        this.modId = +res.modId
-        this.sessionBinding = binding
-        this._onSave()
-        return this
+        this.modId = +res.modId;
+        this.sessionBinding = binding;
+        this._onSave();
+        return this;
     }
 
     getFieldMetadata(fieldId: string) {
         if (!this.layout.metadata) {
-            throw new Error("Field metadata not found. Ensure you run layout.getLayoutMeta() first.")
+            throw new Error(
+                'Field metadata not found. Ensure you run layout.getLayoutMeta() first.',
+            );
         }
-        let result = this.layout.metadata.fieldMetaData.find(i => i.name === fieldId)
-        if (!result) throw new Error("Field metadata not found. Ensure you run layout.getLayoutMeta() first.")
-        return result as z.infer<typeof ApiFieldMetadata>
+        const result = this.layout.metadata.fieldMetaData.find((i) => i.name === fieldId);
+        if (!result) {
+            throw new Error(
+                'Field metadata not found. Ensure you run layout.getLayoutMeta() first.',
+            );
+        }
+        return result as z.infer<typeof ApiFieldMetadata>;
     }
 
-    protected processPortalData (portalData: z.infer<typeof ApiPortalData>): void {
+    protected processPortalData(portalData: z.infer<typeof ApiPortalData>): void {
         for (const portalName of Object.keys(portalData)) {
-            const _portal = new Portal(this, portalName)
-            _portal.records = portalData[portalName].map(item => {
-                const fieldData = item
-                delete fieldData.recordId
-                delete fieldData.modId
-                return new PortalRecord(this, _portal, parseInt(item.recordId as string), parseInt(item.modId as string), fieldData, this.sessionBinding)
-            })
+            const _portal = new Portal(this, portalName);
+            _portal.records = portalData[portalName].map((item) => {
+                const fieldData = item;
+                delete fieldData.recordId;
+                delete fieldData.modId;
+                return new PortalRecord(
+                    this,
+                    _portal,
+                    parseInt(item.recordId as string),
+                    parseInt(item.modId as string),
+                    fieldData,
+                    this.sessionBinding,
+                );
+            });
 
             // @ts-expect-error - This code is actually correct, but throws a typescript error
-            this.portals[portalName] = _portal
+            this.portals[portalName] = _portal;
         }
     }
 
@@ -113,100 +153,148 @@ export class LayoutRecord<LAYOUT extends LayoutInterface> extends RecordBase<LAY
      * @throws {Error} If commit() has not been called.
      * @throws {FMError} If the retrieval fails.
      */
-    async get (portals: Record<string, {limit: number, offset: number}> = {}): Promise<this> {
+    async get(
+        portals: Record<string, { limit: number; offset: number }> = {},
+    ): Promise<this> {
         if (this.recordId === -1) {
-            throw new Error('Cannot get this RecordBase until a commit() is done.')
+            throw new Error('Cannot get this RecordBase until a commit() is done.');
         }
-        if (!this.layout.metadata) await this.layout.getLayoutMeta()
-        const {value: record, binding} = await this.layout.database.execute({type: 'record.get', layout: this.layout.name, recordId: this.recordId, options: {scripts: {}, portals}})
+        if (!this.layout.metadata) {
+            await this.layout.getLayoutMeta();
+        }
+        const { value: record, binding } = await this.layout.database.execute({
+            type: 'record.get',
+            layout: this.layout.name,
+            recordId: this.recordId,
+            options: { scripts: {}, portals },
+        });
 
         // console.log(res, res.response.data)
-        this.sessionBinding = binding
-        this.modId = +record.modId
-        this.processFieldData(record.fieldData)
-        this.portalData = []
-        if (record.portalData) this.processPortalData(record.portalData)
-        return this
+        this.sessionBinding = binding;
+        this.modId = +record.modId;
+        this.processFieldData(record.fieldData);
+        this.portalData = [];
+        if (record.portalData) {
+            this.processPortalData(record.portalData);
+        }
+        return this;
     }
 
     /** Creates a duplicate of this record in FileMaker. */
-    async duplicate (): Promise<LayoutRecord<LAYOUT>> {
-        const trace = new Error()
-        const {value: res, binding} = await this.layout.database.execute({type: 'record.duplicate', layout: this.layout.name, recordId: this.recordId, options: emptyOperationOptions()})
+    async duplicate(): Promise<LayoutRecord<LAYOUT>> {
+        const trace = new Error();
+        const { value: res, binding } = await this.layout.database.execute({
+            type: 'record.duplicate',
+            layout: this.layout.name,
+            recordId: this.recordId,
+            options: emptyOperationOptions(),
+        });
         if (res.scriptError) {
-            throw new FMError(res.scriptError, res.status ?? 200, res, trace)
+            throw new FMError(res.scriptError, res.status ?? 200, res, trace);
         }
-        const data = this.toObject((a) => true, (a) => true, (a) => false, (a) => false)
-        const _res = new LayoutRecord<LAYOUT>(this.layout, res.recordId, res.modId, data.fieldData, data.portalData, [], binding)
+        const data = this.toObject(
+            (a) => true,
+            (a) => true,
+            (a) => false,
+            (a) => false,
+        );
+        const _res = new LayoutRecord<LAYOUT>(
+            this.layout,
+            res.recordId,
+            res.modId,
+            data.fieldData,
+            data.portalData,
+            [],
+            binding,
+        );
 
-        this.emit('duplicated')
-        return _res
+        this.emit('duplicated');
+        return _res;
     }
 
     /** Deletes this record from FileMaker. */
-    async delete (): Promise<void> {
-        const {value: res} = await this.layout.database.execute({type: 'record.delete', layout: this.layout.name, recordId: this.recordId, options: emptyOperationOptions()})
+    async delete(): Promise<void> {
+        const { value: res } = await this.layout.database.execute({
+            type: 'record.delete',
+            layout: this.layout.name,
+            recordId: this.recordId,
+            options: emptyOperationOptions(),
+        });
         if (res.scriptError) {
-            throw new FMError(res.scriptError, res.status ?? 200, res)
+            throw new FMError(res.scriptError, res.status ?? 200, res);
         }
-        this.emit('deleted')
+        this.emit('deleted');
     }
 
-    async refreshContainer (fieldId: string): Promise<ContainerField> {
-        await this.get()
-        const field = this.fields[fieldId]
-        if (!(field instanceof ContainerField)) throw new Error(`Container field ${fieldId} was not returned while refreshing record`)
-        return field
+    async refreshContainer(fieldId: string): Promise<ContainerField> {
+        await this.get();
+        const field = this.fields[fieldId];
+        if (!(field instanceof ContainerField)) {
+            throw new Error(
+                `Container field ${fieldId} was not returned while refreshing record`,
+            );
+        }
+        return field;
     }
 
     /** Returns this record's edited fields as a FileMaker API payload. */
-    fieldsToObject (filter = (a: Field) => a instanceof ValueFieldBase && a.edited): Omit<z.infer<typeof ApiRowDataDef>, 'portalData'> {
-        const fieldsProcessed: z.infer<typeof ApiFieldData> = {}
+    fieldsToObject(
+        filter = (a: Field) => a instanceof ValueFieldBase && a.edited,
+    ): Omit<z.infer<typeof ApiRowDataDef>, 'portalData'> {
+        const fieldsProcessed: z.infer<typeof ApiFieldData> = {};
 
-        for (const field of this.fieldsArray.filter(field => filter(field))) {
-            fieldsProcessed[field.id] = field.serializeRawValue()
+        for (const field of this.fieldsArray.filter((field) => filter(field))) {
+            fieldsProcessed[field.id] = field.serializeRawValue();
         }
 
         return {
             recordId: this.recordId.toString(),
             modId: this.modId.toString(),
-            fieldData: fieldsProcessed
-        }
+            fieldData: fieldsProcessed,
+        };
     }
 
     /** Returns this record and its portal edits as a FileMaker API payload. */
-    toObject (
+    toObject(
         filter: (a: Field) => any = (a) => a instanceof ValueFieldBase && a.edited,
-        portalFilter: (a: Portal<any>) => any = (a) => a.records.find(record => record.edited),
+        portalFilter: (a: Portal<any>) => any = (a) =>
+            a.records.find((record) => record.edited),
         portalRowFilter: (a: PortalRecord<any>) => any = (a) => a.edited,
-        portalFieldFilter: (a: Field) => any = (a) => a instanceof ValueFieldBase && a.edited
+        portalFieldFilter: (a: Field) => any = (a) =>
+            a instanceof ValueFieldBase && a.edited,
     ) {
         const obj: z.infer<typeof ApiRowDataDef> = {
             ...this.fieldsToObject(filter),
-            portalData: {}
-        }
+            portalData: {},
+        };
 
         // Check if there's been any edited portal information
-        const portals = this.portalsArray.filter(a => portalFilter(a))
+        const portals = this.portalsArray.filter((a) => portalFilter(a));
         if (portals) {
-            obj.portalData = {}
+            obj.portalData = {};
             for (const portal of portals) {
-                obj.portalData[portal.name] = portal.records.filter(a => portalRowFilter(a)).map(record => {
-                    return record.toObject(portalFieldFilter)
-                })
+                obj.portalData[portal.name] = portal.records
+                    .filter((a) => portalRowFilter(a))
+                    .map((record) => {
+                        return record.toObject(portalFieldFilter);
+                    });
             }
         }
 
-        return obj
+        return obj;
     }
 }
 
-function emptyOperationOptions () {
-    return {scripts: {}, portals: {}}
+function emptyOperationOptions() {
+    return { scripts: {}, portals: {} };
 }
 
-function operationOptions (extra: extraBodyOptions) {
-    const scripts: Record<string, {name: string, parameter: string}> = {}
-    for (const [name, script] of Object.entries(extra.scripts ?? {})) if (script) scripts[name] = {name: script.name, parameter: script.parameter ?? ''}
-    return {scripts, portals: {}}
+function operationOptions(extra: extraBodyOptions) {
+    const scripts: Record<string, { name: string; parameter: string }> = {};
+    for (const [name, script] of Object.entries(extra.scripts ?? {})) {
+        if (script) {
+            scripts[name] = { name: script.name, parameter: script.parameter ?? '' };
+        }
+    }
+    return { scripts, portals: {} };
 }

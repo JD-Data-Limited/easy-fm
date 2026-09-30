@@ -1,10 +1,17 @@
-import {asDate, DataApiProvider, Database, queryEscape, stringToTemporal, temporalToString} from '../dist/index.js'
+import {
+    asDate,
+    DataApiProvider,
+    Database,
+    queryEscape,
+    stringToTemporal,
+    temporalToString,
+} from '../dist/index.js';
 
 export interface RuntimeSmokeResult {
-    date: string
-    escapedQuery: string
-    formattedDate: string
-    hostname: string
+    date: string;
+    escapedQuery: string;
+    formattedDate: string;
+    hostname: string;
 }
 
 /**
@@ -12,27 +19,29 @@ export interface RuntimeSmokeResult {
  * FileMaker server. Creating and closing a database also verifies that each
  * runtime can load the package's current lifecycle implementation.
  */
-export async function runRuntimeSmokeTest (): Promise<RuntimeSmokeResult> {
-    const hostname = 'runtime-test.example.com'
-    const database = Database.create({provider: new DataApiProvider({
-        hostname: `https://${hostname}`,
-        database: 'RuntimeTest',
-        credentials: {
-            method: 'filemaker',
-            username: 'runtime-test-user',
-            password: 'runtime-test-password'
-        },
-        externalSources: []
-    })})
+export async function runRuntimeSmokeTest(): Promise<RuntimeSmokeResult> {
+    const hostname = 'runtime-test.example.com';
+    const database = Database.create({
+        provider: new DataApiProvider({
+            hostname: `https://${hostname}`,
+            database: 'RuntimeTest',
+            credentials: {
+                method: 'filemaker',
+                username: 'runtime-test-user',
+                password: 'runtime-test-password',
+            },
+            externalSources: [],
+        }),
+    });
 
-    await database.close()
+    await database.close();
 
-    const date = stringToTemporal('09/23/2026', 'date', 'MM/dd/yyyy')
+    const date = stringToTemporal('09/23/2026', 'date', 'MM/dd/yyyy');
 
     return {
         date: asDate(new Date(2026, 8, 23)).toString(),
         escapedQuery: queryEscape('*'),
         formattedDate: temporalToString(date, 'yyyy-MM-dd'),
-        hostname
-    }
+        hostname,
+    };
 }

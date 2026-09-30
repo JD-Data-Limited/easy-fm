@@ -2,10 +2,10 @@
  * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import {PortalRecord} from './portalRecord.js'
-import {type PortalBase} from './portalBase.js'
-import {type LayoutRecord} from './layoutRecord.js'
-import {RecordFieldsMap} from "../layouts/layoutInterface.js";
+import {PortalRecord} from './portalRecord.js';
+import {type PortalBase} from './portalBase.js';
+import {type LayoutRecord} from './layoutRecord.js';
+import {RecordFieldsMap} from '../layouts/layoutInterface.js';
 
 /**
  * Represents a portal.
@@ -13,13 +13,13 @@ import {RecordFieldsMap} from "../layouts/layoutInterface.js";
  * @template T - The type of RecordFieldsMap.
  */
 export class Portal<T extends RecordFieldsMap> implements PortalBase<T> {
-    readonly record: LayoutRecord<any>
-    readonly name: string
-    public records: Array<PortalRecord<T>> = []
+    readonly record: LayoutRecord<any>;
+    readonly name: string;
+    public records: Array<PortalRecord<T>> = [];
 
-    constructor (record: LayoutRecord<any>, name: string) {
-        this.record = record
-        this.name = name
+    constructor(record: LayoutRecord<any>, name: string) {
+        this.record = record;
+        this.name = name;
     }
 
     /**
@@ -27,13 +27,15 @@ export class Portal<T extends RecordFieldsMap> implements PortalBase<T> {
      * @summary Creates a new record.
      * @returns {Promise<PortalRecord<T>>} A Promise that resolves to the newly created record.
      */
-    async create () {
-        const fields: Record<string, string> = {}
-        for (const _field of (await this.record.layout.getLayoutMeta()).portalMetaData[this.name]) {
-            fields[_field.name] = ''
+    async create() {
+        const fields: Record<string, string> = {};
+        for (const _field of (await this.record.layout.getLayoutMeta()).portalMetaData[
+            this.name
+        ]) {
+            fields[_field.name] = '';
         }
-        const record = new PortalRecord<T>(this.record, this, -1, -1, fields)
-        this.records.push(record)
-        return record
+        const record = new PortalRecord<T>(this.record, this, -1, -1, fields);
+        this.records.push(record);
+        return record;
     }
 }

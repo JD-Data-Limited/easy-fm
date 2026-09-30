@@ -1,23 +1,17 @@
 {
-  "compilerOptions": {
-    "target": "es2022",
-    "module": "NodeNext",
-    "lib": ["es2021.intl", "es2022", "dom"],
-    "moduleResolution": "NodeNext",
-    "declaration": true,
-    "noImplicitAny": true,
-    "strict": true,
-    "esModuleInterop": true,
-    "outDir": "./dist",
-    "rootDir": "./src"
-  },
-  "exclude": [
-    "node_modules",
-    "__tests__",
-    "__mocks__"
-  ],
-  "include": ["src/**/*.ts"],
-  "files": [
-    "src/index.ts"
-  ]
+    "compilerOptions": {
+        "target": "es2022",
+        "module": "NodeNext",
+        "lib": ["es2021.intl", "es2022", "dom"],
+        "moduleResolution": "NodeNext",
+        "declaration": true,
+        "noImplicitAny": true,
+        "strict": true,
+        "esModuleInterop": true,
+        "outDir": "./dist",
+        "rootDir": "./src"
+    },
+    "exclude": ["node_modules", "__tests__", "__mocks__"],
+    "include": ["src/**/*.ts"],
+    "files": ["src/index.ts"]
 }

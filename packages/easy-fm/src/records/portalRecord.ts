@@ -2,42 +2,60 @@
  * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import {RecordBase} from './recordBase.js'
-import {type extraBodyOptions, RecordTypes} from '../types.js'
+import { RecordBase } from './recordBase.js';
+import { type extraBodyOptions, RecordTypes } from '../types.js';
 
-import {type PortalBase} from './portalBase.js'
-import z from "zod";
-import {ApiFieldMetadata} from "../models/apiResults.js";
-import {RecordFieldsMap} from "../layouts/layoutInterface.js";
-import {Field} from "./fields/field.js";
-import {ContainerField} from './fields/containerField.js'
-import {type SessionBinding} from '../connection/databaseProvider.js'
+import { type PortalBase } from './portalBase.js';
+import z from 'zod';
+import { ApiFieldMetadata } from '../models/apiResults.js';
+import { RecordFieldsMap } from '../layouts/layoutInterface.js';
+import { Field } from './fields/field.js';
+import { ContainerField } from './fields/containerField.js';
+import { type SessionBinding } from '../connection/databaseProvider.js';
 
 /**
  * Represents a PortalRecord, which is a record in a portal within a parent record.
  * @template T - The type of the record's field map.
  */
 export class PortalRecord<T extends RecordFieldsMap> extends RecordBase<T> {
-    readonly portal: PortalBase<T>
-    readonly type = RecordTypes.PORTAL
+    readonly portal: PortalBase<T>;
+    readonly type = RecordTypes.PORTAL;
 
-    constructor (record: RecordBase<any>, portal: PortalBase<any>, recordId: number, modId = recordId, fieldData = {}, sessionBinding?: SessionBinding) {
-        super(record.layout, recordId, modId, fieldData, sessionBinding)
-        this.portal = portal
+    constructor(
+        record: RecordBase<any>,
+        portal: PortalBase<any>,
+        recordId: number,
+        modId = recordId,
+        fieldData = {},
+        sessionBinding?: SessionBinding,
+    ) {
+        super(record.layout, recordId, modId, fieldData, sessionBinding);
+        this.portal = portal;
     }
 
-    async refreshContainer (fieldId: string): Promise<ContainerField> {
-        await this.portal.record.get({[this.portal.name]: {offset: 1, limit: Math.max(1, this.portal.records.length)}})
-        const portal = this.portal.record.portalsArray.find(item => item.name === this.portal.name)
-        const record = portal?.records.find(item => item.recordId === this.recordId)
-        const field = record?.fields[fieldId]
-        if (!(field instanceof ContainerField)) throw new Error(`Container field ${fieldId} was not returned while refreshing record`)
-        return field
+    async refreshContainer(fieldId: string): Promise<ContainerField> {
+        await this.portal.record.get({
+            [this.portal.name]: {
+                offset: 1,
+                limit: Math.max(1, this.portal.records.length),
+            },
+        });
+        const portal = this.portal.record.portalsArray.find(
+            (item) => item.name === this.portal.name,
+        );
+        const record = portal?.records.find((item) => item.recordId === this.recordId);
+        const field = record?.fields[fieldId];
+        if (!(field instanceof ContainerField)) {
+            throw new Error(
+                `Container field ${fieldId} was not returned while refreshing record`,
+            );
+        }
+        return field;
     }
 
-    _onSave () {
-        super._onSave()
-        this.portal.record._onSave()
+    _onSave() {
+        super._onSave();
+        this.portal.record._onSave();
     }
 
     /**
@@ -46,32 +64,40 @@ export class PortalRecord<T extends RecordFieldsMap> extends RecordBase<T> {
      * @param {extraBodyOptions} [extraBody={}] - The optional extra body options.
      * @returns {Promise} - A promise that resolves when the record is committed.
      */
-    async commit (extraBody: extraBodyOptions = {}) {
-        return await this.portal.record.commit(extraBody)
+    async commit(extraBody: extraBodyOptions = {}) {
+        return await this.portal.record.commit(extraBody);
     }
 
     getFieldMetadata(fieldId: string) {
         if (!this.layout.metadata) {
-            throw new Error("Field metadata not found. Ensure you run layout.getLayoutMeta() first.")
+            throw new Error(
+                'Field metadata not found. Ensure you run layout.getLayoutMeta() first.',
+            );
         }
         const portalMetadata = this.portal
-            ? this.layout.metadata.portalMetaData[this.portal.name] ?? []
-            : Object.values(this.layout.metadata.portalMetaData).flat()
-        const result = portalMetadata.find(i => i.name === fieldId)
-        if (!result) throw new Error("Field metadata not found. Ensure you run layout.getLayoutMeta() first.")
-        return result as z.infer<typeof ApiFieldMetadata>
+            ? (this.layout.metadata.portalMetaData[this.portal.name] ?? [])
+            : Object.values(this.layout.metadata.portalMetaData).flat();
+        const result = portalMetadata.find((i) => i.name === fieldId);
+        if (!result) {
+            throw new Error(
+                'Field metadata not found. Ensure you run layout.getLayoutMeta() first.',
+            );
+        }
+        return result as z.infer<typeof ApiFieldMetadata>;
     }
 
-    toObject (fieldFilter: (a: Field) => boolean): {
-        modId?: string
-        recordId?: string
+    toObject(fieldFilter: (a: Field) => boolean): {
+        modId?: string;
+        recordId?: string;
     } & Record<string, string> {
         const res: any = {
             recordId: this.recordId === -1 ? undefined : this.recordId.toString(),
-            modId: this.modId === -1 ? undefined : this.modId.toString()
+            modId: this.modId === -1 ? undefined : this.modId.toString(),
+        };
+        for (const field of this.fieldsArray.filter((a) => fieldFilter(a))) {
+            res[field.id] = field.value?.toString();
         }
-        for (const field of this.fieldsArray.filter(a => fieldFilter(a))) res[field.id] = field.value?.toString()
         // console.log(res)
-        return res
+        return res;
     }
 }

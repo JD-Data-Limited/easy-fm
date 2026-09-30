@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap');
 
 :root {
     --jd-gold: #d1a438;
@@ -43,7 +43,7 @@ html {
 }
 
 body {
-    font-family: "Quicksand", sans-serif;
+    font-family: 'Quicksand', sans-serif;
     letter-spacing: 0.01em;
     background: var(--jd-page-bg);
 }
@@ -57,10 +57,10 @@ h6,
 .tsd-page-title h1,
 .tsd-toolbar-contents .title,
 .tsd-navigation a {
-    font-family: "Quicksand", sans-serif;
+    font-family: 'Quicksand', sans-serif;
 }
 
-:root[data-theme="light"],
+:root[data-theme='light'],
 :root {
     --light-color-background: #ededed;
     --light-color-background-secondary: #f6f6f6;
@@ -108,7 +108,7 @@ h6,
     --light-color-scheme: light;
 }
 
-:root[data-theme="dark"] {
+:root[data-theme='dark'] {
     --jd-page-bg: #252525;
     --jd-surface: #303030;
     --jd-surface-soft: #353535;
@@ -376,7 +376,9 @@ pre > button:hover {
 .tsd-navigation a,
 .tsd-page-navigation a {
     border-radius: 0.85rem;
-    transition: background-color 120ms ease, color 120ms ease;
+    transition:
+        background-color 120ms ease,
+        color 120ms ease;
 }
 
 .tsd-navigation a.current,

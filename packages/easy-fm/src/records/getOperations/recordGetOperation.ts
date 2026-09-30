@@ -2,132 +2,176 @@
  * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import {type LayoutInterface} from '../../layouts/layoutInterface.js'
-import {type PickPortals, type ScriptRequestData} from '../../types.js'
-import {type LayoutBase} from '../../layouts/layoutBase.js'
-import {LayoutRecord} from '../layoutRecord.js'
-import {FMError} from '../../FMError.js'
-import {FindRequestSymbol, type Query} from '../../utils/query.js'
-import {Temporal} from "temporal-polyfill"
-import {temporalToString} from "../../utils/temporal.js";
+import {type LayoutInterface} from '../../layouts/layoutInterface.js';
+import {type PickPortals, type ScriptRequestData} from '../../types.js';
+import {type LayoutBase} from '../../layouts/layoutBase.js';
+import {LayoutRecord} from '../layoutRecord.js';
+import {FMError} from '../../FMError.js';
+import {FindRequestSymbol, type Query} from '../../utils/query.js';
+import {Temporal} from 'temporal-polyfill';
+import {temporalToString} from '../../utils/temporal.js';
 
-export type SortOrder = 'ascend' | 'descend'
+export type SortOrder = 'ascend' | 'descend';
 /** Raw FileMaker find request strings, already escaped/formatted. */
-export type FindRequestRaw = Record<string, string>
+export type FindRequestRaw = Record<string, string>;
 /** Safe find request built from `query` tagged template helpers. */
-export type FindRequest = Record<string, Query>
+export type FindRequest = Record<string, Query>;
 
 export interface PortalRequest {
-    name: string
+    name: string;
 }
 
 type PortalData<T extends LayoutInterface> = {
     [key in keyof T['portals']]: {
-        limit: number
-        offset: number
-    }
-}
+        limit: number;
+        offset: number;
+    };
+};
 export interface GetOperationOptions<T extends LayoutInterface> {
-    portals: Partial<PortalData<T>>
-    requests?: Array<{ req: FindRequest, omit?: boolean }>
-    limit?: number
-    offset?: number
+    portals: Partial<PortalData<T>>;
+    requests?: Array<{ req: FindRequest; omit?: boolean }>;
+    limit?: number;
+    offset?: number;
 }
 
 /** Builder/executor for list and find operations against one layout. */
-export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOperationOptions<T>> {
-    protected layout: LayoutBase
-    protected limit: number = 100
-    protected scriptData: ScriptRequestData = {}
-    protected sortData: Array<{ fieldName: string, sortOrder: SortOrder }> = []
-    protected portals: Partial<PortalData<T>>
-    protected offset: number = 1
-    protected requests: Array<{ req: FindRequestRaw, omit?: boolean }> = []
+export class RecordGetOperation<
+    T extends LayoutInterface,
+    OPTIONS extends GetOperationOptions<T>,
+> {
+    protected layout: LayoutBase;
+    protected limit: number = 100;
+    protected scriptData: ScriptRequestData = {};
+    protected sortData: Array<{ fieldName: string; sortOrder: SortOrder }> = [];
+    protected portals: Partial<PortalData<T>>;
+    protected offset: number = 1;
+    protected requests: Array<{ req: FindRequestRaw; omit?: boolean }> = [];
 
-    constructor (layout: LayoutBase, options: OPTIONS) {
-        this.layout = layout
-        this.sortData = []
-        this.portals = options.portals
-        this.offset = options.offset ?? 1 // Offset refers to the starting record. offset 1 is the same as no offset.
-        this.limit = options.limit ?? 100
+    constructor(layout: LayoutBase, options: OPTIONS) {
+        this.layout = layout;
+        this.sortData = [];
+        this.portals = options.portals;
+        this.offset = options.offset ?? 1; // Offset refers to the starting record. offset 1 is the same as no offset.
+        this.limit = options.limit ?? 100;
         if (options.requests) {
-            for (const req of options.requests) this.addRequest(req.req, req.omit ?? false)
+            for (const req of options.requests) {
+                this.addRequest(req.req, req.omit ?? false);
+            }
         }
     }
 
-    get isFindRequest () {
-        return this.requests.length !== 0
+    get isFindRequest() {
+        return this.requests.length !== 0;
     }
 
-    private formatQueries () {
-        const test = this.requests.map(query => {
-            const out: any = {}
+    private formatQueries() {
+        const test = this.requests.map((query) => {
+            const out: any = {};
             for (const key of Object.keys(query.req)) {
-                if (query.req[key]) out[key] = query.req[key]
-                else {
-                    out[key] = query.req[key]
+                if (query.req[key]) {
+                    out[key] = query.req[key];
+                } else {
+                    out[key] = query.req[key];
                 }
             }
-            if (query.omit) out.omit = 'true'
-            return out
-        })
-        return test
+            if (query.omit) {
+                out.omit = 'true';
+            }
+            return out;
+        });
+        return test;
     }
 
-    protected generateParamsBody (offset: number, limit: number) {
+    protected generateParamsBody(offset: number, limit: number) {
         const params: Record<string, any> = {
             limit: limit.toString(),
             offset: offset.toString(),
-            dateformats: 2 // Ensure dates are received in ISO8601 format
+            dateformats: 2, // Ensure dates are received in ISO8601 format
+        };
+        if (this.sortData.length !== 0) {
+            params.sort = this.sortData;
         }
-        if (this.sortData.length !== 0) params.sort = this.sortData
 
-        if (this.scriptData.after) params.script = this.scriptData.after.name
-        if (this.scriptData.after?.parameter) params['script.param'] = this.scriptData.after.parameter
+        if (this.scriptData.after) {
+            params.script = this.scriptData.after.name;
+        }
+        if (this.scriptData.after?.parameter) {
+            params['script.param'] = this.scriptData.after.parameter;
+        }
 
-        if (this.scriptData.presort) params['script.presort'] = this.scriptData.presort.name
-        if (this.scriptData.presort?.parameter) params['script.presort.param'] = this.scriptData.presort.parameter
+        if (this.scriptData.presort) {
+            params['script.presort'] = this.scriptData.presort.name;
+        }
+        if (this.scriptData.presort?.parameter) {
+            params['script.presort.param'] = this.scriptData.presort.parameter;
+        }
 
-        if (this.scriptData.prerequest) params['script.prerequest'] = this.scriptData.prerequest.name
-        if (this.scriptData.prerequest?.parameter) params['script.prerequest.param'] = this.scriptData.prerequest.parameter
+        if (this.scriptData.prerequest) {
+            params['script.prerequest'] = this.scriptData.prerequest.name;
+        }
+        if (this.scriptData.prerequest?.parameter) {
+            params['script.prerequest.param'] = this.scriptData.prerequest.parameter;
+        }
 
-        if (this.requests.length !== 0) params.query = this.formatQueries()
+        if (this.requests.length !== 0) {
+            params.query = this.formatQueries();
+        }
 
-        const portals: Array<keyof typeof this.portals> = Object.keys(this.portals)
-        params.portal = portals
+        const portals: Array<keyof typeof this.portals> = Object.keys(this.portals);
+        params.portal = portals;
         for (const portal of portals) {
-            params[`offset.${portal.toString()}`] = this.portals[portal]?.offset
-            params[`limit.${portal.toString()}`] = this.portals[portal]?.limit
+            params[`offset.${portal.toString()}`] = this.portals[portal]?.offset;
+            params[`limit.${portal.toString()}`] = this.portals[portal]?.limit;
         }
 
-        return params
+        return params;
     }
 
-    protected generateParamsURL (offset: number, limit: number) {
+    protected generateParamsURL(offset: number, limit: number) {
         const params = new URLSearchParams({
             _limit: limit.toString(),
             _offset: offset.toString(),
-            dateformats: '2' // Ensure dates are received in ISO8601 format
-        })
-        if (this.sortData.length !== 0) params.set('_sort', JSON.stringify(this.sortData))
-
-        if (this.scriptData.after) params.set('script', this.scriptData.after.name)
-        if (this.scriptData.after?.parameter) params.set('script.param', this.scriptData.after.parameter)
-
-        if (this.scriptData.presort) params.set('script.presort', this.scriptData.presort.name)
-        if (this.scriptData.presort?.parameter) params.set('script.presort.param', this.scriptData.presort.parameter)
-
-        if (this.scriptData.prerequest) params.set('script.prerequest', this.scriptData.prerequest.name)
-        if (this.scriptData.prerequest?.parameter) params.set('script.prerequest.param', this.scriptData.prerequest.parameter)
-
-        const portals: Array<keyof typeof this.portals> = Object.keys(this.portals)
-        for (const portal of portals) {
-            params.set(`_offset.${portal.toString()}`, (this.portals[portal]?.limit ?? '').toString())
-            params.set(`_offset.${portal.toString()}`, (this.portals[portal]?.offset ?? '').toString())
+            dateformats: '2', // Ensure dates are received in ISO8601 format
+        });
+        if (this.sortData.length !== 0) {
+            params.set('_sort', JSON.stringify(this.sortData));
         }
-        params.set('portal', JSON.stringify(portals))
 
-        return params
+        if (this.scriptData.after) {
+            params.set('script', this.scriptData.after.name);
+        }
+        if (this.scriptData.after?.parameter) {
+            params.set('script.param', this.scriptData.after.parameter);
+        }
+
+        if (this.scriptData.presort) {
+            params.set('script.presort', this.scriptData.presort.name);
+        }
+        if (this.scriptData.presort?.parameter) {
+            params.set('script.presort.param', this.scriptData.presort.parameter);
+        }
+
+        if (this.scriptData.prerequest) {
+            params.set('script.prerequest', this.scriptData.prerequest.name);
+        }
+        if (this.scriptData.prerequest?.parameter) {
+            params.set('script.prerequest.param', this.scriptData.prerequest.parameter);
+        }
+
+        const portals: Array<keyof typeof this.portals> = Object.keys(this.portals);
+        for (const portal of portals) {
+            params.set(
+                `_offset.${portal.toString()}`,
+                (this.portals[portal]?.limit ?? '').toString(),
+            );
+            params.set(
+                `_offset.${portal.toString()}`,
+                (this.portals[portal]?.offset ?? '').toString(),
+            );
+        }
+        params.set('portal', JSON.stringify(portals));
+
+        return params;
     }
 
     /**
@@ -136,9 +180,9 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
      * @param {ScriptRequestData} scripts - The script request data to set.
      * @return {this} - The current instance of the class.
      */
-    scripts (scripts: ScriptRequestData) {
-        this.scriptData = scripts
-        return this
+    scripts(scripts: ScriptRequestData) {
+        this.scriptData = scripts;
+        return this;
     }
 
     /**
@@ -149,23 +193,33 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
      *
      * @return {this} - Returns the current instance of the object.
      */
-    sort (fieldName: string, sortOrder: SortOrder) {
-        this.sortData.push({fieldName, sortOrder})
-        return this
+    sort(fieldName: string, sortOrder: SortOrder) {
+        this.sortData.push({ fieldName, sortOrder });
+        return this;
     }
 
-    private parseFindRequest<I extends FindRequest>(query: I): { [key in keyof I]: string } {
-        const out: any = {}
+    private parseFindRequest<I extends FindRequest>(
+        query: I,
+    ): { [key in keyof I]: string } {
+        const out: any = {};
         for (const key of Object.keys(query)) {
-            out[key] = query[key][FindRequestSymbol].map(item => {
-                if (typeof item === 'string') return item
+            out[key] = query[key][FindRequestSymbol].map((item) => {
+                if (typeof item === 'string') {
+                    return item;
+                }
                 // Re-write date into correct format
-                if (item instanceof Temporal.PlainDateTime) return temporalToString(item, this.layout.database.timeStampFormat)
-                if (item instanceof Temporal.PlainDate) return temporalToString(item, this.layout.database.dateFormat)
-                if (item instanceof Temporal.PlainTime) return temporalToString(item, this.layout.database.timeFormat)
-            }).join('')
+                if (item instanceof Temporal.PlainDateTime) {
+                    return temporalToString(item, this.layout.database.timeStampFormat);
+                }
+                if (item instanceof Temporal.PlainDate) {
+                    return temporalToString(item, this.layout.database.dateFormat);
+                }
+                if (item instanceof Temporal.PlainTime) {
+                    return temporalToString(item, this.layout.database.timeFormat);
+                }
+            }).join('');
         }
-        return out
+        return out;
     }
 
     /**
@@ -175,9 +229,9 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
      * @param {boolean} [omit=false] - Flag to indicate if the find request should be omitted.
      * @return {Object} - The current object instance.
      */
-    addRequest (query: FindRequest, omit = false) {
-        this.requests.push({req: this.parseFindRequest(query), omit})
-        return this
+    addRequest(query: FindRequest, omit = false) {
+        this.requests.push({ req: this.parseFindRequest(query), omit });
+        return this;
     }
 
     /**
@@ -185,38 +239,63 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
      *
      * @returns {Promise} A promise that resolves with the result of the fetch operation.
      */
-    async fetch () {
-        return await this.performFind(this.offset, this.limit)
+    async fetch() {
+        return await this.performFind(this.offset, this.limit);
     }
 
-    private async performFind (offset: number, limit: number): Promise<Array<LayoutRecord<
-    PickPortals<T, keyof OPTIONS['portals']>
-    >>> {
-        await this.layout.getLayoutMeta()
+    private async performFind(
+        offset: number,
+        limit: number,
+    ): Promise<Array<LayoutRecord<PickPortals<T, keyof OPTIONS['portals']>>>> {
+        await this.layout.getLayoutMeta();
 
         try {
-            const portals: Record<string, {limit: number, offset: number}> = {}
-            for (const [name, paging] of Object.entries(this.portals)) if (paging) portals[name] = paging
-            const scripts: Record<string, {name: string, parameter: string}> = {}
-            for (const [name, script] of Object.entries(this.scriptData)) if (script) scripts[name] = {name: script.name, parameter: script.parameter ?? ''}
-            const {value: res, binding} = await this.layout.database.execute({
+            const portals: Record<string, { limit: number; offset: number }> = {};
+            for (const [name, paging] of Object.entries(this.portals)) {
+                if (paging) {
+                    portals[name] = paging;
+                }
+            }
+            const scripts: Record<string, { name: string; parameter: string }> = {};
+            for (const [name, script] of Object.entries(this.scriptData)) {
+                if (script) {
+                    scripts[name] = {
+                        name: script.name,
+                        parameter: script.parameter ?? '',
+                    };
+                }
+            }
+            const { value: res, binding } = await this.layout.database.execute({
                 type: 'record.list',
                 layout: this.layout.name,
-                query: this.requests.map(request => ({fields: request.req, omit: request.omit ?? false})),
-                options: {limit, offset, sort: this.sortData, portals, scripts}
-            })
-            if (!this.layout.metadata) await this.layout.getLayoutMeta()
-            return res.map(item => {
-                return new LayoutRecord(this.layout, item.recordId, item.modId, item.fieldData, item.portalData, [], binding)
-            })
+                query: this.requests.map((request) => ({
+                    fields: request.req,
+                    omit: request.omit ?? false,
+                })),
+                options: { limit, offset, sort: this.sortData, portals, scripts },
+            });
+            if (!this.layout.metadata) {
+                await this.layout.getLayoutMeta();
+            }
+            return res.map((item) => {
+                return new LayoutRecord(
+                    this.layout,
+                    item.recordId,
+                    item.modId,
+                    item.fieldData,
+                    item.portalData,
+                    [],
+                    binding,
+                );
+            });
         } catch (e) {
             if (e instanceof FMError) {
                 if (e.code === 401) {
                     // No records found, so return empty set
-                    return []
+                    return [];
                 }
             }
-            throw e
+            throw e;
         }
     }
 
@@ -224,49 +303,50 @@ export class RecordGetOperation<T extends LayoutInterface, OPTIONS extends GetOp
      * Create async iterator that pages through results lazily.
      * @param pageSize min: 1, max: 999
      */
-    iterate (pageSize = 100) {
-        let nextOffset = this.offset
-        const startOffset: number = JSON.parse(JSON.stringify(this.offset))
-        const limit = this.limit
+    iterate(pageSize = 100) {
+        let nextOffset = this.offset;
+        const startOffset: number = JSON.parse(JSON.stringify(this.offset));
+        const limit = this.limit;
 
-        let exitAfterLastRecord = false
-        let records: Array<LayoutRecord<PickPortals<T, keyof OPTIONS['portals']>>> = []
+        let exitAfterLastRecord = false;
+        let records: Array<LayoutRecord<PickPortals<T, keyof OPTIONS['portals']>>> = [];
 
         const fetch = async () => {
-            const theoreticalLimit = (limit - nextOffset) + startOffset
+            const theoreticalLimit = limit - nextOffset + startOffset;
             if (theoreticalLimit === 0) {
-                exitAfterLastRecord = true
-                records = []
-                return
+                exitAfterLastRecord = true;
+                records = [];
+                return;
             }
-            const requestLimit = Math.min(theoreticalLimit, pageSize)
-            records = await this.performFind(nextOffset, requestLimit)
-            nextOffset += pageSize
-            if (records.length < requestLimit) exitAfterLastRecord = true
-        }
+            const requestLimit = Math.min(theoreticalLimit, pageSize);
+            records = await this.performFind(nextOffset, requestLimit);
+            nextOffset += pageSize;
+            if (records.length < requestLimit) {
+                exitAfterLastRecord = true;
+            }
+        };
 
         const iterator = {
             next: async () => {
                 if (records.length === 0 && !exitAfterLastRecord) {
-                    await fetch()
+                    await fetch();
                 }
 
                 if (records.length === 0 && exitAfterLastRecord) {
-                    return {done: true, value: undefined}
-                } else {
-                    const record = records.shift()
-                    return {done: false, value: record}
+                    return { done: true, value: undefined };
                 }
+                const record = records.shift();
+                return { done: false, value: record };
             },
-            [Symbol.asyncIterator] () {
-                return this
-            }
-        }
+            [Symbol.asyncIterator]() {
+                return this;
+            },
+        };
 
-        return iterator
+        return iterator;
     }
 
-    [Symbol.asyncIterator] () {
-        return this.iterate()
+    [Symbol.asyncIterator]() {
+        return this.iterate();
     }
 }

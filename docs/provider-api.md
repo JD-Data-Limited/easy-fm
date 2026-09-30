@@ -1,13 +1,14 @@
 # Provider API
 
-`Database` works with semantic providers. Providers choose transport and session creation; core schedules sessions and translates results into layouts and records.
+`Database` works with semantic providers. Providers choose transport and session creation;
+core schedules sessions and translates results into layouts and records.
 
 ```ts
 import type {
-  DatabaseProvider,
-  ProviderConnection,
-  ProviderSession
-} from "@jd-data-limited/easy-fm"
+    DatabaseProvider,
+    ProviderConnection,
+    ProviderSession,
+} from '@jd-data-limited/easy-fm';
 ```
 
 A provider exposes synchronous formatting defaults and lazy connection:
@@ -45,9 +46,11 @@ const database = Database.create({provider})
 
 ## Rules
 
-- `maxSessions: 1` selects serialized single-session behavior; larger values allow bounded pooling.
+- `maxSessions: 1` selects serialized single-session behavior; larger values allow bounded
+  pooling.
 - `execute` receives typed layout, script, record, and upload operations—not HTTP paths.
-- Throw `ProviderSessionExpiredError` when session cannot continue. Core retries safe reads once.
+- Throw `ProviderSessionExpiredError` when session cannot continue. Core retries safe
+  reads once.
 - Container reference is opaque and bound to session that produced it.
 - `fetchContainer` must return Web `Response`; transport itself may be HTTP or custom.
 - Do not replay operations inside provider. Core owns retry policy.

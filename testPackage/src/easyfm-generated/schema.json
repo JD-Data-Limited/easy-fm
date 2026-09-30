@@ -1,176 +1,173 @@
 {
-  "version": 1,
-  "layouts": [
-    {
-      "name": "EasyFMBenchmark",
-      "fields": [
+    "version": 1,
+    "layouts": [
         {
-          "name": "OneVeryLongField",
-          "result": "text",
-          "type": "normal",
-          "writable": true,
-          "required": false
+            "name": "EasyFMBenchmark",
+            "fields": [
+                {
+                    "name": "OneVeryLongField",
+                    "result": "text",
+                    "type": "normal",
+                    "writable": true,
+                    "required": false
+                },
+                {
+                    "name": "PrimaryKey",
+                    "result": "text",
+                    "type": "normal",
+                    "writable": true,
+                    "required": true
+                },
+                {
+                    "name": "CreationTimestamp",
+                    "result": "timeStamp",
+                    "type": "normal",
+                    "writable": true,
+                    "required": true
+                },
+                {
+                    "name": "Date",
+                    "result": "date",
+                    "type": "normal",
+                    "writable": true,
+                    "required": false
+                },
+                {
+                    "name": "Time",
+                    "result": "time",
+                    "type": "normal",
+                    "writable": true,
+                    "required": false
+                },
+                {
+                    "name": "Timestamp",
+                    "result": "timeStamp",
+                    "type": "normal",
+                    "writable": true,
+                    "required": false
+                },
+                {
+                    "name": "Container",
+                    "result": "container",
+                    "type": "normal",
+                    "writable": true,
+                    "required": false
+                },
+                {
+                    "name": "AVeryStrictField",
+                    "result": "text",
+                    "type": "normal",
+                    "writable": true,
+                    "required": false
+                }
+            ],
+            "portals": {
+                "test": [
+                    {
+                        "name": "test::PrimaryKey",
+                        "result": "text",
+                        "type": "normal",
+                        "writable": true,
+                        "required": true
+                    },
+                    {
+                        "name": "test::CreationTimestamp",
+                        "result": "timeStamp",
+                        "type": "normal",
+                        "writable": true,
+                        "required": true
+                    },
+                    {
+                        "name": "test::CreatedBy",
+                        "result": "text",
+                        "type": "normal",
+                        "writable": true,
+                        "required": true
+                    },
+                    {
+                        "name": "test::ModificationTimestamp",
+                        "result": "timeStamp",
+                        "type": "normal",
+                        "writable": true,
+                        "required": true
+                    },
+                    {
+                        "name": "test::ModifiedBy",
+                        "result": "text",
+                        "type": "normal",
+                        "writable": true,
+                        "required": true
+                    },
+                    {
+                        "name": "test::OneVeryLongField",
+                        "result": "text",
+                        "type": "normal",
+                        "writable": true,
+                        "required": false
+                    }
+                ]
+            }
         },
         {
-          "name": "PrimaryKey",
-          "result": "text",
-          "type": "normal",
-          "writable": true,
-          "required": true
+            "name": "Origin",
+            "fields": [
+                {
+                    "name": "Country",
+                    "result": "text",
+                    "type": "normal",
+                    "writable": true,
+                    "required": false
+                },
+                {
+                    "name": "PrimaryKey",
+                    "result": "text",
+                    "type": "normal",
+                    "writable": true,
+                    "required": true
+                }
+            ],
+            "portals": {}
         },
         {
-          "name": "CreationTimestamp",
-          "result": "timeStamp",
-          "type": "normal",
-          "writable": true,
-          "required": true
+            "name": "Specimen",
+            "fields": [
+                {
+                    "name": "TaxonomyID",
+                    "result": "text",
+                    "type": "normal",
+                    "writable": true,
+                    "required": false
+                },
+                {
+                    "name": "OriginID",
+                    "result": "text",
+                    "type": "normal",
+                    "writable": true,
+                    "required": false
+                }
+            ],
+            "portals": {}
         },
         {
-          "name": "Date",
-          "result": "date",
-          "type": "normal",
-          "writable": true,
-          "required": false
-        },
-        {
-          "name": "Time",
-          "result": "time",
-          "type": "normal",
-          "writable": true,
-          "required": false
-        },
-        {
-          "name": "Timestamp",
-          "result": "timeStamp",
-          "type": "normal",
-          "writable": true,
-          "required": false
-        },
-        {
-          "name": "Container",
-          "result": "container",
-          "type": "normal",
-          "writable": true,
-          "required": false
-        },
-        {
-          "name": "AVeryStrictField",
-          "result": "text",
-          "type": "normal",
-          "writable": true,
-          "required": false
+            "name": "Taxonomy",
+            "fields": [
+                {
+                    "name": "Name",
+                    "result": "text",
+                    "type": "normal",
+                    "writable": true,
+                    "required": false
+                },
+                {
+                    "name": "PrimaryKey",
+                    "result": "text",
+                    "type": "normal",
+                    "writable": true,
+                    "required": true
+                }
+            ],
+            "portals": {}
         }
-      ],
-      "portals": {
-        "test": [
-          {
-            "name": "test::PrimaryKey",
-            "result": "text",
-            "type": "normal",
-            "writable": true,
-            "required": true
-          },
-          {
-            "name": "test::CreationTimestamp",
-            "result": "timeStamp",
-            "type": "normal",
-            "writable": true,
-            "required": true
-          },
-          {
-            "name": "test::CreatedBy",
-            "result": "text",
-            "type": "normal",
-            "writable": true,
-            "required": true
-          },
-          {
-            "name": "test::ModificationTimestamp",
-            "result": "timeStamp",
-            "type": "normal",
-            "writable": true,
-            "required": true
-          },
-          {
-            "name": "test::ModifiedBy",
-            "result": "text",
-            "type": "normal",
-            "writable": true,
-            "required": true
-          },
-          {
-            "name": "test::OneVeryLongField",
-            "result": "text",
-            "type": "normal",
-            "writable": true,
-            "required": false
-          }
-        ]
-      }
-    },
-    {
-      "name": "Origin",
-      "fields": [
-        {
-          "name": "Country",
-          "result": "text",
-          "type": "normal",
-          "writable": true,
-          "required": false
-        },
-        {
-          "name": "PrimaryKey",
-          "result": "text",
-          "type": "normal",
-          "writable": true,
-          "required": true
-        }
-      ],
-      "portals": {}
-    },
-    {
-      "name": "Specimen",
-      "fields": [
-        {
-          "name": "TaxonomyID",
-          "result": "text",
-          "type": "normal",
-          "writable": true,
-          "required": false
-        },
-        {
-          "name": "OriginID",
-          "result": "text",
-          "type": "normal",
-          "writable": true,
-          "required": false
-        }
-      ],
-      "portals": {}
-    },
-    {
-      "name": "Taxonomy",
-      "fields": [
-        {
-          "name": "Name",
-          "result": "text",
-          "type": "normal",
-          "writable": true,
-          "required": false
-        },
-        {
-          "name": "PrimaryKey",
-          "result": "text",
-          "type": "normal",
-          "writable": true,
-          "required": true
-        }
-      ],
-      "portals": {}
-    }
-  ],
-  "transports": [
-    "data-api",
-    "odata"
-  ]
+    ],
+    "transports": ["data-api", "odata"]
 }

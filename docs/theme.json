@@ -1,9 +1,9 @@
 {
-  "entryPoints": ["../packages/easy-fm/src/index.ts"],
-  "readme": "../README.md",
-  "projectDocuments": "./**/*.md",
-  "out": "../docs_out",
-  "customCss": "./theme.css",
-  "name": "EasyFM",
-  "includeVersion": true
+    "entryPoints": ["../packages/easy-fm/src/index.ts"],
+    "readme": "../README.md",
+    "projectDocuments": "./**/*.md",
+    "out": "../docs_out",
+    "customCss": "./theme.css",
+    "name": "EasyFM",
+    "includeVersion": true
 }

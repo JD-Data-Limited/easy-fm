@@ -14,20 +14,22 @@ And sometimes:
 
 ## Provider
 
-`DataApiProvider` represents a FileMaker Data API connection. Custom providers can implement other transports.
+`DataApiProvider` represents a FileMaker Data API connection. Custom providers can
+implement other transports.
 
 Example:
 
 ```ts
 const provider = new DataApiProvider({
-  hostname: "https://example.com",
-  database: "Contacts",
-  credentials: {method: "filemaker", username: "api-user", password: "secret"},
-  externalSources: []
-})
+    hostname: 'https://example.com',
+    database: 'Contacts',
+    credentials: { method: 'filemaker', username: 'api-user', password: 'secret' },
+    externalSources: [],
+});
 ```
 
-Provider owns formatting rules and translates semantic database operations to its transport.
+Provider owns formatting rules and translates semantic database operations to its
+transport.
 
 ## Database
 
@@ -36,10 +38,11 @@ Provider owns formatting rules and translates semantic database operations to it
 Example:
 
 ```ts
-const database = Database.create({provider})
+const database = Database.create({ provider });
 ```
 
-Database object handles session management, requests, layout caching, and helper methods like `script()`.
+Database object handles session management, requests, layout caching, and helper methods
+like `script()`.
 
 ## Layout
 
@@ -66,9 +69,9 @@ Good practice:
 You read and write through `record.fields`:
 
 ```ts
-const record = await layout.records.get(123)
-record.fields.Status.value = "Active"
-await record.commit()
+const record = await layout.records.get(123);
+record.fields.Status.value = 'Active';
+await record.commit();
 ```
 
 Important:
@@ -84,20 +87,22 @@ Portals represent related rows returned inside parent layout record.
 Portal data is not fetched automatically. You must ask for it:
 
 ```ts
-const records = await layout.records.list({
-  portals: {
-    LineItems: {
-      offset: 1,
-      limit: 25
-    }
-  }
-}).fetch()
+const records = await layout.records
+    .list({
+        portals: {
+            LineItems: {
+                offset: 1,
+                limit: 25,
+            },
+        },
+    })
+    .fetch();
 ```
 
 Then read portal rows from:
 
 ```ts
-records[0].portals.LineItems.records
+records[0].portals.LineItems.records;
 ```
 
 ## Record ID vs Business ID
@@ -115,30 +120,32 @@ These are useful for API operations.
 - they are layout/API oriented
 - business rules usually belong to dedicated fields like `CustomerNumber`
 
-`modId` is different. It is still internal, but it can be useful for change detection, optimistic locking, or checking whether a record has been modified since you last read it.
+`modId` is different. It is still internal, but it can be useful for change detection,
+optimistic locking, or checking whether a record has been modified since you last read it.
 
 ## Typed Layouts
 
-TypeScript users can describe layout shape to get better autocomplete and compile-time checks.
+TypeScript users can describe layout shape to get better autocomplete and compile-time
+checks.
 
 Minimal example:
 
 ```ts
-import {type LayoutInterface, type Field} from "@jd-data-limited/easy-fm"
+import { type LayoutInterface, type Field } from '@jd-data-limited/easy-fm';
 
 interface ContactsLayout extends LayoutInterface {
-  fields: {
-    FirstName: Field<string>
-    LastName: Field<string>
-  }
-  portals: {}
+    fields: {
+        FirstName: Field<string>;
+        LastName: Field<string>;
+    };
+    portals: {};
 }
 ```
 
 Then:
 
 ```ts
-const layout = database.layout<ContactsLayout>("Contacts_API")
+const layout = database.layout<ContactsLayout>('Contacts_API');
 ```
 
 Now `record.fields.FirstName` is typed.

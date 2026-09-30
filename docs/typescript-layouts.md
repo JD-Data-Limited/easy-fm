@@ -6,36 +6,36 @@
 
 ```ts
 import {
-  Database,
-  DataApiProvider,
-  type Field,
-  type LayoutInterface,
-  type Portal
-} from "@jd-data-limited/easy-fm"
+    Database,
+    DataApiProvider,
+    type Field,
+    type LayoutInterface,
+    type Portal,
+} from '@jd-data-limited/easy-fm';
 
 interface ContactsLayout extends LayoutInterface {
-  fields: {
-    FirstName: Field<string>
-    LastName: Field<string>
-    Status: Field<string>
-  }
-  portals: {
-    Notes: Portal<{
-      Note: Field<string>
-    }>
-  }
+    fields: {
+        FirstName: Field<string>;
+        LastName: Field<string>;
+        Status: Field<string>;
+    };
+    portals: {
+        Notes: Portal<{
+            Note: Field<string>;
+        }>;
+    };
 }
 
 const database = Database.create({
-  provider: new DataApiProvider({
-    hostname: "https://example.com",
-    database: "Contacts",
-    credentials: {method: "filemaker", username: "api-user", password: "secret"},
-    externalSources: []
-  })
-})
+    provider: new DataApiProvider({
+        hostname: 'https://example.com',
+        database: 'Contacts',
+        credentials: { method: 'filemaker', username: 'api-user', password: 'secret' },
+        externalSources: [],
+    }),
+});
 
-const layout = database.layout<ContactsLayout>("Contacts_API")
+const layout = database.layout<ContactsLayout>('Contacts_API');
 ```
 
 ## What You Get
@@ -48,18 +48,20 @@ const layout = database.layout<ContactsLayout>("Contacts_API")
 ## Example Use
 
 ```ts
-const records = await layout.records.list({
-  portals: {
-    Notes: {
-      offset: 1,
-      limit: 10
-    }
-  },
-  limit: 5
-}).fetch()
+const records = await layout.records
+    .list({
+        portals: {
+            Notes: {
+                offset: 1,
+                limit: 10,
+            },
+        },
+        limit: 5,
+    })
+    .fetch();
 
-records[0].fields.FirstName.value = "Ada"
-console.log(records[0].portals.Notes.records[0].fields.Note.value)
+records[0].fields.FirstName.value = 'Ada';
+console.log(records[0].portals.Notes.records[0].fields.Note.value);
 ```
 
 ## Related Types

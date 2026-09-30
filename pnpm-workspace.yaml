@@ -1,8 +1,8 @@
 packages:
-  - 'packages/*'
+    - 'packages/*'
 
 allowBuilds:
-  '@parcel/watcher': false
-  esbuild: false
-  unrs-resolver: false
-  workerd: true
+    '@parcel/watcher': false
+    esbuild: false
+    unrs-resolver: false
+    workerd: true

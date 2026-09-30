@@ -1,76 +1,76 @@
 name: Node.js CI
 
 on:
-  pull_request:
-    branches:
-      - main
+    pull_request:
+        branches:
+            - main
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    environment: TEST DB ENVIROMENT
+    test:
+        runs-on: ubuntu-latest
+        environment: TEST DB ENVIROMENT
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v6
+            - uses: pnpm/action-setup@v6
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
+            - name: Set up Node.js
+              uses: actions/setup-node@v6
+              with:
+                  node-version: 24
+                  cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
 
-      - name: Run tests
-        env:
-          FM_DB_HOST: ${{ secrets.FM_DB_HOST }}
-          FM_DB_NAME: ${{ secrets.FM_DB_NAME }}
-          FM_DB_ACCOUNT: ${{ secrets.FM_DB_ACCOUNT }}
-          FM_DB_PASSWORD: ${{ secrets.FM_DB_PASSWORD }}
-          # Add all other environment variables here
-        run: pnpm test
+            - name: Run tests
+              env:
+                  FM_DB_HOST: ${{ secrets.FM_DB_HOST }}
+                  FM_DB_NAME: ${{ secrets.FM_DB_NAME }}
+                  FM_DB_ACCOUNT: ${{ secrets.FM_DB_ACCOUNT }}
+                  FM_DB_PASSWORD: ${{ secrets.FM_DB_PASSWORD }}
+                  # Add all other environment variables here
+              run: pnpm test
 
-  bun-runtime:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-      - uses: oven-sh/setup-bun@v2
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      - run: pnpm test:runtime:bun
+    bun-runtime:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 24
+                  cache: pnpm
+            - uses: oven-sh/setup-bun@v2
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm build
+            - run: pnpm test:runtime:bun
 
-  deno-runtime:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-      - uses: denoland/setup-deno@v2
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      - run: pnpm test:runtime:deno
+    deno-runtime:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 24
+                  cache: pnpm
+            - uses: denoland/setup-deno@v2
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm build
+            - run: pnpm test:runtime:deno
 
-  workers-runtime:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      - run: pnpm test:runtime:workers
+    workers-runtime:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 24
+                  cache: pnpm
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm build
+            - run: pnpm test:runtime:workers

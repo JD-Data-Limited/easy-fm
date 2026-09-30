@@ -2,26 +2,28 @@
  * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import {RecordTypes} from '../../types.js'
-import {type ApiFieldMetadata, FieldResultTypes} from '../../models/apiResults.js'
-import {type LayoutBase} from '../../layouts/layoutBase.js'
-import {type z} from 'zod'
-import {type SessionBinding} from '../../connection/databaseProvider.js'
+import {RecordTypes} from '../../types.js';
+import {type ApiFieldMetadata, FieldResultTypes} from '../../models/apiResults.js';
+import {type LayoutBase} from '../../layouts/layoutBase.js';
+import {type z} from 'zod';
+import {type SessionBinding} from '../../connection/databaseProvider.js';
 
-export type ContainerValue = null
+export type ContainerValue = null;
 /**
  * RawValueData refers to the raw shapes of data we receive from or sent to FileMaker.
  */
-export type RawValueData = string | number | null
+export type RawValueData = string | number | null;
 
 export interface Parentable {
-    layout: LayoutBase
-    type: RecordTypes
-    recordId: number
-    sessionBinding?: SessionBinding
-    portal?: { name: string },
-    getFieldMetadata(fieldId: string): z.infer<typeof ApiFieldMetadata>
-    refreshContainer(fieldId: string): Promise<import('./containerField.js').ContainerField>
+    layout: LayoutBase;
+    type: RecordTypes;
+    recordId: number;
+    sessionBinding?: SessionBinding;
+    portal?: { name: string };
+    getFieldMetadata(fieldId: string): z.infer<typeof ApiFieldMetadata>;
+    refreshContainer(
+        fieldId: string,
+    ): Promise<import('./containerField.js').ContainerField>;
 }
 
 /**
@@ -34,9 +36,9 @@ export abstract class BaseField<
     T extends unknown,
     API_FIELD_RESULT extends FieldResultTypes,
 > {
-    parent: Parentable
-    id: string
-    protected _value: T
+    parent: Parentable;
+    id: string;
+    protected _value: T;
 
     /**
      * @internal
@@ -47,9 +49,9 @@ export abstract class BaseField<
      * @protected
      */
     protected constructor(record: Parentable, id: string, value: RawValueData) {
-        this.parent = record
-        this.id = id
-        this._value = this.parseRawValue(value)
+        this.parent = record;
+        this.id = id;
+        this._value = this.parseRawValue(value);
     }
 
     /**
@@ -58,36 +60,38 @@ export abstract class BaseField<
      * @param value
      */
     parseRawValue(value: RawValueData): T {
-        return value as T
+        return value as T;
     }
 
     /**
      * Converts data back into a format that can be sent to FileMaker. Intended to be overriden if conversion is non-standard.
      */
     serializeRawValue(): RawValueData {
-        return this._value as RawValueData
+        return this._value as RawValueData;
     }
 
     updateFromRawValue(value: RawValueData) {
-        this._value = this.parseRawValue(value)
+        this._value = this.parseRawValue(value);
     }
 
     /** Returns the FileMaker metadata for this field. */
     get metadata() {
-        return this.parent.getFieldMetadata(this.id) as z.infer<typeof ApiFieldMetadata> & { result: API_FIELD_RESULT }
+        return this.parent.getFieldMetadata(this.id) as z.infer<
+            typeof ApiFieldMetadata
+        > & { result: API_FIELD_RESULT };
     }
 
     /** Gets or sets the current field value. */
     get value() {
         // if (this.metadata.result === "container") throw "Use await field.stream() to get the contents of a container field, instead of field.value"
-        return this._value
+        return this._value;
     }
 
     isCalculationField() {
-        return this.metadata.type === 'calculation'
+        return this.metadata.type === 'calculation';
     }
 
     isSummaryField() {
-        return this.metadata.type === 'summary'
+        return this.metadata.type === 'summary';
     }
 }
