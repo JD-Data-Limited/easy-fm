@@ -118,13 +118,16 @@ export function stripInaccessibleMetadata(
     };
 }
 
-/** Removes inaccessible placeholder values before strict generated validation. */
+/** Removes fields hidden by FileMaker before strict generated validation. */
 export function stripInaccessibleFieldData<T extends Record<string, unknown>>(
     fields: T,
 ): T {
-    const inaccessible = Object.keys(fields).filter((name) =>
-        name.includes('<No Access>'),
-    );
+    const inaccessible = Object.entries(fields)
+        .filter(
+            ([name, value]) =>
+                name.includes('<No Access>') || value === '<No Access>',
+        )
+        .map(([name]) => name);
     if (!inaccessible.length) {
         return fields;
     }

@@ -1,7 +1,7 @@
-import {BaseField, Parentable, RawValueData} from './baseField.js';
-import {Temporal} from 'temporal-polyfill';
-import {FieldResultTypes} from '../../models/apiResults.js';
-import {stringToTemporal, temporalToString} from '../../utils/temporal.js';
+import { BaseField, Parentable, RawValueData } from './baseField.js';
+import { Temporal } from 'temporal-polyfill';
+import { FieldResultTypes } from '../../models/apiResults.js';
+import { stringToTemporal, temporalToString } from '../../utils/temporal.js';
 
 export abstract class ValueFieldBase<
     T,

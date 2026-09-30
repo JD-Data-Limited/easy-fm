@@ -1,5 +1,5 @@
-import {expect, test} from 'bun:test';
-import {runRuntimeSmokeTest} from './smoke.js';
+import { expect, test } from 'bun:test';
+import { runRuntimeSmokeTest } from './smoke.js';
 
 test('published package runs under Bun', async () => {
     expect(await runRuntimeSmokeTest()).toEqual({

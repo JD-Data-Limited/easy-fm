@@ -1,5 +1,6 @@
 import {
     ApiLayoutMetadata,
+    stripInaccessibleFieldData,
     stripInaccessibleMetadata,
 } from '../dist/models/apiResults.js';
 
@@ -35,5 +36,15 @@ describe('inaccessible metadata', () => {
             fieldMetaData: [{ name: 'Name' }],
             portalMetaData: { Rows: [] },
         });
+    });
+
+    it('removes named fields whose Data API value is the no-access sentinel', () => {
+        expect(
+            stripInaccessibleFieldData({
+                Name: 'Ada',
+                CreatedBy: '<No Access>',
+                PrimaryKey: '<No Access>',
+            }),
+        ).toEqual({ Name: 'Ada' });
     });
 });

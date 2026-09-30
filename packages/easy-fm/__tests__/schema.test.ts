@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { SchemaDriftError, withSchemaValidation, zodValidator } from '../dist/schema.js';
+import { SchemaDriftError, withSchemaValidation } from '../dist/schema.js';
 import type { DatabaseProvider } from '../src/connection/databaseProvider.js';
 
 const formatting = {
@@ -43,8 +43,7 @@ describe('generated schema validation', () => {
 
     it('accepts matching canonical provider records', async () => {
         const wrapped = withSchemaValidation(provider({ name: 'Ada' }), {
-            validator: zodValidator,
-            layouts: { People: { record: recordSchema } },
+            layouts: { People: { providerRecord: recordSchema } },
         });
         const connection = await wrapped.connect({
             signal: new AbortController().signal,
@@ -63,8 +62,7 @@ describe('generated schema validation', () => {
 
     it('throws a useful error when provider data drifts', async () => {
         const wrapped = withSchemaValidation(provider({ renamed: 'Ada' }), {
-            validator: zodValidator,
-            layouts: { People: { record: recordSchema } },
+            layouts: { People: { providerRecord: recordSchema } },
         });
         const connection = await wrapped.connect({
             signal: new AbortController().signal,
@@ -101,10 +99,9 @@ describe('generated schema validation', () => {
             return connection;
         };
         const wrapped = withSchemaValidation(raw, {
-            validator: zodValidator,
             layouts: {
                 People: {
-                    record: recordSchema,
+                    providerRecord: recordSchema,
                     metadata: {
                         fields: { name: { result: 'text', type: 'normal' } },
                         portals: {},
@@ -123,10 +120,14 @@ describe('generated schema validation', () => {
     });
 
     it('strips inaccessible metadata and record placeholders before validation', async () => {
-        const raw = provider({ name: 'Ada', '<No Access>': '' });
+        const raw = provider({
+            name: 'Ada',
+            '<No Access>': '',
+            CreatedBy: '<No Access>',
+            PrimaryKey: '<No Access>',
+        });
         const wrapped = withSchemaValidation(raw, {
-            validator: zodValidator,
-            layouts: { People: { record: recordSchema } },
+            layouts: { People: { providerRecord: recordSchema } },
         });
         const connection = await wrapped.connect({
             signal: new AbortController().signal,

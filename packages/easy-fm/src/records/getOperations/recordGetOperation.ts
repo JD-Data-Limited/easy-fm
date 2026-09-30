@@ -2,14 +2,14 @@
  * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import {type LayoutInterface} from '../../layouts/layoutInterface.js';
-import {type PickPortals, type ScriptRequestData} from '../../types.js';
-import {type LayoutBase} from '../../layouts/layoutBase.js';
-import {LayoutRecord} from '../layoutRecord.js';
-import {FMError} from '../../FMError.js';
-import {FindRequestSymbol, type Query} from '../../utils/query.js';
-import {Temporal} from 'temporal-polyfill';
-import {temporalToString} from '../../utils/temporal.js';
+import { type LayoutInterface } from '../../layouts/layoutInterface.js';
+import { type PickPortals, type ScriptRequestData } from '../../types.js';
+import { type LayoutBase } from '../../layouts/layoutBase.js';
+import { LayoutRecord } from '../layoutRecord.js';
+import { FMError } from '../../FMError.js';
+import { FindRequestSymbol, type Query } from '../../utils/query.js';
+import { Temporal } from 'temporal-polyfill';
+import { temporalToString } from '../../utils/temporal.js';
 
 export type SortOrder = 'ascend' | 'descend';
 /** Raw FileMaker find request strings, already escaped/formatted. */

@@ -1,6 +1,6 @@
-import {access, readFile} from 'node:fs/promises';
-import {dirname, parse, resolve} from 'node:path';
-import {spawn} from 'node:child_process';
+import { access, readFile } from 'node:fs/promises';
+import { dirname, parse, resolve } from 'node:path';
+import { spawn } from 'node:child_process';
 
 const ZOD_VERSION = '^4.6.5';
 type PackageManager = 'pnpm' | 'npm' | 'yarn' | 'bun';

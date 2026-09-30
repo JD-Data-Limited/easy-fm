@@ -68,36 +68,44 @@ making the editor analyse the runtime Zod schemas. Results from `record.get` and
 `record.list` are checked with strict Zod schemas before EasyFM constructs records;
 mismatch throws `SchemaDriftError`.
 
-Zod is the default, but validation generation is pluggable:
+Zod is the runtime validator. To narrow a field beyond what FileMaker metadata can
+describe, pass field schemas as the optional second argument to the generated client
+factory:
 
 ```ts
-import {
-    defineTypegenConfig,
-    zodTypegenValidator,
-} from '@jd-data-limited/easy-fm/typegen';
+import {z} from 'zod';
+import {createEasyFMClient} from './easyfm-generated/client.js';
 
-export default defineTypegenConfig({
-    source,
-    output: './src/easyfm-generated',
-    validator: zodTypegenValidator(),
+export const easyfm = createEasyFMClient(providers, {
+    database: {
+        Flags: {
+            fields: {
+                Enabled: z.union([z.literal(0), z.literal(1)]),
+            },
+        },
+    },
 });
 ```
 
-Implement `TypegenValidator` to target another validator. Runtime adapters implement
-`RuntimeValidator`; generated clients pass that adapter and generated schemas to
-`withSchemaValidation`.
+The same schema is used for runtime validation and static inference, so `Enabled` is a
+`NumberField<0 | 1>` and any other API value throws `SchemaDriftError`. Overrides are
+available per database, layout, regular field, and portal field. The generated defaults
+remain strict when no override is supplied.
 
 Validation happens at two boundaries. Layout metadata comparison is an early structural
 warning. Separately, each complete canonical provider record is checked by a strict
-generated Zod schema before EasyFM constructs `LayoutRecord` or field objects. This
+generated Zod schema before EasyFM constructs `LayoutRecord` or field objects. EasyFM
+calls that schema's `safeParse()` directly; there is no separate validator adapter. This
 validates `recordId`, `modId`, exact `fieldData` keys and values, `portalData`, and portal
 rows. Portal selection remains optional because queries may request only a subset. Both
 paths throw `SchemaDriftError` with `phase`, layout, record, and normalized issue paths.
 
 FileMaker may return `<No Access>` metadata with `type: "invalid"` and
 `result: "invalid"`. EasyFM accepts these placeholders, removes them from runtime metadata
-and record data, and excludes them from generated interfaces and Zod schemas. They
-therefore do not create false schema-drift errors.
+and excludes them from generated interfaces and Zod schemas. Record responses can still
+contain the real field name with the literal value `<No Access>`; EasyFM removes those
+entries from regular and portal field data before Zod validation. They therefore do not
+create false schema-drift errors.
 
 Typegen prints a warning for every excluded inaccessible field, including database,
 layout, and portal context. Programmatic callers may provide `onDiagnostic`; all

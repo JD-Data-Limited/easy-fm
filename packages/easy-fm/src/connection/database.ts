@@ -1,8 +1,8 @@
-import {Layout} from '../layouts/layout.js';
-import type {LayoutInterface} from '../layouts/layoutInterface.js';
-import type {DatabaseStructure} from '../databaseStructure.js';
-import type {Script} from '../types.js';
-import type {DatabaseBase} from './databaseBase.js';
+import { Layout } from '../layouts/layout.js';
+import type { LayoutInterface } from '../layouts/layoutInterface.js';
+import type { DatabaseStructure } from '../databaseStructure.js';
+import type { Script } from '../types.js';
+import type { DatabaseBase } from './databaseBase.js';
 import {
     ContainerSessionAffinityError,
     type DatabaseOperation,

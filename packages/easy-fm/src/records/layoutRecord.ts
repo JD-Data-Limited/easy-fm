@@ -2,20 +2,25 @@
  * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import {type extraBodyOptions} from '../types.js';
-import {RecordBase} from './recordBase.js';
-import {PortalRecord} from './portalRecord.js';
-import {Portal} from './portal.js';
-import {type LayoutInterface} from '../layouts/layoutInterface.js';
-import {FMError} from '../FMError.js';
-import {type LayoutRecordBase} from './layoutRecordBase.js';
-import {type ApiFieldData, ApiFieldMetadata, type ApiPortalData, type ApiRowDataDef,} from '../models/apiResults.js';
-import {type LayoutBase} from '../layouts/layoutBase.js';
+import { type extraBodyOptions } from '../types.js';
+import { RecordBase } from './recordBase.js';
+import { PortalRecord } from './portalRecord.js';
+import { Portal } from './portal.js';
+import { type LayoutInterface } from '../layouts/layoutInterface.js';
+import { FMError } from '../FMError.js';
+import { type LayoutRecordBase } from './layoutRecordBase.js';
+import {
+    type ApiFieldData,
+    ApiFieldMetadata,
+    type ApiPortalData,
+    type ApiRowDataDef,
+} from '../models/apiResults.js';
+import { type LayoutBase } from '../layouts/layoutBase.js';
 import z from 'zod';
-import {Field} from './fields/field.js';
-import {ValueFieldBase} from './fields/valueField.js';
-import {ContainerField} from './fields/containerField.js';
-import {type SessionBinding} from '../connection/databaseProvider.js';
+import { Field } from './fields/field.js';
+import { ValueFieldBase } from './fields/valueField.js';
+import { ContainerField } from './fields/containerField.js';
+import { type SessionBinding } from '../connection/databaseProvider.js';
 
 export class LayoutRecord<LAYOUT extends LayoutInterface>
     extends RecordBase<LAYOUT['fields']>

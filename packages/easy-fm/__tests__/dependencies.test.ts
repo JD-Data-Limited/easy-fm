@@ -1,7 +1,7 @@
-import {mkdir, mkdtemp, rm, writeFile} from 'node:fs/promises';
-import {tmpdir} from 'node:os';
-import {join} from 'node:path';
-import {getZodInstallPlan} from '../dist/typegen/dependencies.js';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { getZodInstallPlan } from '../dist/typegen/dependencies.js';
 
 describe('typegen dependencies', () => {
     it('does nothing when Zod is already declared', async () => {

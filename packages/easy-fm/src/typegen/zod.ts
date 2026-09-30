@@ -1,33 +1,42 @@
-import type {TypegenField, TypegenLayout, TypegenValidator} from './types.js';
+import type { TypegenField, TypegenLayout } from './types.js';
 
-/** Strict Zod generator. Extra, missing, and wrongly typed fields fail validation. */
-export function zodTypegenValidator(): TypegenValidator {
-    return {
-        imports: ["import {z} from 'zod'"],
-        runtimeValidator: 'zodValidator',
-        renderRecord: renderProviderRecord,
-    };
-}
-
-function renderProviderRecord(layout: TypegenLayout) {
-    const fieldData = objectSchema(layout.fields);
+/** Render the strict Zod schema for one complete canonical ProviderRecord. */
+export function renderProviderRecord(
+    layout: TypegenLayout,
+    overrideExpression?: string,
+) {
+    const fieldOverrides = overrideExpression
+        ? `${overrideExpression}?.fields`
+        : undefined;
+    const fieldData = objectSchema(layout.fields, fieldOverrides);
     const portals = Object.entries(layout.portals)
-        .map(([name, fields]) => `${quote(name)}: z.array(${portalRowSchema(fields)})`)
+        .map(([name, fields]) =>
+            `${quote(name)}: z.array(${portalRowSchema(fields, overrideExpression ? `${overrideExpression}?.portals?.[${quote(name)}]` : undefined)})`,
+        )
         .join(', ');
     const portalData = `z.object({${portals}}).partial().strict().optional()`;
     return `z.object({recordId: z.string(), modId: z.string(), fieldData: ${fieldData}, portalData: ${portalData}}).strict()`;
 }
 
-function objectSchema(fields: readonly TypegenField[]) {
-    return `z.object({${fields.map((field) => `${quote(field.name)}: ${fieldSchema(field)}`).join(', ')}}).strict()`;
+function objectSchema(fields: readonly TypegenField[], overrides?: string) {
+    const entries = fields.map(
+        (field) => `${quote(field.name)}: ${fieldSchema(field)}`,
+    );
+    if (overrides) {
+        entries.push(`...(${overrides} ?? {})`);
+    }
+    return `z.object({${entries.join(', ')}}).strict()`;
 }
 
-function portalRowSchema(fields: readonly TypegenField[]) {
+function portalRowSchema(fields: readonly TypegenField[], overrides?: string) {
     const entries = fields.map((field) => `${quote(field.name)}: ${fieldSchema(field)}`);
     entries.push(
         'recordId: z.union([z.string(), z.number()])',
         'modId: z.union([z.string(), z.number()])',
     );
+    if (overrides) {
+        entries.push(`...(${overrides} ?? {})`);
+    }
     return `z.object({${entries.join(', ')}}).strict()`;
 }
 

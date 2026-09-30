@@ -24,7 +24,7 @@ describe('easyfm init', () => {
             const generated = await readFile(config, 'utf8');
             const environment = await readFile(join(root, '.env'), 'utf8');
             const gitignore = await readFile(join(root, '.gitignore'), 'utf8');
-            expect(generated).toContain('zodTypegenValidator()');
+            expect(generated).not.toContain('validator:');
             expect(generated).toContain('transports: ["data-api","odata"]');
             expect(generated).not.toContain('secret');
             expect(environment).toContain('# keep me');

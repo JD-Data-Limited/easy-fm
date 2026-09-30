@@ -22,36 +22,20 @@ export interface ValidationIssue {
     message: string;
     code?: string;
 }
-export type ValidationResult =
-    { success: true } | { success: false; issues: ValidationIssue[]; cause?: unknown };
-export interface RuntimeValidator {
-    validate(schema: unknown, value: unknown): ValidationResult;
-}
-
-/** Built-in runtime adapter used by Zod-generated clients. */
-export const zodValidator: RuntimeValidator = {
-    validate(schema, value) {
-        const result = (schema as z.ZodType).safeParse(value);
-        return result.success
-            ? { success: true }
-            : { success: false, issues: result.error.issues, cause: result.error };
-    },
-};
 
 export interface ExpectedFieldMetadata {
     result: string;
     type: string;
 }
 export interface LayoutRuntimeSchema {
-    /** Validates the complete canonical ProviderRecord returned by a provider. */
-    record: unknown;
+    /** Generated schema for the complete raw ProviderRecord returned by the API/provider. */
+    providerRecord: z.ZodType;
     metadata?: {
         fields: Record<string, ExpectedFieldMetadata>;
         portals: Record<string, Record<string, ExpectedFieldMetadata>>;
     };
 }
 export interface DatabaseRuntimeSchema {
-    validator: RuntimeValidator;
     layouts: Record<string, LayoutRuntimeSchema>;
 }
 
@@ -124,10 +108,10 @@ export function withSchemaValidation(
                                 validateMetadata(schema, operation.layout, result);
                             }
                             if (operation.type === 'record.get') {
-                                result = stripRecord(
+                                result = stripInaccessibleFieldsFromProviderRecord(
                                     result as ProviderRecord,
                                 ) as DatabaseOperationResult<K>;
-                                validateRecord(
+                                validateProviderRecordFromApi(
                                     schema,
                                     operation.layout,
                                     result as ProviderRecord,
@@ -135,10 +119,14 @@ export function withSchemaValidation(
                             }
                             if (operation.type === 'record.list') {
                                 result = (result as ProviderRecord[]).map(
-                                    stripRecord,
+                                    stripInaccessibleFieldsFromProviderRecord,
                                 ) as DatabaseOperationResult<K>;
-                                for (const record of result as ProviderRecord[]) {
-                                    validateRecord(schema, operation.layout, record);
+                                for (const providerRecordFromApi of result as ProviderRecord[]) {
+                                    validateProviderRecordFromApi(
+                                        schema,
+                                        operation.layout,
+                                        providerRecordFromApi,
+                                    );
                                 }
                             }
                             return result;
@@ -150,14 +138,16 @@ export function withSchemaValidation(
     };
 }
 
-function stripRecord(record: ProviderRecord): ProviderRecord {
+function stripInaccessibleFieldsFromProviderRecord(
+    providerRecordFromApi: ProviderRecord,
+): ProviderRecord {
     return {
-        ...record,
-        fieldData: stripInaccessibleFieldData(record.fieldData),
+        ...providerRecordFromApi,
+        fieldData: stripInaccessibleFieldData(providerRecordFromApi.fieldData),
         portalData:
-            record.portalData &&
+            providerRecordFromApi.portalData &&
             Object.fromEntries(
-                Object.entries(record.portalData).map(([name, rows]) => [
+                Object.entries(providerRecordFromApi.portalData).map(([name, rows]) => [
                     name,
                     rows.map((row) => stripInaccessibleFieldData(row)),
                 ]),
@@ -165,31 +155,40 @@ function stripRecord(record: ProviderRecord): ProviderRecord {
     };
 }
 
-function validateRecord(
-    schema: DatabaseRuntimeSchema,
+function validateProviderRecordFromApi(
+    generatedDatabaseSchema: DatabaseRuntimeSchema,
     layout: string,
-    record: ProviderRecord,
+    providerRecordFromApi: ProviderRecord,
 ) {
-    const layoutSchema = schema.layouts[layout];
-    if (!layoutSchema) {
+    const generatedLayoutSchema = generatedDatabaseSchema.layouts[layout];
+    const generatedProviderRecordSchema = generatedLayoutSchema?.providerRecord;
+    if (!generatedProviderRecordSchema) {
         return;
     }
-    assertValid(schema.validator, layoutSchema.record, record, {
-        layout,
-        recordId: record.recordId,
-        phase: 'record',
-    });
+    assertProviderRecordMatchesGeneratedSchema(
+        generatedProviderRecordSchema,
+        providerRecordFromApi,
+        {
+            layout,
+            recordId: providerRecordFromApi.recordId,
+            phase: 'record',
+        },
+    );
 }
 
-function assertValid(
-    validator: RuntimeValidator,
-    validationSchema: unknown,
-    value: unknown,
+function assertProviderRecordMatchesGeneratedSchema(
+    generatedProviderRecordSchema: z.ZodType,
+    providerRecordFromApi: ProviderRecord,
     context: Omit<ConstructorParameters<typeof SchemaDriftError>[0], 'issues'>,
 ) {
-    const result = validator.validate(validationSchema, value);
-    if (!result.success) {
-        throw new SchemaDriftError({ ...context, issues: result.issues }, result.cause);
+    const providerRecordValidation = generatedProviderRecordSchema.safeParse(
+        providerRecordFromApi,
+    );
+    if (!providerRecordValidation.success) {
+        throw new SchemaDriftError(
+            { ...context, issues: providerRecordValidation.error.issues },
+            providerRecordValidation.error,
+        );
     }
 }
 

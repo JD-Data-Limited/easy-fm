@@ -1,0 +1,36 @@
+import {
+    asDate,
+    DataApiProvider,
+    Database,
+    queryEscape,
+    stringToTemporal,
+    temporalToString,
+} from '../dist/index.js';
+/**
+ * Exercises the published build using APIs that do not require a live
+ * FileMaker server. Creating and closing a database also verifies that each
+ * runtime can load the package's current lifecycle implementation.
+ */
+export async function runRuntimeSmokeTest() {
+    const hostname = 'runtime-test.example.com';
+    const database = Database.create({
+        provider: new DataApiProvider({
+            hostname: `https://${hostname}`,
+            database: 'RuntimeTest',
+            credentials: {
+                method: 'filemaker',
+                username: 'runtime-test-user',
+                password: 'runtime-test-password',
+            },
+            externalSources: [],
+        }),
+    });
+    await database.close();
+    const date = stringToTemporal('09/23/2026', 'date', 'MM/dd/yyyy');
+    return {
+        date: asDate(new Date(2026, 8, 23)).toString(),
+        escapedQuery: queryEscape('*'),
+        formattedDate: temporalToString(date, 'yyyy-MM-dd'),
+        hostname,
+    };
+}

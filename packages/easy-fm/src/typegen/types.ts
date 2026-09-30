@@ -32,14 +32,6 @@ export interface SchemaSource {
     introspect(): Promise<TypegenSchema>;
 }
 
-/** Code-generation plugin for a runtime validation library. */
-export interface TypegenValidator {
-    readonly imports: readonly string[];
-    readonly runtimeValidator: string;
-    /** Render a validator for the complete canonical ProviderRecord. */
-    renderRecord(layout: TypegenLayout): string;
-}
-
 export interface TypegenConfig {
     output: string;
     /** User-owned runtime entrypoint. Created once and never overwritten. */
@@ -51,8 +43,6 @@ export interface TypegenConfig {
     transports?: TypegenTransport[];
     /** Restrict output to these FileMaker layout names. */
     layouts?: string[];
-    /** Defaults to the built-in strict Zod validator. */
-    validator?: TypegenValidator;
     databases?: Record<string, TypegenDatabaseConfig>;
     onDiagnostic?: (diagnostic: TypegenDiagnostic & { database: string }) => void;
 }
@@ -62,7 +52,6 @@ export interface TypegenDatabaseConfig {
     provider?: string;
     transports?: TypegenTransport[];
     layouts?: string[];
-    validator?: TypegenValidator;
     runtime?: DataApiRuntimeDescriptor;
 }
 

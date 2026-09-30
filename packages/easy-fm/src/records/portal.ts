@@ -2,10 +2,10 @@
  * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import {PortalRecord} from './portalRecord.js';
-import {type PortalBase} from './portalBase.js';
-import {type LayoutRecord} from './layoutRecord.js';
-import {RecordFieldsMap} from '../layouts/layoutInterface.js';
+import { PortalRecord } from './portalRecord.js';
+import { type PortalBase } from './portalBase.js';
+import { type LayoutRecord } from './layoutRecord.js';
+import { RecordFieldsMap } from '../layouts/layoutInterface.js';
 
 /**
  * Represents a portal.

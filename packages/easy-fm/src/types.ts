@@ -4,8 +4,8 @@
 
 // const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 import type * as http from 'http';
-import {type FMError} from './FMError.js';
-import {type LayoutInterface} from './layouts/layoutInterface.js';
+import { type FMError } from './FMError.js';
+import { type LayoutInterface } from './layouts/layoutInterface.js';
 import z from 'zod';
 
 export type PickPortals<
