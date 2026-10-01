@@ -28,41 +28,47 @@ export function renderProviderRecord(
 
 function objectSchema(fields: readonly TypegenField[], overrides?: string) {
     const entries = fields.map(
-        (field) => `${quote(field.name)}: ${fieldSchema(field)}`,
+        (field) =>
+            `${quote(field.name)}: ${fieldSchema(
+                field,
+                overrides ? `${overrides}?.[${quote(field.name)}]` : undefined,
+            )}`,
     );
-    if (overrides) {
-        entries.push(`...(${overrides} ?? {})`);
-    }
     return `z.object({${entries.join(', ')}}).strict()`;
 }
 
 function portalRowSchema(fields: readonly TypegenField[], overrides?: string) {
-    const entries = fields.map((field) => `${quote(field.name)}: ${fieldSchema(field)}`);
+    const entries = fields.map(
+        (field) =>
+            `${quote(field.name)}: ${fieldSchema(
+                field,
+                overrides ? `${overrides}?.[${quote(field.name)}]` : undefined,
+            )}`,
+    );
     entries.push(
         'recordId: z.union([z.string(), z.number()])',
         'modId: z.union([z.string(), z.number()])',
     );
-    if (overrides) {
-        entries.push(`...(${overrides} ?? {})`);
-    }
     return `z.object({${entries.join(', ')}}).strict()`;
 }
 
-function fieldSchema(field: TypegenField) {
+function fieldSchema(field: TypegenField, override?: string) {
+    const selected = (fallback: string) =>
+        override ? `(${override} ?? ${fallback})` : fallback;
     if (field.result === 'number') {
-        return 'z.number().nullable()';
+        return `emptyFileMakerValueToNull(${selected('z.number()')})`;
     }
     if (
         field.result === 'date' ||
         field.result === 'time' ||
         field.result === 'timeStamp'
     ) {
-        return 'z.string().nullable()';
+        return `emptyFileMakerValueToNull(${selected('z.string()')})`;
     }
     if (field.result === 'container') {
-        return 'z.string().nullable()';
+        return `emptyFileMakerValueToNull(${selected('z.string()')})`;
     }
-    return 'z.string()';
+    return selected('z.string()');
 }
 
 function quote(value: string) {

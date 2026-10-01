@@ -88,9 +88,12 @@ export const easyfm = createEasyFMClient(providers, {
 ```
 
 The same schema is used for runtime validation and static inference, so `Enabled` is a
-`NumberField<0 | 1>` and any other API value throws `SchemaDriftError`. Overrides are
-available per database, layout, regular field, and portal field. The generated defaults
-remain strict when no override is supplied.
+`NumberField<0 | 1 | null>` and any other non-empty API value throws
+`SchemaDriftError`. FileMaker represents empty values as `""`; generated schemas accept
+that wire value for number, date, time, timestamp, and container fields, and EasyFM
+normalizes it to `null`. Text fields preserve `""`. Overrides are available per database,
+layout, regular field, and portal field. The generated defaults remain strict when no
+override is supplied.
 
 Configurations created by earlier v5 betas may still import and call
 `zodTypegenValidator()`. The helper remains available as a deprecated compatibility

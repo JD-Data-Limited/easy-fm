@@ -65,7 +65,15 @@ export class TextField<T extends string = string> extends ValueFieldBase<T, 'tex
 export class NumberField<T extends number | null = number | null> extends ValueFieldBase<
     T,
     'number'
-> {}
+> {
+    override parseRawValue(value: RawValueData): T {
+        return (value === '' ? null : value) as T;
+    }
+
+    override serializeRawValue(): RawValueData {
+        return this._value === null ? '' : this._value;
+    }
+}
 
 export class TimeStampField extends ValueFieldBase<
     Temporal.PlainDateTime | null,

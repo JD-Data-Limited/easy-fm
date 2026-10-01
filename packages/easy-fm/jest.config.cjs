@@ -4,6 +4,8 @@ module.exports = {
     watchman: false,
     collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/bin/**'],
     moduleNameMapper: {
+        '^@jd-data-limited/easy-fm$': '<rootDir>/dist/index.js',
+        '^@jd-data-limited/easy-fm/typegen$': '<rootDir>/dist/typegen/index.js',
         '^(.+)\\.js$': '$1', // Remove .js extension for imports
     },
     moduleFileExtensions: ['ts', 'js', 'json'],

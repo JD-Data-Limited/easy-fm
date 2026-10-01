@@ -5,9 +5,19 @@ import {
     ContainerSessionAffinityError,
 } from '../../connection/databaseProvider.js';
 
-export class ContainerField extends BaseField<string, 'container'> {
+export class ContainerField extends BaseField<string | null, 'container'> {
     constructor(record: Parentable, id: string, value: RawValueData) {
         super(record, id, value);
+    }
+
+    override parseRawValue(value: RawValueData): string | null {
+        if (value === '' || value === null) {
+            return null;
+        }
+        if (typeof value !== 'string') {
+            throw new Error('Received an invalid value for a container field.');
+        }
+        return value;
     }
 
     async upload(file: File): Promise<void> {

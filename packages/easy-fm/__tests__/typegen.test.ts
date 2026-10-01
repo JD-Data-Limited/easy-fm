@@ -1,7 +1,9 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import * as ts from 'typescript';
+import { z } from 'zod';
 import {
     generate,
     zodTypegenValidator,
@@ -130,12 +132,14 @@ describe('typegen', () => {
                 join(root, 'generated', 'client.d.ts'),
                 'utf8',
             );
-            expect(runtime).toContain('...(overrides?.["Flags"]?.fields ?? {})');
+            expect(runtime).toContain(
+                'emptyFileMakerValueToNull((overrides?.["Flags"]?.fields?.["Enabled"] ?? z.number()))',
+            );
             expect(declarations).toContain(
                 '"Enabled"?: z.ZodType<number | null, number | null>',
             );
             expect(declarations).toContain(
-                'NumberField<ZodInput<NonNullable<SchemaOverrides["fields"]>["Enabled"], number | null> & (number | null)>',
+                'NumberField<(ZodInput<NonNullable<SchemaOverrides["fields"]>["Enabled"], number> & number) | null>',
             );
         } finally {
             await rm(root, { recursive: true, force: true });
@@ -164,6 +168,41 @@ describe('typegen', () => {
                                             writable: true,
                                             required: true,
                                         },
+                                        {
+                                            name: 'Label',
+                                            result: 'text',
+                                            type: 'normal',
+                                            writable: true,
+                                            required: false,
+                                        },
+                                        {
+                                            name: 'DueDate',
+                                            result: 'date',
+                                            type: 'normal',
+                                            writable: true,
+                                            required: false,
+                                        },
+                                        {
+                                            name: 'DueTime',
+                                            result: 'time',
+                                            type: 'normal',
+                                            writable: true,
+                                            required: false,
+                                        },
+                                        {
+                                            name: 'ChangedAt',
+                                            result: 'timeStamp',
+                                            type: 'normal',
+                                            writable: true,
+                                            required: false,
+                                        },
+                                        {
+                                            name: 'Attachment',
+                                            result: 'container',
+                                            type: 'normal',
+                                            writable: true,
+                                            required: false,
+                                        },
                                     ],
                                     portals: {},
                                 },
@@ -186,7 +225,7 @@ type Enabled = typeof client.database.Flags extends Layout<infer Definition>
     ? Definition['fields']['Enabled']['value']
     : never
 declare const enabled: Enabled
-const exact: 0 | 1 = enabled
+const exact: 0 | 1 | null = enabled
 void exact
 `,
                 'utf8',
@@ -207,6 +246,104 @@ void exact
                     getNewLine: () => '\n',
                 }),
             ).toBe('');
+
+            const generated = await import(
+                pathToFileURL(join(output, 'client.js')).href
+            );
+            const metadataField = (
+                name: string,
+                result:
+                    | 'number'
+                    | 'text'
+                    | 'date'
+                    | 'time'
+                    | 'timeStamp'
+                    | 'container',
+            ) => ({
+                name,
+                result,
+                type: 'normal',
+                displayType: 'editText',
+                global: false,
+                autoEnter: false,
+                fourDigitYear: false,
+                maxRepeat: 1,
+                maxCharacters: 0,
+                notEmpty: false,
+                numeric: result === 'number',
+                timeOfDay: false,
+                repetitionStart: 1,
+                repetitionEnd: 1,
+            });
+            const formatting = {
+                dateFormat: 'MM/DD/YYYY',
+                timeFormat: 'HH:mm:ss',
+                timeStampFormat: 'MM/DD/YYYY HH:mm:ss',
+            };
+            const provider = {
+                formatting,
+                async connect() {
+                    return {
+                        formatting,
+                        maxSessions: 1,
+                        async openSession() {
+                            return {
+                                async execute(operation: { type: string }) {
+                                    if (operation.type === 'layout.metadata') {
+                                        return {
+                                            fieldMetaData: [
+                                                metadataField('Enabled', 'number'),
+                                                metadataField('Label', 'text'),
+                                                metadataField('DueDate', 'date'),
+                                                metadataField('DueTime', 'time'),
+                                                metadataField('ChangedAt', 'timeStamp'),
+                                                metadataField('Attachment', 'container'),
+                                            ],
+                                            portalMetaData: {},
+                                        };
+                                    }
+                                    return {
+                                        recordId: '1',
+                                        modId: '0',
+                                        fieldData: {
+                                            Enabled: '',
+                                            Label: '',
+                                            DueDate: '',
+                                            DueTime: '',
+                                            ChangedAt: '',
+                                            Attachment: '',
+                                        },
+                                        portalData: {},
+                                    };
+                                },
+                                async fetchContainer() {
+                                    return new Response();
+                                },
+                                async close() {},
+                            };
+                        },
+                    };
+                },
+            };
+            const client = generated.createEasyFMClient(
+                { database: provider },
+                {
+                    database: {
+                        Flags: {
+                            fields: {
+                                Enabled: z.union([z.literal(0), z.literal(1)]),
+                            },
+                        },
+                    },
+                },
+            );
+            const record = await client.database.Flags.records.get(1);
+            expect(record.fields.Enabled.value).toBeNull();
+            expect(record.fields.Label.value).toBe('');
+            expect(record.fields.DueDate.value).toBeNull();
+            expect(record.fields.DueTime.value).toBeNull();
+            expect(record.fields.ChangedAt.value).toBeNull();
+            expect(record.fields.Attachment.value).toBeNull();
         } finally {
             await rm(root, { recursive: true, force: true });
         }
