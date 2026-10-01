@@ -92,6 +92,11 @@ The same schema is used for runtime validation and static inference, so `Enabled
 available per database, layout, regular field, and portal field. The generated defaults
 remain strict when no override is supplied.
 
+Configurations created by earlier v5 betas may still import and call
+`zodTypegenValidator()`. The helper remains available as a deprecated compatibility
+marker, but Zod is now built in and the `validator` option is ignored. New configurations
+do not need either one.
+
 Validation happens at two boundaries. Layout metadata comparison is an early structural
 warning. Separately, each complete canonical provider record is checked by a strict
 generated Zod schema before EasyFM constructs `LayoutRecord` or field objects. EasyFM

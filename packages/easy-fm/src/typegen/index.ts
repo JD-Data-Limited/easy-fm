@@ -1,5 +1,6 @@
 export { generate } from './generate.js';
 export { dataApiSchemaSource } from './dataApiSchemaSource.js';
+export { zodTypegenValidator } from './zod.js';
 export {
     configExists,
     readEnvironment,
@@ -24,4 +25,5 @@ export {
     type TypegenLayout,
     type TypegenSchema,
     type TypegenTransport,
+    type TypegenValidator,
 } from './types.js';

@@ -1,4 +1,12 @@
-import type { TypegenField, TypegenLayout } from './types.js';
+import type { TypegenField, TypegenLayout, TypegenValidator } from './types.js';
+
+/**
+ * @deprecated Zod is now built into typegen. Existing v5 configurations may
+ * keep calling this helper; the returned marker is intentionally ignored.
+ */
+export function zodTypegenValidator(): TypegenValidator {
+    return { kind: 'zod' };
+}
 
 /** Render the strict Zod schema for one complete canonical ProviderRecord. */
 export function renderProviderRecord(
