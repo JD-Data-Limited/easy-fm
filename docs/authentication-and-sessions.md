@@ -60,5 +60,5 @@ operations. `logout()` remains alias.
 ## Custom Providers
 
 Implement `DatabaseProvider`, `ProviderConnection`, and `ProviderSession`. Provider
-receives semantic operations rather than HTTP paths. Set `maxSessions` to `1` for
-single-session systems or higher for pooled systems.
+receives semantic operations rather than HTTP paths. Omit `maxSessions` for
+single-session systems or set a higher value for pooled systems.

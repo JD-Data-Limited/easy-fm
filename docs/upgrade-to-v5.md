@@ -83,7 +83,7 @@ Custom integrations implement:
 - `ProviderConnection`
 - `ProviderSession`
 
-Set `ProviderConnection.maxSessions` to `1` for a single-session provider or a larger
+Omit `ProviderConnection.maxSessions` for a single-session provider or set a larger
 value for bounded pooling. Core owns session allocation, queuing, reuse, retry policy, and
 shutdown.
 

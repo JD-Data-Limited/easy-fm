@@ -23,7 +23,8 @@ export interface DatabaseProvider {
 }
 export interface ProviderConnection {
     readonly formatting: DatabaseFormatting;
-    readonly maxSessions: number;
+    /** Maximum parallel sessions. Omit for a serialized single-session connection. */
+    readonly maxSessions?: number;
     openSession: (signal: AbortSignal) => Promise<ProviderSession>;
     close?: () => Promise<void>;
 }
@@ -41,6 +42,12 @@ export interface ProviderRecord {
     modId: string;
     fieldData: z.infer<typeof ApiFieldData>;
     portalData?: z.infer<typeof ApiPortalData>;
+    portalDataInfo?: Array<{
+        database: string;
+        table: string;
+        foundCount: number;
+        returnedCount: number;
+    }>;
 }
 export interface RecordQueryClause {
     omit: boolean;

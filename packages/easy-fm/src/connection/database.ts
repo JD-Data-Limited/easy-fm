@@ -163,7 +163,7 @@ export class Database<T extends DatabaseStructure> implements DatabaseBase {
                     !active &&
                     !job.preferred &&
                     this.#sessions.filter((item) => item.valid).length <
-                        Math.max(1, connection.maxSessions)
+                        Math.max(1, connection.maxSessions ?? 1)
                 ) {
                     try {
                         active = await this.#openSession();

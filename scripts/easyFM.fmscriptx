@@ -1,0 +1,42 @@
+@compatSingleParam
+script __EasyFM_WebViewerCallback ($param: string) {
+    let $webViewerName = `JSONGetElement($param ; "webViewerName")`
+    let $window = `JSONGetElement($param ; "window")`
+    let $recordNumber = `JSONGetElement($param ; "recordNumber")`
+    let $callId = `JSONGetElement($param ; "id")`
+    let $token = `JSONGetElement($param ; "token")`
+
+    let $res, $errCode, $errMsg = __EasyFM_WebViewerCallback_Internal($param)
+
+    if `not IsEmpty($errCode) and $errCode != 0` {
+        // An error has occured
+        let $callbackRes = ```
+        JSONSetElement( "{}" ;
+            ["protocol" ; "easy-fm.webviewer/v1" ; JSONString] ;
+            ["id" ; $callId ; JSONString] ;
+            ["ok" ; False ; JSONBolean] ;
+            ["error" ; JSONSetElement( "{}" ;
+                ["message" ; $errMsg ; JSONString] ;
+                ["code" ; $errCode ; JSONNumber]
+            ); JSONRaw]
+        )
+        ```
+    } else {
+        let $callbackRes = ```
+        JSONSetElement( "{}" ;
+            ["protocol" ; "easy-fm.webviewer/v1" ; JSONString] ;
+            ["id" ; $callId ; JSONString] ;
+            ["ok" ; False ; JSONBolean] ;
+            ["result" ; $res; JSONRaw]
+        )
+        ```
+    }
+
+    let $bootstrapConfig = `JSONGetElement($$__EasyFMBootstrapTokens; $token)`
+    let $callback = `JSONGetElement($bootstrapConfig ; "callback")`
+    performJavaScriptInWebViewer({
+        webViewer: $webViewerName,
+        function: $callback,
+        parameters: [$callbackRes]
+    })
+}

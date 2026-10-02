@@ -9,21 +9,21 @@ export function zodTypegenValidator(): TypegenValidator {
 }
 
 /** Render the strict Zod schema for one complete canonical ProviderRecord. */
-export function renderProviderRecord(
-    layout: TypegenLayout,
-    overrideExpression?: string,
-) {
+export function renderProviderRecord(layout: TypegenLayout, overrideExpression?: string) {
     const fieldOverrides = overrideExpression
         ? `${overrideExpression}?.fields`
         : undefined;
     const fieldData = objectSchema(layout.fields, fieldOverrides);
     const portals = Object.entries(layout.portals)
-        .map(([name, fields]) =>
-            `${quote(name)}: z.array(${portalRowSchema(fields, overrideExpression ? `${overrideExpression}?.portals?.[${quote(name)}]` : undefined)})`,
+        .map(
+            ([name, fields]) =>
+                `${quote(name)}: z.array(${portalRowSchema(fields, overrideExpression ? `${overrideExpression}?.portals?.[${quote(name)}]` : undefined)})`,
         )
         .join(', ');
     const portalData = `z.object({${portals}}).partial().strict().optional()`;
-    return `z.object({recordId: z.string(), modId: z.string(), fieldData: ${fieldData}, portalData: ${portalData}}).strict()`;
+    const portalDataInfo =
+        'z.array(z.object({database: z.string(), table: z.string(), foundCount: z.number(), returnedCount: z.number()}).strict()).optional()';
+    return `z.object({recordId: z.string(), modId: z.string(), fieldData: ${fieldData}, portalData: ${portalData}, portalDataInfo: ${portalDataInfo}}).strict()`;
 }
 
 function objectSchema(fields: readonly TypegenField[], overrides?: string) {
@@ -56,17 +56,17 @@ function fieldSchema(field: TypegenField, override?: string) {
     const selected = (fallback: string) =>
         override ? `(${override} ?? ${fallback})` : fallback;
     if (field.result === 'number') {
-        return `emptyFileMakerValueToNull(${selected('z.number()')})`;
+        return `normalizeFileMakerNullableValue(${selected('z.number()')})`;
     }
     if (
         field.result === 'date' ||
         field.result === 'time' ||
         field.result === 'timeStamp'
     ) {
-        return `emptyFileMakerValueToNull(${selected('z.string()')})`;
+        return `normalizeFileMakerNullableValue(${selected('z.string()')})`;
     }
     if (field.result === 'container') {
-        return `emptyFileMakerValueToNull(${selected('z.string()')})`;
+        return `normalizeFileMakerNullableValue(${selected('z.string()')})`;
     }
     return selected('z.string()');
 }

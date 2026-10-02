@@ -91,9 +91,10 @@ The same schema is used for runtime validation and static inference, so `Enabled
 `NumberField<0 | 1 | null>` and any other non-empty API value throws
 `SchemaDriftError`. FileMaker represents empty values as `""`; generated schemas accept
 that wire value for number, date, time, timestamp, and container fields, and EasyFM
-normalizes it to `null`. Text fields preserve `""`. Overrides are available per database,
-layout, regular field, and portal field. The generated defaults remain strict when no
-override is supplied.
+normalizes it to `null`. FileMaker's `"?"` error value is handled the same way for these
+parsed/nullable field types, while text fields preserve both `""` and `"?"` verbatim.
+Overrides are available per database, layout, regular field, and portal field. The
+generated defaults remain strict when no override is supplied.
 
 Configurations created by earlier v5 betas may still import and call
 `zodTypegenValidator()`. The helper remains available as a deprecated compatibility
