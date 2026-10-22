@@ -91,12 +91,14 @@ Task guides:
 
 API reference:
 
-- [`docs_out/index.html`](./docs_out/index.html): generated TypeDoc site
+- [`../docs-site/`](../docs-site): Fumadocs application with a native, generated TypeScript API reference
 
 ## Build Docs
 
+From the repository root:
+
 ```sh
-npm run docs:build
+pnpm docs:build
 ```
 
 ## Test

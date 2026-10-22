@@ -1,4 +1,7 @@
-# Test Guide
+---
+title: Test guide
+description: Run unit, integration, coverage, type, and cross-runtime tests.
+---
 
 Common local test commands:
 

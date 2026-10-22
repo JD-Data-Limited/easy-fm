@@ -1,4 +1,7 @@
-# Provider API
+---
+title: Provider API
+description: Implement custom transports with EasyFM's semantic provider interfaces.
+---
 
 `Database` works with semantic providers. Providers choose transport and session creation;
 core schedules sessions and translates results into layouts and records.

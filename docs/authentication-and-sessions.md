@@ -1,4 +1,7 @@
-# Authentication And Sessions
+---
+title: Authentication and sessions
+description: Configure authentication modes, pooling, retries, and container sessions.
+---
 
 Create a `DataApiProvider`, then pass it to synchronous `Database.create()`:
 

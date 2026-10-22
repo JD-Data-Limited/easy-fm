@@ -1,0 +1,20 @@
+{
+  "title": "EasyFM",
+  "pages": [
+    "index",
+    "upgrade-to-v5",
+    "---Setup---",
+    "getting-started",
+    "accessing-your-data",
+    "core-concepts",
+    "---Guides---",
+    "authentication-and-sessions",
+    "working-with-records",
+    "query-recipes",
+    "typescript-layouts",
+    "typegen",
+    "provider-api",
+    "api-reference",
+    "testGuide"
+  ]
+}

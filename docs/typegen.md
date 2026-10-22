@@ -1,4 +1,7 @@
-# Type generation
+---
+title: Type generation
+description: Generate schemas, types, and a configured EasyFM client from FileMaker metadata.
+---
 
 Typegen ships in the main package but behind the `@jd-data-limited/easy-fm/typegen`
 subpath. Normal runtime imports do not load its Node.js filesystem code, and the package

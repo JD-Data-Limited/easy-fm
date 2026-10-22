@@ -1,0 +1,4 @@
+{
+  "title": "API reference",
+  "pages": ["index", "database", "layouts", "records", "fields", "providers", "schema-and-utilities"]
+}

@@ -1,4 +1,7 @@
-# Query Recipes
+---
+title: Query recipes
+description: Build FileMaker finds, paging, sorting, and portal queries.
+---
 
 This guide covers record listing, finding, paging, sorting, and portal fetches.
 

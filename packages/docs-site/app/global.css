@@ -1,0 +1,76 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
+:root {
+  --brand-primary: #daa520;
+  --brand-dark: #333333;
+  --brand-light: #eeeeee;
+  --brand-blue: oklch(0.5037 0.211 263.8);
+  --brand-violet: oklch(0.5548 0.2575 312.98);
+  --brand-mint: oklch(0.7906 0.1573 166.87);
+  --font-sans: "Quicksand Variable", "Quicksand", sans-serif;
+  --font-mono: "SFMono-Regular", "Cascadia Code", "Roboto Mono", monospace;
+  --color-fd-background: #ffffff;
+  --color-fd-foreground: var(--brand-dark);
+  --color-fd-card: #ffffff;
+  --color-fd-card-foreground: var(--brand-dark);
+  --color-fd-popover: #ffffff;
+  --color-fd-popover-foreground: var(--brand-dark);
+  --color-fd-muted: #d3d3d3;
+  --color-fd-muted-foreground: #68675f;
+  --color-fd-secondary: #d3d3d3;
+  --color-fd-secondary-foreground: var(--brand-dark);
+  --color-fd-accent: #cccccc;
+  --color-fd-accent-foreground: var(--brand-dark);
+  --color-fd-border: var(--brand-light);
+  --color-fd-primary: var(--brand-primary);
+  --color-fd-primary-foreground: var(--brand-dark);
+  --color-fd-ring: var(--brand-primary);
+}
+
+.dark {
+  --color-fd-background: #292929;
+  --color-fd-foreground: #f5f3eb;
+  --color-fd-card: #333333;
+  --color-fd-card-foreground: #f5f3eb;
+  --color-fd-popover: #333333;
+  --color-fd-popover-foreground: #f5f3eb;
+  --color-fd-muted: #3a3a3a;
+  --color-fd-muted-foreground: #bdbbb3;
+  --color-fd-secondary: #3a3a3a;
+  --color-fd-secondary-foreground: #f5f3eb;
+  --color-fd-accent: #454131;
+  --color-fd-accent-foreground: #f5f3eb;
+  --color-fd-border: #4b4b4b;
+  --color-fd-primary: var(--brand-primary);
+  --color-fd-primary-foreground: var(--brand-dark);
+  --color-fd-ring: var(--brand-primary);
+}
+
+html { scrollbar-gutter: stable; }
+
+html > body[data-scroll-locked] {
+  margin-right: 0px !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+body { letter-spacing: -0.008em; }
+
+.easyfm-sidebar p {
+  margin-block: 1.75rem 0.5rem;
+  border-inline-start: 2px solid var(--brand-primary);
+  padding: 0.125rem 0.5rem;
+  color: var(--color-fd-foreground);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  line-height: 1.25rem;
+  text-transform: uppercase;
+}
+
+.easyfm-sidebar p:first-child { margin-top: 0; }
+
+@media (max-width: 640px) {
+  .easyfm-lockup img { height: 1.35rem; }
+}
