@@ -185,7 +185,8 @@ describe('typegen', () => {
 
     it('creates a working user entrypoint once and never overwrites it', async () => {
         const root = await mkdtemp(join(tmpdir(), 'easyfm-entrypoint-'));
-        const entrypoint = join(root, 'src', 'easyfm.ts');
+        const entrypoint = join(root, 'src', 'easyfm.js');
+        const declaration = join(root, 'src', 'easyfm.d.ts');
         const config = {
             output: join(root, 'src', 'generated'),
             entrypoint,
@@ -212,9 +213,17 @@ describe('typegen', () => {
             const contents = await readFile(entrypoint, 'utf8');
             expect(contents).toContain('export const easyfm = createEasyFMClient');
             expect(contents).toContain('required("FM_CRM_PASSWORD")');
+            expect(contents).toContain('function required(name)');
+            expect(contents).not.toContain('name: string');
+            const declarationContents = await readFile(declaration, 'utf8');
+            expect(declarationContents).toContain(
+                'export declare const easyfm: EasyFMClient',
+            );
+            expect(first.entrypoint?.declarationPath).toBe(declaration);
             const second = await generate(config);
             expect(second.entrypoint?.created).toBe(false);
             expect(await readFile(entrypoint, 'utf8')).toBe(contents);
+            expect(await readFile(declaration, 'utf8')).toBe(declarationContents);
         } finally {
             await rm(root, { recursive: true, force: true });
         }

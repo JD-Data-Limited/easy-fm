@@ -24,9 +24,10 @@ when no equivalent ignore rule exists.
 `easyfm typegen` automatically launches the same setup when its config does not exist,
 then continues generation.
 
-On first generation, initialized projects also receive `src/easyfm.ts`: a ready-to-import
-client with all configured Data API providers wired to their database-scoped environment
-variables. This user-owned file is created exclusively and never overwritten. Every
+On first generation, initialized projects also receive `src/easyfm.js` and its
+`src/easyfm.d.ts` declaration: a ready-to-import client with all configured Data API
+providers wired to their database-scoped environment variables. These user-owned files
+are created exclusively and never overwritten. Every
 typegen run prints an import/use sample; custom providers without a runtime descriptor
 receive the factory sample instead.
 

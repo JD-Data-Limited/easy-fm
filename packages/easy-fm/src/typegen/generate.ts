@@ -128,13 +128,27 @@ async function createEntrypoint(
     }
     await mkdir(dirname(path), { recursive: true });
     const generatedImport = modulePath(dirname(path), resolve(output, 'client.js'));
+    const declarationPath = path.endsWith('.js')
+        ? `${path.slice(0, -3)}.d.ts`
+        : `${path}.d.ts`;
     const providers = databases
         .map((db) => {
             const runtime = db.config.runtime!;
             return `${prop(db.key)}: new DataApiProvider({hostname: required(${quote(runtime.hostnameEnv)}), database: required(${quote(runtime.databaseEnv)}), credentials: {method: 'filemaker', username: required(${quote(runtime.usernameEnv)}), password: required(${quote(runtime.passwordEnv)})}, externalSources: []})`;
         })
         .join(',\n    ');
-    const contents = `/* Created by easyfm typegen. This file is yours and will not be overwritten. */\nimport {DataApiProvider} from '@jd-data-limited/easy-fm'\nimport {createEasyFMClient} from ${quote(generatedImport)}\n\nfunction required(name: string) { const value = process.env[name]; if (!value) throw new Error(\`Missing required environment variable \${name}\`); return value }\n\nexport const easyfm = createEasyFMClient({\n    ${providers}\n})\n`;
+    const contents = `/* Created by easyfm typegen. This file is yours and will not be overwritten. */\nimport {DataApiProvider} from '@jd-data-limited/easy-fm'\nimport {createEasyFMClient} from ${quote(generatedImport)}\n\nfunction required(name) { const value = process.env[name]; if (!value) throw new Error(\`Missing required environment variable \${name}\`); return value }\n\nexport const easyfm = createEasyFMClient({\n    ${providers}\n})\n`;
+    const declarations = `/* Created by easyfm typegen. This file is yours and will not be overwritten. */\nimport type {EasyFMClient} from ${quote(generatedImport)}\n\nexport declare const easyfm: EasyFMClient\n`;
+    const runtimeCreated = await writeExclusive(path, contents);
+    const declarationCreated = await writeExclusive(declarationPath, declarations);
+    return {
+        path,
+        declarationPath,
+        created: runtimeCreated || declarationCreated,
+    };
+}
+
+async function writeExclusive(path: string, contents: string) {
     try {
         const file = await open(path, 'wx');
         try {
@@ -142,11 +156,10 @@ async function createEntrypoint(
         } finally {
             await file.close();
         }
-
-        return { path, created: true };
+        return true;
     } catch (error) {
         if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
-            return { path, created: false };
+            return false;
         }
         throw error;
     }
@@ -158,7 +171,7 @@ function sampleUsage(
     databases: GeneratedDatabase[],
 ) {
     if (entrypoint) {
-        return `import {easyfm} from ${quote(modulePath(process.cwd(), resolve(entrypoint).replace(/\.ts$/, '.js')))}\n\n// Example: easyfm.${prop(databases[0]?.key ?? 'database')}.database`;
+        return `import {easyfm} from ${quote(modulePath(process.cwd(), resolve(entrypoint)))}\n\n// Example: easyfm.${prop(databases[0]?.key ?? 'database')}.database`;
     }
     return `import {createEasyFMClient} from ${quote(modulePath(process.cwd(), resolve(output, 'client.js')))}\n\nconst easyfm = createEasyFMClient({${databases.map((db) => `${prop(db.key)}: provider`).join(', ')}})`;
 }

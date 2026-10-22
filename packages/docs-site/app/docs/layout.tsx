@@ -7,6 +7,7 @@ export default function Layout({ children }: LayoutProps<'/docs'>) {
     <DocsLayout
       tree={source.getPageTree()}
       sidebar={{ className: 'easyfm-sidebar' }}
+      containerProps={{ className: '[--fd-layout-width:100%]'}}
       {...baseOptions()}
     >
       {children}
