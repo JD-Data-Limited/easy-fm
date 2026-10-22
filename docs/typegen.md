@@ -137,4 +137,6 @@ export default defineTypegenConfig({
 Pass one runtime provider per database:
 `createEasyFMClient({crm: crmProvider, inventory: inventoryProvider})`. Returned layouts
 are namespaced under `client.crm` and `client.inventory`; databases therefore have
-independent sessions and may contain layouts with the same name.
+independent sessions and may contain layouts with the same name. Layout properties use
+an `L` prefix, so a `Users` layout is available as `client.crm.LUsers`. This keeps the
+client namespace distinct from future table properties, which use a `T` prefix.

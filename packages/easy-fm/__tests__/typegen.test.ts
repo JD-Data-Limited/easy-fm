@@ -49,7 +49,7 @@ describe('typegen', () => {
             expect(client).toContain('database: DatabaseProvider');
             expect(client).toContain('export interface EasyFMClient');
             expect(client).toContain('database: DatabaseClient');
-            expect(client).toContain('people: Layout<DatabasePeopleLayout>');
+            expect(client).toContain('LPeople: Layout<DatabasePeopleLayout>');
             expect(client).toContain('export interface DatabasePeopleFields');
             expect(client).toContain('fields: DatabasePeopleFields');
             expect(client).toContain(
@@ -58,6 +58,7 @@ describe('typegen', () => {
             expect(runtime).toContain(
                 'withSchemaValidation(provider, easyFMSchemas.database)',
             );
+            expect(runtime).toContain('LPeople: database.layout("API People")');
             expect(runtime).toContain('validator: zodValidator');
             expect(runtime).toContain(
                 'record: z.object({recordId: z.string(), modId: z.string(), fieldData:',
@@ -133,6 +134,7 @@ describe('typegen', () => {
             expect(client).toContain('stock: DatabaseProvider');
             expect(runtime).toContain('crm: createCrmClient(providers.crm)');
             expect(runtime).toContain('stock: createStockClient(providers.stock)');
+            expect(runtime).toContain('LPeople: database.layout("People")');
             expect(manifest.databases.stock).toMatchObject({
                 provider: 'custom',
                 transports: ['odata'],

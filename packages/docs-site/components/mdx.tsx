@@ -4,6 +4,7 @@ import { createFileSystemGeneratorCache, createGenerator } from 'fumadocs-typesc
 import { AutoTypeTable as FumadocsAutoTypeTable } from 'fumadocs-typescript/ui';
 import * as TabsComponents from 'fumadocs-ui/components/tabs';
 import { GettingStartedPrerequisites } from './getting-started-prerequisites';
+import { Mermaid } from '@/components/mermaid';
 
 const typeGenerator = createGenerator({
   cache: createFileSystemGeneratorCache('.next/fumadocs-typescript'),
@@ -35,6 +36,7 @@ export function getMDXComponents(components?: MDXComponents) {
     GettingStartedPrerequisites,
     ...components,
     ...TabsComponents,
+    Mermaid,
   } satisfies MDXComponents;
 }
 
