@@ -1,4 +1,7 @@
-# Working With Records
+---
+title: Working with records
+description: List, find, create, edit, duplicate, and delete FileMaker records.
+---
 
 This guide covers common record operations once you already have a `layout`.
 

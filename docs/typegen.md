@@ -1,4 +1,7 @@
-# Type generation
+---
+title: Type generation
+description: Generate schemas, types, and a configured EasyFM client from FileMaker metadata.
+---
 
 Typegen ships in the main package but behind the `@jd-data-limited/easy-fm/typegen`
 subpath. Normal runtime imports do not load its Node.js filesystem code, and the package
@@ -21,9 +24,10 @@ when no equivalent ignore rule exists.
 `easyfm typegen` automatically launches the same setup when its config does not exist,
 then continues generation.
 
-On first generation, initialized projects also receive `src/easyfm.ts`: a ready-to-import
-client with all configured Data API providers wired to their database-scoped environment
-variables. This user-owned file is created exclusively and never overwritten. Every
+On first generation, initialized projects also receive `src/easyfm.js` and its
+`src/easyfm.d.ts` declaration: a ready-to-import client with all configured Data API
+providers wired to their database-scoped environment variables. These user-owned files
+are created exclusively and never overwritten. Every
 typegen run prints an import/use sample; custom providers without a runtime descriptor
 receive the factory sample instead.
 
@@ -133,4 +137,6 @@ export default defineTypegenConfig({
 Pass one runtime provider per database:
 `createEasyFMClient({crm: crmProvider, inventory: inventoryProvider})`. Returned layouts
 are namespaced under `client.crm` and `client.inventory`; databases therefore have
-independent sessions and may contain layouts with the same name.
+independent sessions and may contain layouts with the same name. Layout properties use
+an `L` prefix, so a `Users` layout is available as `client.crm.LUsers`. This keeps the
+client namespace distinct from future table properties, which use a `T` prefix.

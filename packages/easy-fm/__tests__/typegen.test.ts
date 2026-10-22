@@ -49,7 +49,7 @@ describe('typegen', () => {
             expect(client).toContain('database: DatabaseProvider');
             expect(client).toContain('export interface EasyFMClient');
             expect(client).toContain('database: DatabaseClient');
-            expect(client).toContain('people: Layout<DatabasePeopleLayout>');
+            expect(client).toContain('LPeople: Layout<DatabasePeopleLayout>');
             expect(client).toContain('export interface DatabasePeopleFields');
             expect(client).toContain('fields: DatabasePeopleFields');
             expect(client).toContain(
@@ -58,6 +58,7 @@ describe('typegen', () => {
             expect(runtime).toContain(
                 'withSchemaValidation(provider, easyFMSchemas.database)',
             );
+            expect(runtime).toContain('LPeople: database.layout("API People")');
             expect(runtime).toContain('validator: zodValidator');
             expect(runtime).toContain(
                 'record: z.object({recordId: z.string(), modId: z.string(), fieldData:',
@@ -133,6 +134,7 @@ describe('typegen', () => {
             expect(client).toContain('stock: DatabaseProvider');
             expect(runtime).toContain('crm: createCrmClient(providers.crm)');
             expect(runtime).toContain('stock: createStockClient(providers.stock)');
+            expect(runtime).toContain('LPeople: database.layout("People")');
             expect(manifest.databases.stock).toMatchObject({
                 provider: 'custom',
                 transports: ['odata'],
@@ -185,7 +187,8 @@ describe('typegen', () => {
 
     it('creates a working user entrypoint once and never overwrites it', async () => {
         const root = await mkdtemp(join(tmpdir(), 'easyfm-entrypoint-'));
-        const entrypoint = join(root, 'src', 'easyfm.ts');
+        const entrypoint = join(root, 'src', 'easyfm.js');
+        const declaration = join(root, 'src', 'easyfm.d.ts');
         const config = {
             output: join(root, 'src', 'generated'),
             entrypoint,
@@ -212,9 +215,17 @@ describe('typegen', () => {
             const contents = await readFile(entrypoint, 'utf8');
             expect(contents).toContain('export const easyfm = createEasyFMClient');
             expect(contents).toContain('required("FM_CRM_PASSWORD")');
+            expect(contents).toContain('function required(name)');
+            expect(contents).not.toContain('name: string');
+            const declarationContents = await readFile(declaration, 'utf8');
+            expect(declarationContents).toContain(
+                'export declare const easyfm: EasyFMClient',
+            );
+            expect(first.entrypoint?.declarationPath).toBe(declaration);
             const second = await generate(config);
             expect(second.entrypoint?.created).toBe(false);
             expect(await readFile(entrypoint, 'utf8')).toBe(contents);
+            expect(await readFile(declaration, 'utf8')).toBe(declarationContents);
         } finally {
             await rm(root, { recursive: true, force: true });
         }

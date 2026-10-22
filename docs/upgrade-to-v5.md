@@ -1,4 +1,7 @@
-# Upgrading from v4 to v5
+---
+title: Upgrade to v5
+description: Migrate providers, fields, Temporal values, and type generation from EasyFM v4.
+---
 
 Easy FM v5 contains several re-designs that are intended to bring power to your workflow.
 
@@ -11,7 +14,7 @@ Particularly this includes:
 
 ## Migration checklist
 
-1. Upgrade to Node.js 22.22.3 or later.
+1. Upgrade to Node.js `22.22.3` or later.
 2. Replace `FMHost` with `Database.create()` and `DataApiProvider`.
 3. Use `database.connect()` only when eager connection validation is required.
 4. Replace generic `Field<T>` declarations with concrete field classes.

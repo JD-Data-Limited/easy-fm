@@ -107,7 +107,7 @@ function required (name) {
 
 export default defineTypegenConfig({
     output: ${JSON.stringify(answers.output)},
-    entrypoint: './src/easyfm.ts',
+    entrypoint: './src/easyfm.js',
     transports: ${JSON.stringify(answers.transports === 'both' ? ['data-api', 'odata'] : [answers.transports])},
     runtime: {provider: 'data-api', hostnameEnv: 'FM_HOST', databaseEnv: 'FM_DATABASE', usernameEnv: 'FM_USERNAME', passwordEnv: 'FM_PASSWORD'},
     validator: zodTypegenValidator(),
@@ -130,7 +130,7 @@ function renderMultiConfig(answers: MultiDatabaseInitAnswers) {
             return `${JSON.stringify(db.key)}: {provider: 'data-api/odata', transports: ${JSON.stringify(transports)}, runtime: {provider: 'data-api', hostnameEnv: '${prefix}_HOST', databaseEnv: '${prefix}_DATABASE', usernameEnv: '${prefix}_USERNAME', passwordEnv: '${prefix}_PASSWORD'}, source: dataApiSchemaSource({hostname: required('${prefix}_HOST'), database: required('${prefix}_DATABASE'), credentials: {method: 'filemaker', username: required('${prefix}_USERNAME'), password: required('${prefix}_PASSWORD')}, externalSources: []})}`;
         })
         .join(',\n        ');
-    return `import {dataApiSchemaSource, defineTypegenConfig, zodTypegenValidator} from '@jd-data-limited/easy-fm/typegen'\n\nfunction required(name) { const value = process.env[name]; if (!value) throw new Error(\`Missing required environment variable \${name}\`); return value }\n\nexport default defineTypegenConfig({output: ${JSON.stringify(answers.output)}, entrypoint: './src/easyfm.ts', validator: zodTypegenValidator(), databases: {\n        ${databases}\n    }})\n`;
+    return `import {dataApiSchemaSource, defineTypegenConfig, zodTypegenValidator} from '@jd-data-limited/easy-fm/typegen'\n\nfunction required(name) { const value = process.env[name]; if (!value) throw new Error(\`Missing required environment variable \${name}\`); return value }\n\nexport default defineTypegenConfig({output: ${JSON.stringify(answers.output)}, entrypoint: './src/easyfm.js', validator: zodTypegenValidator(), databases: {\n        ${databases}\n    }})\n`;
 }
 
 function envPrefix(key: string) {

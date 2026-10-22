@@ -12,7 +12,9 @@
         "test:runtime:bun": "pnpm --filter @jd-data-limited/easy-fm test:runtime:bun",
         "test:runtime:deno": "pnpm --filter @jd-data-limited/easy-fm test:runtime:deno",
         "test:runtime:workers": "pnpm --filter @jd-data-limited/easy-fm test:runtime:workers",
-        "docs:build": "pnpm --filter @jd-data-limited/easy-fm docs:build"
+        "docs:api": "pnpm --filter @jd-data-limited/easy-fm docs:api",
+        "docs:build": "pnpm --filter @jd-data-limited/easy-fm-docs build",
+        "docs:dev": "pnpm --filter @jd-data-limited/easy-fm-docs dev"
     },
     "packageManager": "pnpm@12.5.1+sha512.e3f305bc784a2bc89f5ad3b6138889470fae8d2af5f36b61216ec91c2c3d64089775f9de38aac331044ea40f245cb0d5666392dfdf65824e1907ef6a2c62de5f",
     "devDependencies": {

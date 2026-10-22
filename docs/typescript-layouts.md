@@ -1,4 +1,7 @@
-# TypeScript Layouts
+---
+title: TypeScript layouts
+description: Describe FileMaker layout shapes for end-to-end field and portal types.
+---
 
 `easy-fm` becomes much easier to use when you describe your layout shape.
 
@@ -72,5 +75,4 @@ console.log(records[0].portals.Notes.records[0].fields.Note.value);
 - `PickPortals`
 - `RecordFieldsMap`
 
-See the generated API docs for type details:
-[`../docs_out/index.html`](../docs_out/index.html)
+See the generated [API reference](/docs/api-reference) for type details.

@@ -1,4 +1,7 @@
-# Core Concepts
+---
+title: Core concepts
+description: Understand providers, databases, layouts, records, and portals.
+---
 
 This guide explains FileMaker ideas `easy-fm` builds on.
 

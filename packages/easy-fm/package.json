@@ -42,7 +42,7 @@
         "test:runtime:deno": "deno test --no-check --allow-read --node-modules-dir=manual ./runtime-tests/deno.test.ts",
         "test:runtime:workers": "vitest run --config ./runtime-tests/workers/vitest.config.ts",
         "stress:search": "tsx src/bin/stressSearch.ts",
-        "docs:build": "typedoc --options ../../docs/theme.json",
+        "docs:api": "typedoc --options ../../docs/theme.json",
         "lint": "prettier --write . && eslint ./src --fix"
     },
     "repository": {

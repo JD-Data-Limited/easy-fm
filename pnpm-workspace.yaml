@@ -1,5 +1,9 @@
 packages:
     - 'packages/*'
+    - 'testPackage'
+
+overrides:
+    'isomorphic-mermaid>mermaid': 11.12.1
 
 allowBuilds:
     '@parcel/watcher': false

@@ -1,0 +1,103 @@
+---
+title: Basic DB Operations
+description: Learn how to access your data with EasyFM
+---
+
+Once you've setup EasyFM, accessing your database is easy. First, check your `easyfm.config.js` file to find where your
+entrypoint file is. By default, this is `./src/easyfm.js`.
+
+## List
+
+In a FileMaker-style provider, everything is layout centric. That means you get a layout first, then fetch records on
+that layout. In this scenario;
+
+- `Contacts` is the name we gave the DB.
+- `Users` is the name of the layout in the DB.
+
+```typescript
+import {easyfm} from "./easyfm.js"
+
+const records = await easyfm
+    .Contacts
+    .LUsers // L for Layout. If you're wanting to use a table-based provider such as OData, use T instead.
+    .records
+    .list({portals: []})
+    .fetch()
+const record = records[0]
+```
+
+## Reload
+
+There may be a situation where you have a record in-memory, but you want to refresh it's data should it have changed in
+the DB. You can do this via `record.get()`
+
+```typescript
+await record.get()
+```
+
+## Update
+
+Once you have a record in memory, you can use EasyFM to modify it.
+
+```typescript
+record.fields["Email"].value = "john.doe@example.com"
+
+await record.commit() // Commit to save changes
+```
+
+## Create
+
+You may also wish to create new records
+
+```typescript
+import {easyfm} from "./easyfm.js"
+
+const record = await easyfm.Contacts.LUsers.records.create().fetch()
+
+record.fields["FirstName"].value = "John"
+record.fields["LastName"].value = "Doe"
+record.fields["Email"].value = "john.doe@example.com"
+
+await record.commit() // Record doesn't exist in DB until you commit.
+```
+
+## Duplicate
+
+```typescript
+import {easyfm} from "./easyfm.js"
+
+const oldRecord = await easyfm.Contacts.LUsers.records.create().fetch()
+const newRecord = await oldRecord.duplicate() // Record doesn't exist in DB until you commit.
+
+/**
+* Easy FM does not automatically re-fetch the record on duplication. If your database automatically updates certain
+* values such as IDs on duplication, you'll need to re-fetch the record.
+ */
+await newRecord.get()
+```
+
+## Delete
+
+You delete a record simply by calling the delete() method on the record.
+
+```typescript
+await record.delete()
+```
+
+## Get by Record ID
+
+Internally FileMaker stores an ID for all records. This can be fetched from within FileMaker with the calculation
+`Get(RecordID)`. EasyFM also uses this internally to manage your records. *It is **not** recommended* to fetch records
+by their internal ID, though if you must:
+
+```typescript
+import {easyfm} from "./easyfm.js"
+
+const recordId = 12
+const record = await easyfm.Contacts.LUsers.records.get(recordId)
+
+```
+
+<Callout>
+    It is highly recommended that you prefer using your own ID mechanisum over FileMaker's internal ID.
+</Callout>
