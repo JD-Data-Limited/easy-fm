@@ -6,7 +6,7 @@ module.exports = {
     moduleNameMapper: {
         '^@jd-data-limited/easy-fm$': '<rootDir>/dist/index.js',
         '^@jd-data-limited/easy-fm/typegen$': '<rootDir>/dist/typegen/index.js',
-        '^(.+)\\.js$': '$1', // Remove .js extension for imports
+        '^(\\.{1,2}/.+)\\.js$': '$1', // Remove .js only from relative imports
     },
     moduleFileExtensions: ['ts', 'js', 'json'],
     transform: {

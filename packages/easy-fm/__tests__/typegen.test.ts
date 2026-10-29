@@ -1,7 +1,6 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
 import * as ts from 'typescript';
 import { z } from 'zod';
 import { generate, zodTypegenValidator } from '../dist/typegen/index.js';
@@ -223,7 +222,7 @@ type Enabled = typeof client.database.Flags extends Layout<infer Definition>
     ? Definition['fields']['Enabled']['value']
     : never
 declare const enabled: Enabled
-const exact: 0 | 1 | null = enabled
+const exact: 0 | 1 | '?' | null = enabled
 void exact
 `,
                 'utf8',
@@ -245,7 +244,18 @@ void exact
                 }),
             ).toBe('');
 
-            const generated = await import(pathToFileURL(join(output, 'client.js')).href);
+            const generatedRuntime = join(output, 'client.cjs');
+            await writeFile(
+                generatedRuntime,
+                ts.transpileModule(await readFile(join(output, 'client.js'), 'utf8'), {
+                    compilerOptions: {
+                        module: ts.ModuleKind.CommonJS,
+                        target: ts.ScriptTarget.ES2022,
+                    },
+                }).outputText,
+                'utf8',
+            );
+            const generated = jest.requireActual(generatedRuntime);
             const metadataField = (
                 name: string,
                 result: 'number' | 'text' | 'date' | 'time' | 'timeStamp' | 'container',
@@ -348,12 +358,12 @@ void exact
             expect(record.fields.Attachment.value).toBeNull();
 
             const errorRecord = await client.database.Flags.records.get(2);
-            expect(errorRecord.fields.Enabled.value).toBeNull();
+            expect(errorRecord.fields.Enabled.value).toBe('?');
             expect(errorRecord.fields.Label.value).toBe('?');
-            expect(errorRecord.fields.DueDate.value).toBeNull();
-            expect(errorRecord.fields.DueTime.value).toBeNull();
-            expect(errorRecord.fields.ChangedAt.value).toBeNull();
-            expect(errorRecord.fields.Attachment.value).toBeNull();
+            expect(errorRecord.fields.DueDate.value).toBe('?');
+            expect(errorRecord.fields.DueTime.value).toBe('?');
+            expect(errorRecord.fields.ChangedAt.value).toBe('?');
+            expect(errorRecord.fields.Attachment.value).toBe('?');
         } finally {
             await rm(root, { recursive: true, force: true });
         }

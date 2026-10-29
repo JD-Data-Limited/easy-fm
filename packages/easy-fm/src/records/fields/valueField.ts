@@ -6,6 +6,7 @@ import { stringToTemporal, temporalToString } from '../../utils/temporal.js';
 export abstract class ValueFieldBase<
     T,
     API_FIELD_RESULT extends FieldResultTypes,
+    SET_EXCLUDE = never
 > extends BaseField<T, API_FIELD_RESULT> {
     #originalContents: RawValueData;
 
@@ -22,7 +23,7 @@ export abstract class ValueFieldBase<
         this.#originalContents = value;
     }
 
-    set(content: T) {
+    set(content: Exclude<T, SET_EXCLUDE>) {
         /**
          * Sets the value of the field.
          *
@@ -51,7 +52,7 @@ export abstract class ValueFieldBase<
         this.#originalContents = this.serializeRawValue();
     }
 
-    set value(value: T) {
+    set value(value: Exclude<T, SET_EXCLUDE>) {
         this.set(value);
     }
 
@@ -63,11 +64,12 @@ export abstract class ValueFieldBase<
 export class TextField<T extends string = string> extends ValueFieldBase<T, 'text'> {}
 
 export class NumberField<T extends number | null = number | null> extends ValueFieldBase<
-    T,
-    'number'
+    T | '?',
+    'number',
+    '?'
 > {
-    override parseRawValue(value: RawValueData): T {
-        return (value === '' ? null : value) as T;
+    override parseRawValue(value: RawValueData): T | '?' {
+        return (value === '' || value === null ? null : value) as T | '?';
     }
 
     override serializeRawValue(): RawValueData {
@@ -75,17 +77,40 @@ export class NumberField<T extends number | null = number | null> extends ValueF
     }
 }
 
-export class TimeStampField extends ValueFieldBase<
-    Temporal.PlainDateTime | null,
-    'timeStamp'
-> {
+abstract class TemporalField<
+    T,
+    API_FIELD_RESULT extends FieldResultTypes,
+> extends ValueFieldBase<T | '?' | null, API_FIELD_RESULT, '?'> {
+    abstract toTemporal(value: string): T;
+    abstract toCommitableString(value: T): string;
+
     override parseRawValue(value: RawValueData) {
         if (value === '' || value === null) {
             return null;
         }
+        if (value === '?') {
+            return value;
+        }
         if (typeof value !== 'string') {
             throw new Error('Received an invalid value for a temporal field.');
         }
+
+        return this.toTemporal(value);
+    }
+
+    override serializeRawValue(): RawValueData {
+        if (this._value === null) {
+            return '';
+        }
+        if (this._value === '?') {
+            return '?';
+        }
+        return this.toCommitableString(this._value);
+    }
+}
+
+export class TimeStampField extends TemporalField<Temporal.PlainDateTime, 'timeStamp'> {
+    toTemporal(value: string): Temporal.PlainDateTime {
         try {
             return stringToTemporal(
                 value,
@@ -96,23 +121,13 @@ export class TimeStampField extends ValueFieldBase<
             return Temporal.PlainDateTime.from(value);
         }
     }
-
-    override serializeRawValue(): RawValueData {
-        if (this._value === null) {
-            return '';
-        }
-        return temporalToString(this._value, this.parent.layout.database.timeStampFormat);
+    toCommitableString(value: Temporal.PlainDateTime): string {
+        return temporalToString(value, this.parent.layout.database.timeStampFormat);
     }
 }
 
-export class DateField extends ValueFieldBase<Temporal.PlainDate | null, 'date'> {
-    override parseRawValue(value: RawValueData) {
-        if (value === '' || value === null) {
-            return null;
-        }
-        if (typeof value !== 'string') {
-            throw new Error('Received an invalid value for a temporal field.');
-        }
+export class DateField extends TemporalField<Temporal.PlainDate, 'date'> {
+    toTemporal(value: string): Temporal.PlainDate {
         try {
             return stringToTemporal(
                 value,
@@ -123,23 +138,13 @@ export class DateField extends ValueFieldBase<Temporal.PlainDate | null, 'date'>
             return Temporal.PlainDate.from(value);
         }
     }
-
-    override serializeRawValue(): RawValueData {
-        if (this._value === null) {
-            return '';
-        }
-        return temporalToString(this._value, this.parent.layout.database.dateFormat);
+    toCommitableString(value: Temporal.PlainDate): string {
+        return temporalToString(value, this.parent.layout.database.dateFormat);
     }
 }
 
-export class TimeField extends ValueFieldBase<Temporal.PlainTime | null, 'time'> {
-    override parseRawValue(value: RawValueData) {
-        if (value === '' || value === null) {
-            return null;
-        }
-        if (typeof value !== 'string') {
-            throw new Error('Received an invalid value for a temporal field.');
-        }
+export class TimeField extends TemporalField<Temporal.PlainTime, 'time'> {
+    toTemporal(value: string): Temporal.PlainTime {
         try {
             return stringToTemporal(
                 value,
@@ -150,12 +155,8 @@ export class TimeField extends ValueFieldBase<Temporal.PlainTime | null, 'time'>
             return Temporal.PlainTime.from(value);
         }
     }
-
-    override serializeRawValue(): RawValueData {
-        if (this._value === null) {
-            return '';
-        }
-        return temporalToString(this._value, this.parent.layout.database.timeFormat);
+    toCommitableString(value: Temporal.PlainTime): string {
+        return temporalToString(value, this.parent.layout.database.timeFormat);
     }
 }
 

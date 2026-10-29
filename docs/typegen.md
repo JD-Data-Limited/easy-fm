@@ -88,11 +88,12 @@ export const easyfm = createEasyFMClient(providers, {
 ```
 
 The same schema is used for runtime validation and static inference, so `Enabled` is a
-`NumberField<0 | 1 | null>` and any other non-empty API value throws
+`NumberField<0 | 1 | null>` whose value may also be FileMaker's `"?"` error marker, and
+any other non-empty API value throws
 `SchemaDriftError`. FileMaker represents empty values as `""`; generated schemas accept
 that wire value for number, date, time, timestamp, and container fields, and EasyFM
-normalizes it to `null`. FileMaker's `"?"` error value is handled the same way for these
-parsed/nullable field types, while text fields preserve both `""` and `"?"` verbatim.
+normalizes it to `null`. FileMaker's `"?"` error value remains `"?"` for every field type,
+so callers can distinguish an invalid value from an empty one.
 Overrides are available per database, layout, regular field, and portal field. The
 generated defaults remain strict when no override is supplied.
 

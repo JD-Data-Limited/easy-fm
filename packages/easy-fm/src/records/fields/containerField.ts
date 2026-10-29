@@ -11,7 +11,7 @@ export class ContainerField extends BaseField<string | null, 'container'> {
     }
 
     override parseRawValue(value: RawValueData): string | null {
-        if (value === '' || value === '?' || value === null) {
+        if (value === '' || value === null) {
             return null;
         }
         if (typeof value !== 'string') {

@@ -33,7 +33,7 @@ export interface Parentable {
  * @template T - The type of the field value.
  */
 export abstract class BaseField<
-    T extends unknown,
+    T,
     API_FIELD_RESULT extends FieldResultTypes,
 > {
     parent: Parentable;

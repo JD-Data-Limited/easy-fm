@@ -58,7 +58,7 @@ console.log({
     externalSources: [],
     debug: true,
 });
-export const DATABASE = Database.create<DatabaseSchema>({
+export const DATABASE: Database<DatabaseSchema> = Database.create({
     provider: new DataApiProvider({
         hostname: DATABASE_HOST,
         database: 'EasyFMBenchmark',
