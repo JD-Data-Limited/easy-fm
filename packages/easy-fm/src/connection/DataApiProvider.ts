@@ -32,6 +32,8 @@ export interface DataApiProviderOptions extends databaseOptionsWithExternalSourc
 }
 
 export class DataApiProvider implements DatabaseProvider {
+    static readonly databaseType = 'layout';
+    readonly databaseType = DataApiProvider.databaseType;
     readonly name: string;
     readonly formatting: DatabaseFormatting = {
         dateFormat: 'MM/DD/YYYY',
@@ -166,7 +168,7 @@ class DataApiSession implements ProviderSession {
                     path += `?script.param=${encodeURIComponent(operation.parameter)}`;
                 }
                 break;
-            case 'record.list': {
+            case 'layout.record.list': {
                 const request = operation.options;
                 if (!operation.query.length) {
                     const params = new URLSearchParams({
@@ -202,32 +204,32 @@ class DataApiSession implements ProviderSession {
                 }
                 break;
             }
-            case 'record.get':
+            case 'layout.record.get':
                 path = `/layouts/${encodeURIComponent(operation.layout)}/records/${operation.recordId}?${recordParams(operation.options)}`;
                 break;
-            case 'record.create':
+            case 'layout.record.create':
                 path = `/layouts/${encodeURIComponent(operation.layout)}/records`;
                 options = {
                     method: 'POST',
                     body: JSON.stringify(recordBody(operation.body, operation.options)),
                 };
                 break;
-            case 'record.update':
+            case 'layout.record.update':
                 path = `/layouts/${encodeURIComponent(operation.layout)}/records/${operation.recordId}`;
                 options = {
                     method: 'PATCH',
                     body: JSON.stringify(recordBody(operation.body, operation.options)),
                 };
                 break;
-            case 'record.duplicate':
+            case 'layout.record.duplicate':
                 path = `/layouts/${encodeURIComponent(operation.layout)}/records/${operation.recordId}?${recordParams(operation.options)}`;
                 options = { method: 'POST' };
                 break;
-            case 'record.delete':
+            case 'layout.record.delete':
                 path = `/layouts/${encodeURIComponent(operation.layout)}/records/${operation.recordId}?${recordParams(operation.options)}`;
                 options = { method: 'DELETE' };
                 break;
-            case 'container.upload': {
+            case 'layout.container.upload': {
                 path = `/layouts/${encodeURIComponent(operation.layout)}/records/${operation.recordId}/containers/${encodeURIComponent(operation.field)}/1`;
                 const form = new FormData();
                 form.append('upload', operation.file);
@@ -235,7 +237,7 @@ class DataApiSession implements ProviderSession {
                 break;
             }
         }
-        if (operation.type !== 'container.upload') {
+        if (operation.type !== 'layout.container.upload') {
             addHeaders(options, { 'Content-Type': 'application/json' });
         }
         const { response, body } = await this.#requestJSON(
@@ -335,14 +337,14 @@ function normalize(operation: DatabaseOperation, response: any, status: number):
                 scriptResult: response?.scriptResult,
                 status,
             };
-        case 'record.list':
+        case 'layout.record.list':
             return response?.data ?? [];
-        case 'record.get':
+        case 'layout.record.get':
             return response?.data?.[0];
-        case 'record.create':
-        case 'record.update':
-        case 'record.duplicate':
-        case 'record.delete':
+        case 'layout.record.create':
+        case 'layout.record.update':
+        case 'layout.record.duplicate':
+        case 'layout.record.delete':
             return {
                 ...(response ?? {}),
                 scriptError:
@@ -351,7 +353,7 @@ function normalize(operation: DatabaseOperation, response: any, status: number):
                         : Number(response.scriptError),
                 status,
             };
-        case 'container.upload':
+        case 'layout.container.upload':
             return undefined;
     }
 }

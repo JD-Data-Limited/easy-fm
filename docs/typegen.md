@@ -68,8 +68,8 @@ easyfm typegen
 Typegen writes a provider-neutral `client.js`, a declaration-only `client.d.ts`, and
 `schema.json`. Generated clients accept any `DatabaseProvider`. The declaration file
 exposes explicit database, layout, and field interfaces for editor completion without
-making the editor analyse the runtime Zod schemas. Results from `record.get` and
-`record.list` are checked with strict Zod schemas before EasyFM constructs records;
+making the editor analyse the runtime Zod schemas. Results from `layout.record.get` and
+`layout.record.list` are checked with strict Zod schemas before EasyFM constructs records;
 mismatch throws `SchemaDriftError`.
 
 Zod is the default, but validation generation is pluggable:

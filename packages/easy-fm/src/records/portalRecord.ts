@@ -2,7 +2,6 @@
  * Copyright (c) 2023-2024. See LICENSE file for more information
  */
 
-import { RecordBase } from './recordBase.js';
 import { type extraBodyOptions, RecordTypes } from '../types.js';
 
 import { type PortalBase } from './portalBase.js';
@@ -12,18 +11,19 @@ import { RecordFieldsMap } from '../layouts/layoutInterface.js';
 import { Field } from './fields/field.js';
 import { ContainerField } from './fields/containerField.js';
 import { type SessionBinding } from '../connection/databaseProvider.js';
+import {LayoutishRecordBase} from "./LayoutishRecordBase.js";
 
 /**
  * Represents a PortalRecord, which is a record in a portal within a parent record.
  * @template T - The type of the record's field map.
  */
-export class PortalRecord<T extends RecordFieldsMap> extends RecordBase<T> {
+export class PortalRecord<T extends RecordFieldsMap> extends LayoutishRecordBase<T> {
     readonly portal: PortalBase<T>;
     readonly type = RecordTypes.PORTAL;
 
     constructor(
-        record: RecordBase<any>,
-        portal: PortalBase<any>,
+        record: LayoutishRecordBase<never>,
+        portal: PortalBase<never>,
         recordId: number,
         modId = recordId,
         fieldData = {},
@@ -89,8 +89,11 @@ export class PortalRecord<T extends RecordFieldsMap> extends RecordBase<T> {
     toObject(fieldFilter: (a: Field) => boolean): {
         modId?: string;
         recordId?: string;
-    } & Record<string, string> {
-        const res: any = {
+    } & { [K in keyof T]: string } {
+        const res: {
+            recordId?: string;
+            modId?: string;
+        } & { [K in keyof T]: string } = {
             recordId: this.recordId === -1 ? undefined : this.recordId.toString(),
             modId: this.modId === -1 ? undefined : this.modId.toString(),
         };

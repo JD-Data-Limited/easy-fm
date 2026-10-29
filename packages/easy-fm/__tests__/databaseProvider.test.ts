@@ -1,4 +1,4 @@
-import { Database } from '../dist/connection/database.js';
+import { Database, TableDatabase } from '../dist/connection/database.js';
 import type {
     DatabaseOperation,
     DatabaseOperationResult,
@@ -27,6 +27,7 @@ function provider(options: {
     let connects = 0;
     const sessions: ProviderSession[] = [];
     const value: DatabaseProvider = {
+        databaseType: 'layout',
         formatting,
         async connect() {
             connects++;
@@ -65,6 +66,22 @@ function resultFor<K extends DatabaseOperationType>(
 }
 
 describe('provider-backed Database', () => {
+    it('selects a type-safe database API from the provider discriminator', () => {
+        const fake = provider({ maxSessions: 1 });
+        const tableProvider: DatabaseProvider<'table'> = {
+            ...fake.value,
+            databaseType: 'table',
+        };
+        const database = Database.create({ provider: tableProvider });
+        const typed: TableDatabase = database;
+
+        expect(typed).toBeInstanceOf(TableDatabase);
+        if (false) {
+            // @ts-expect-error Table providers do not expose layout APIs.
+            database.layout('People');
+        }
+    });
+
     it('constructs synchronously and connects lazily once', async () => {
         const fake = provider({ maxSessions: 1 });
         const database = Database.create({ provider: fake.value });
@@ -130,6 +147,7 @@ describe('provider-backed Database', () => {
     it('uses exact originating session for container fetches', async () => {
         let sessionNumber = 0;
         const value: DatabaseProvider = {
+            databaseType: 'layout',
             formatting,
             async connect() {
                 return {

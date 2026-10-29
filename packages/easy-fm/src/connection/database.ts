@@ -1,7 +1,4 @@
-import {Layout} from '../layouts/layout.js';
-import type {LayoutInterface} from '../layouts/layoutInterface.js';
 import type {DatabaseStructure} from '../databaseStructure.js';
-import type {Script} from '../types.js';
 import type {DatabaseBase} from './databaseBase.js';
 import {
     ContainerSessionAffinityError,
@@ -9,14 +6,19 @@ import {
     type DatabaseOperationResult,
     type DatabaseOperationType,
     type DatabaseProvider,
+    type DatabaseProviderType,
     type ProviderConnection,
     type ProviderSession,
     ProviderSessionExpiredError,
     type SessionBinding,
 } from './databaseProvider.js';
+import {LayoutDatabase} from "./layoutDatabase.js";
+import {TableDatabase} from "./tableDatabase.js";
 
-export interface DatabaseOptions {
-    provider: DatabaseProvider;
+export interface DatabaseOptions<
+    P extends DatabaseProvider<DatabaseProviderType> = DatabaseProvider,
+> {
+    provider: P;
     name?: string;
     debug?: boolean;
 }
@@ -35,11 +37,15 @@ interface QueueJob<T = unknown> {
     reject: (reason?: unknown) => void;
 }
 
-export class Database<T extends DatabaseStructure> implements DatabaseBase {
+export type DatabaseForProvider<
+    P extends DatabaseProvider<DatabaseProviderType>,
+    T extends DatabaseStructure = DatabaseStructure,
+> = P['databaseType'] extends 'layout' ? LayoutDatabase<T> : TableDatabase;
+
+export abstract class Database implements DatabaseBase {
     readonly name: string;
     readonly debug: boolean;
-    readonly #provider: DatabaseProvider;
-    readonly #layoutCache = new Map();
+    readonly #provider: DatabaseProvider<DatabaseProviderType>;
     readonly #abortController = new AbortController();
     readonly #sessions: ActiveSession[] = [];
     readonly #closingSessions: Set<Promise<void>> = new Set();
@@ -48,16 +54,26 @@ export class Database<T extends DatabaseStructure> implements DatabaseBase {
     #closed = false;
     #draining = false;
 
-    private constructor(options: DatabaseOptions) {
+    protected constructor(
+        options: DatabaseOptions<DatabaseProvider<DatabaseProviderType>>,
+    ) {
         this.#provider = options.provider;
         this.name = options.name ?? options.provider.name ?? '';
         this.debug = options.debug ?? false;
     }
 
-    static create<T extends DatabaseStructure = DatabaseStructure>(
-        options: DatabaseOptions,
-    ): Database<T> {
-        return new Database<T>(options);
+    static create<
+        T extends DatabaseStructure = DatabaseStructure,
+        P extends DatabaseProvider<DatabaseProviderType> = DatabaseProvider,
+    >(options: DatabaseOptions<P>): DatabaseForProvider<P, T> {
+        switch (options.provider.databaseType) {
+            case 'layout':
+                return new LayoutDatabase<T>(options) as DatabaseForProvider<P, T>;
+            case 'table':
+                return new TableDatabase(options) as DatabaseForProvider<P, T>;
+            default:
+                return assertUnknownProviderType(options.provider.databaseType);
+        }
     }
 
     async #connection(): Promise<ProviderConnection> {
@@ -288,38 +304,17 @@ export class Database<T extends DatabaseStructure> implements DatabaseBase {
     async [Symbol.asyncDispose]() {
         await this.close();
     }
+}
 
-    async listLayouts(page = 0) {
-        const { value } = await this.execute({ type: 'layout.list', page });
-        return value.map((name) => new Layout(this, name));
-    }
-
-    layout<R extends keyof T['layouts']>(name: R): Layout<T['layouts'][R]>;
-    layout<R extends LayoutInterface>(name: string): Layout<R>;
-    layout(name: string): Layout<any> {
-        let layout = this.#layoutCache.get(name);
-        if (!layout) {
-            layout = new Layout<LayoutInterface>(this, name);
-            this.#layoutCache.set(name, layout);
-        }
-
-        return layout;
-    }
-
-    clearLayoutCache() {
-        this.#layoutCache.clear();
-    }
-
-    script(name: string, parameter = ''): Script {
-        return { name, parameter };
-    }
+function assertUnknownProviderType(value: never): never {
+    throw new Error(`Unsupported database provider type: ${String(value)}`);
 }
 
 function isReadOnly(type: DatabaseOperationType) {
     return (
         type === 'layout.list' ||
         type === 'layout.metadata' ||
-        type === 'record.list' ||
-        type === 'record.get'
+        type === 'layout.record.list' ||
+        type === 'layout.record.get'
     );
 }

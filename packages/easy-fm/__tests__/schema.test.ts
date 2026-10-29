@@ -10,6 +10,7 @@ const formatting = {
 
 function provider(fieldData: Record<string, string | number | null>): DatabaseProvider {
     return {
+        databaseType: 'layout',
         formatting,
         async connect() {
             return {

@@ -3,7 +3,6 @@
  */
 
 import {type extraBodyOptions} from '../types.js';
-import {RecordBase} from './recordBase.js';
 import {PortalRecord} from './portalRecord.js';
 import {Portal} from './portal.js';
 import {type LayoutInterface} from '../layouts/layoutInterface.js';
@@ -16,9 +15,10 @@ import {Field} from './fields/field.js';
 import {ValueFieldBase} from './fields/valueField.js';
 import {ContainerField} from './fields/containerField.js';
 import {type SessionBinding} from '../connection/databaseProvider.js';
+import {LayoutishRecordBase} from "./LayoutishRecordBase.js";
 
 export class LayoutRecord<LAYOUT extends LayoutInterface>
-    extends RecordBase<LAYOUT['fields']>
+    extends LayoutishRecordBase<LAYOUT['fields']>
     implements LayoutRecordBase
 {
     portals: LAYOUT['portals'] = {};
@@ -73,7 +73,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface>
         if (this.recordId === -1) {
             // This is a new LayoutRecord
             const { value: res, binding } = await this.layout.database.execute({
-                type: 'record.create',
+                type: 'layout.record.create',
                 layout: this.layout.name,
                 body: data,
                 options,
@@ -91,7 +91,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface>
 
         // for (let item of Object.keys(data)) extraBody[item] = data[item]
         const { value: res, binding } = await this.layout.database.execute({
-            type: 'record.update',
+            type: 'layout.record.update',
             layout: this.layout.name,
             recordId: this.recordId,
             body: data,
@@ -163,7 +163,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface>
             await this.layout.getLayoutMeta();
         }
         const { value: record, binding } = await this.layout.database.execute({
-            type: 'record.get',
+            type: 'layout.record.get',
             layout: this.layout.name,
             recordId: this.recordId,
             options: { scripts: {}, portals },
@@ -184,7 +184,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface>
     async duplicate(): Promise<LayoutRecord<LAYOUT>> {
         const trace = new Error();
         const { value: res, binding } = await this.layout.database.execute({
-            type: 'record.duplicate',
+            type: 'layout.record.duplicate',
             layout: this.layout.name,
             recordId: this.recordId,
             options: emptyOperationOptions(),
@@ -215,7 +215,7 @@ export class LayoutRecord<LAYOUT extends LayoutInterface>
     /** Deletes this record from FileMaker. */
     async delete(): Promise<void> {
         const { value: res } = await this.layout.database.execute({
-            type: 'record.delete',
+            type: 'layout.record.delete',
             layout: this.layout.name,
             recordId: this.recordId,
             options: emptyOperationOptions(),

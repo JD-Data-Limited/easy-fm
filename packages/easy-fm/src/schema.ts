@@ -95,11 +95,12 @@ export class SchemaDriftError extends Error {
 }
 
 /** Decorates any provider with generated, provider-neutral metadata and result validation. */
-export function withSchemaValidation(
-    provider: DatabaseProvider,
+export function withSchemaValidation<P extends DatabaseProvider<'layout' | 'table'>>(
+    provider: P,
     schema: DatabaseRuntimeSchema,
-): DatabaseProvider {
+): P {
     return {
+        databaseType: provider.databaseType,
         name: provider.name,
         formatting: provider.formatting,
         async connect(context): Promise<ProviderConnection> {
@@ -123,7 +124,7 @@ export function withSchemaValidation(
                                 ) as DatabaseOperationResult<K>;
                                 validateMetadata(schema, operation.layout, result);
                             }
-                            if (operation.type === 'record.get') {
+                            if (operation.type === 'layout.record.get') {
                                 result = stripRecord(
                                     result as ProviderRecord,
                                 ) as DatabaseOperationResult<K>;
@@ -133,7 +134,7 @@ export function withSchemaValidation(
                                     result as ProviderRecord,
                                 );
                             }
-                            if (operation.type === 'record.list') {
+                            if (operation.type === 'layout.record.list') {
                                 result = (result as ProviderRecord[]).map(
                                     stripRecord,
                                 ) as DatabaseOperationResult<K>;
@@ -147,7 +148,7 @@ export function withSchemaValidation(
                 },
             };
         },
-    };
+    } as P;
 }
 
 function stripRecord(record: ProviderRecord): ProviderRecord {

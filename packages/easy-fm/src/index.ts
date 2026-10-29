@@ -10,7 +10,11 @@ export { FMError } from './FMError.js';
 export { type PickPortals } from './types.js';
 export { type DatabaseStructure } from './databaseStructure.js';
 /** Base database connection abstraction used by all auth modes. */
-export { Database } from './connection/database.js';
+export {
+    Database,
+    type DatabaseForProvider,
+    type DatabaseOptions,
+} from './connection/database.js';
 /** Layout-scoped API wrapper for metadata, scripts, and record operations. */
 export { Layout } from './layouts/layout.js';
 /** Base record implementation shared by layout and portal records. */
@@ -68,6 +72,7 @@ export {
 } from './connection/DataApiProvider.js';
 export {
     type DatabaseProvider,
+    type DatabaseProviderType,
     type ProviderConnection,
     type ProviderSession,
     type ProviderContext,
@@ -83,3 +88,5 @@ export {
     /** Namespace re-export of library public types. */
     type TYPES,
 };
+export {LayoutDatabase} from "./connection/layoutDatabase.js";
+export {TableDatabase} from "./connection/tableDatabase.js";

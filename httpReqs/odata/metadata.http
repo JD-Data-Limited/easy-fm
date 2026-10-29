@@ -1,0 +1,3 @@
+GET {{host}}/fmi/odata/v4/{{database}}/$metadata
+Authorization: Basic {{username}} {{password}}
+Accept: application/json

@@ -203,4 +203,5 @@ export enum RecordTypes {
     UNKNOWN,
     LAYOUT,
     PORTAL,
+    TABLE,
 }

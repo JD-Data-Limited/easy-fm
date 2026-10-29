@@ -4,6 +4,7 @@ import type {
     ApiLayoutMetadata,
     ApiPortalData,
 } from '../models/apiResults.js';
+import {FileMakerMetadataSchema} from "../models/odataResults.js";
 
 export interface DatabaseFormatting {
     readonly dateFormat: string;
@@ -15,7 +16,11 @@ export interface ProviderContext {
     readonly signal: AbortSignal;
     readonly debug: boolean;
 }
-export interface DatabaseProvider {
+export type DatabaseProviderType = 'layout' | 'table';
+
+export interface DatabaseProvider<TDatabaseType extends DatabaseProviderType = 'layout'> {
+    /** Selects the public database API constructed for this provider. */
+    readonly databaseType: TDatabaseType;
     readonly name?: string;
     /** Synchronous formatting defaults, refined in place when connect resolves. */
     readonly formatting: DatabaseFormatting;
@@ -72,11 +77,37 @@ export interface DatabaseOperationMap {
         operation: { layout: string };
         result: z.infer<typeof ApiLayoutMetadata>;
     };
+    'tables.metadata': {
+        operation: object;
+        result: z.infer<typeof FileMakerMetadataSchema>;
+    };
+    'table.record.update': {
+        operation: {
+            databaseName: string;
+            tableName: string;
+            primaryKeyValue: string;
+            data: Record<string, string>
+        }
+    };
+    'table.record.create': {
+        operation: {
+            databaseName: string;
+            tableName: string;
+            data: Record<string, string>
+        }
+    };
+    'table.record.delete': {
+        operation: {
+            databaseName: string;
+            tableName: string;
+            primaryKeyValue: string;
+        }
+    };
     'script.run': {
         operation: { layout: string; script: string; parameter?: string };
         result: { scriptError?: number; scriptResult?: string; status?: number };
     };
-    'record.list': {
+    'layout.record.list': {
         operation: {
             layout: string;
             query: RecordQueryClause[];
@@ -84,11 +115,11 @@ export interface DatabaseOperationMap {
         };
         result: ProviderRecord[];
     };
-    'record.get': {
+    'layout.record.get': {
         operation: { layout: string; recordId: number; options: RecordOperationOptions };
         result: ProviderRecord;
     };
-    'record.create': {
+    'layout.record.create': {
         operation: {
             layout: string;
             body: RecordWriteBody;
@@ -101,7 +132,7 @@ export interface DatabaseOperationMap {
             status?: number;
         };
     };
-    'record.update': {
+    'layout.record.update': {
         operation: {
             layout: string;
             recordId: number;
@@ -110,7 +141,7 @@ export interface DatabaseOperationMap {
         };
         result: { modId: string; scriptError?: number; status?: number };
     };
-    'record.duplicate': {
+    'layout.record.duplicate': {
         operation: { layout: string; recordId: number; options: RecordOperationOptions };
         result: {
             recordId: string;
@@ -119,11 +150,11 @@ export interface DatabaseOperationMap {
             status?: number;
         };
     };
-    'record.delete': {
+    'layout.record.delete': {
         operation: { layout: string; recordId: number; options: RecordOperationOptions };
         result: { scriptError?: number; status?: number };
     };
-    'container.upload': {
+    'layout.container.upload': {
         operation: { layout: string; recordId: number; field: string; file: File };
         result: undefined;
     };

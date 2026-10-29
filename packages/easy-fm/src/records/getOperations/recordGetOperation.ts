@@ -266,7 +266,7 @@ export class RecordGetOperation<
                 }
             }
             const { value: res, binding } = await this.layout.database.execute({
-                type: 'record.list',
+                type: 'layout.record.list',
                 layout: this.layout.name,
                 query: this.requests.map((request) => ({
                     fields: request.req,
